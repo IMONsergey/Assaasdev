@@ -29,8 +29,11 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - name: Use the runner's installed Google Chrome
+        run: google-chrome --version
       - run: npm run test:e2e
+        env:
+          APCOSYS_CHROMIUM_CHANNEL: chrome
       - name: Save browser evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

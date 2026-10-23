@@ -97,7 +97,7 @@ npm run test:e2e
 
 The browser suite starts an explicit demo server and also intercepts selected live HTTP responses to check the auth boundary. Browser downloads and direct file writer failure are exercised. These checks do not use real accounts, payment providers or scanning targets.
 
-Local Firefox can be selected with `APCOSYS_BROWSER=firefox`; install the matching Playwright browser first. `APCOSYS_FIREFOX_EXECUTABLE` is available for a separately managed, compatible Firefox executable. CI uses Chromium and separately builds/tests the Nginx container against a local protocol fixture.
+Local Firefox can be selected with `APCOSYS_BROWSER=firefox`; install the matching Playwright browser first. `APCOSYS_FIREFOX_EXECUTABLE` is available for a separately managed, compatible Firefox executable. CI uses the Ubuntu runner’s installed Google Chrome through Playwright’s Chromium engine and separately builds/tests the Nginx container against a local protocol fixture. Set `APCOSYS_CHROMIUM_CHANNEL=chrome` to use an installed Chrome locally; that path retains screenshots/traces and does not require a downloaded video encoder.
 
 ## Repository map
 

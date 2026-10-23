@@ -93,7 +93,7 @@ Application access logs include the method, path, status and timings, without qu
 
 ## Continuous integration and release gates
 
-`.github/workflows/ci.yml` uses read-only repository permission and full commit pins for the official actions. It runs typechecking, unit/transport tests, the production build and the browser suite. A separate Docker job builds the complete image and exercises it against an isolated protocol fixture.
+`.github/workflows/ci.yml` uses read-only repository permission and full commit pins for the official actions. It runs typechecking, unit/transport tests, the production build and the browser suite. Browser checks use the runner’s installed Google Chrome via Playwright’s Chromium engine, avoiding a second browser/OS-package installation. The executable version is logged; failure screenshots and traces are retained. Video recording is disabled only for this installed-Chrome path so the checks do not require a separate FFmpeg download. A separate Docker job builds the complete image and exercises it against an isolated protocol fixture.
 
 The proxy smoke test checks the concrete routing risks: login page deep links return SPA HTML; the CSP explicitly names the public WebSocket scheme, authority and port; API login preserves 202 and cookie attributes; the original Origin survives; a backend 404 stays JSON; the OAuth callback remains a redirect; an intentionally open NDJSON response reaches the browser before completion; and `/backend/ws` upgrades to a WebSocket at upstream `/ws`. The fixture has no production fallback path and no real credentials.
 

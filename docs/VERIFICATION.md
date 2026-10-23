@@ -2,7 +2,7 @@
 
 The complete local run for initial commit `507eb481` passed **TypeScript, 81 unit tests, the production build and all 19 committed browser tests**. The browser tests use Firefox with the explicit demo adapter or an intercepted local HTTP fixture. These results verify client behavior; they do not certify the customer's deployed backend.
 
-The machine-readable record is [verification.json](evidence/verification.json). Its source fingerprint identifies the initial application/config/test files checked before publication. The committed [GitHub Actions workflow](../.github/workflows/ci.yml) runs Chromium and a separate container fixture; consult [Actions](https://github.com/IMONsergey/Assaasdev/actions) for remote execution results.
+The machine-readable record is [verification.json](evidence/verification.json). Its source fingerprint identifies the initial application/config/test files checked before publication. The committed [GitHub Actions workflow](../.github/workflows/ci.yml) runs the installed Google Chrome through Playwright’s Chromium engine and a separate container fixture; consult [Actions](https://github.com/IMONsergey/Assaasdev/actions) for remote execution results.
 
 ## Final repeatable checks
 
@@ -39,7 +39,7 @@ APCOSYS_FIREFOX_EXECUTABLE=/path/to/compatible/firefox \
 npm run test:e2e
 ```
 
-CI installs its matching Chromium binary and runs the suite without these overrides.
+CI uses `APCOSYS_CHROMIUM_CHANNEL=chrome` and logs the runner’s installed Chrome version. Screenshots and Playwright traces remain enabled; video recording is disabled for this channel to avoid an unnecessary encoder installation. The [reviewed runner image](https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md) includes Google Chrome 155. The first CI run used Playwright’s downloaded Chromium 153.
 
 ## Additional scoped interaction and visual evidence
 
@@ -64,6 +64,8 @@ Earlier browser failures were addressed before the final suite: a test's sign-in
 Chromium passed 17 of 19 browser tests. Both failures were the same reproducible layout problem: `/scanner` document overflow at 390 and 320 px. The earlier Firefox pass did not establish Chromium compatibility.
 
 The corrective change makes the scanner table's scroll wrapper a positioned containing block. This keeps its absolute, visually hidden column labels inside the local scrolling region. It does not hide page overflow or remove table actions. The route regression additionally scrolls to the rightmost Delete action and verifies both its visibility and the unchanged document width. Failure diagnostics now attach the concrete overflow bounds for future investigation. The [local containing-block control](evidence/scanner-layout-correction.json) records the off-screen label coordinates, its parent before/after, and accessible table scrolling at both mobile widths.
+
+The next run on `d05c5cc` passed the container again but stalled in `playwright install --with-deps chromium` before browser tests. The workflow now uses the browser already present on the official runner image; all 19 browser tests remain in place.
 
 The current [Actions page](https://github.com/IMONsergey/Assaasdev/actions) records the corrective run independently of the initial failure. Live backend acceptance remains separate even when both CI jobs pass.
 
