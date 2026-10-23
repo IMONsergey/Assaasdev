@@ -6,6 +6,8 @@ This repository contains the **working React application**, its website HTTP/Web
 
 **Release status:** client implementation and local browser verification are available. Acceptance against the client's actual HTTPS backend and external providers remains a separate release gate. See [release review](docs/RELEASE-2026-10-23.md), [implementation coverage](docs/IMPLEMENTATION-COVERAGE.md) and [verification evidence](docs/VERIFICATION.md).
 
+**Public review deployment:** the committed `vercel.json` publishes the explicit demo build at a domain root and supports direct links to application routes. This hosting configuration is for interface acceptance; the live backend deployment uses the separate proxy configuration below. Demo state resets after a page reload.
+
 ![APCOSYS search workspace](docs/screenshots/search-home.png)
 
 ## Run the interactive demo

@@ -13,9 +13,17 @@ npm test
 npm run build
 ```
 
-`npm run dev:demo` uses the explicit demonstration adapter. It does not contact the client's backend and does not prove live integration. `npm run dev` and production default to live mode. The production container always writes `dataMode: 'live'` at startup.
+`npm run dev:demo` uses the explicit demonstration adapter. It does not contact the client's backend and does not prove live integration. `npm run dev` and `npm run build` default to live mode. The production container always writes `dataMode: 'live'` at startup.
 
 `npm run preview` previews a local build; it is not the production web server. See the [Vite deployment documentation](https://vite.dev/guide/static-deploy.html).
+
+### Public review on Vercel
+
+The root `vercel.json` explicitly uses `npm run build:demo`, publishes only `dist`, and rewrites application deep links to `index.html`. It is the public interface-review deployment. Use the Vite preset, Node 24 and domain-root hosting. The tracked `.env.demo` selects the local adapter; do not override `VITE_DATA_MODE` with `live` in this project's environment or replace the empty tracked `public/runtime-config.js` with container-generated settings.
+
+This deployment needs no API origin or credentials. The visible Demo label identifies synthetic data; in-memory changes reset after reload. Static publishing does not run Nginx or establish a live backend connection. The existing `noindex,nofollow` metadata is retained. Vercel's Git connection can rebuild this demo from `main`; the GitHub verification workflow remains a separate check.
+
+After publication, verify the root page and direct `/scanner`, `/billing`, `/auth/login` and `/account/security` links, local assets and runtime configuration, a sample search, and absence of backend/WebSocket traffic. The SPA rewrite follows the [official Vite hosting guidance](https://vercel.com/docs/frameworks/frontend/vite#using-vite-to-make-spas). Follow the container sections below for the live service.
 
 ### Why the API has a prefix
 
