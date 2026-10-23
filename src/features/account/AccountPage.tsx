@@ -27,7 +27,7 @@ export function AccountPage() {
 }
 
 function ProfilePanel({ user }: { user: Profile }) {
-  const { api, refreshSession, preferences, setPreferences } = useApp();
+  const { api, refreshSession } = useApp();
   const update = useOperation();
   const verify = useOperation();
   const [pending, setPending] = useState(false);
@@ -62,7 +62,7 @@ function ProfilePanel({ user }: { user: Profile }) {
     </div>
     <div className="stack">
       <Card><h2 className="section-title">Your access</h2><dl className="account-facts"><div><dt>Current plan</dt><dd>{user.subscription?.type ?? '—'}</dd></div><div><dt>Search credits</dt><dd>{formatNumber(user.credits)}</dd></div><div><dt>Scan credits</dt><dd>{formatNumber(user.scan_credits)}</dd></div><div><dt>User ID</dt><dd className="mono account-break">{user.user_id ?? '—'}</dd></div></dl><Link to="/billing" className="inline-link">View subscription →</Link></Card>
-      <Card><h2 className="section-title">Make it yours</h2><div className="stack"><label className="account-select-label">Appearance<select value={preferences.theme} onChange={(event) => setPreferences({ theme: event.target.value as 'light' | 'dark' | 'system' })}><option value="system">Use device setting</option><option value="light">Light</option><option value="dark">Dark</option></select></label><label className="account-select-label">Information density<select value={preferences.density} onChange={(event) => setPreferences({ density: event.target.value as 'comfortable' | 'compact' })}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></div></Card>
+      <Card><h2 className="section-title">Workspace settings</h2><p className="muted">Theme, layout, text size and motion, all in one place.</p><Link className="inline-link" to="/settings">Open settings →</Link></Card>
     </div>
   </div>;
 }

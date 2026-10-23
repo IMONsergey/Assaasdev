@@ -30,6 +30,8 @@ test('HTTP 202 requires TOTP before authenticated workspace access', async ({ pa
   await page.getByLabel('Authenticator code').fill('123456');
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(page).toHaveURL(/\/search$/);
-  await expect(page.getByText('contract_test', { exact: true })).toBeVisible();
+  const accountLink = page.getByRole('link', { name: 'Account', exact: true });
+  await expect(accountLink).toBeVisible();
+  await expect(accountLink).toHaveAttribute('title', 'contract_test');
   expect(writes).toEqual(['/backend/auth/login', '/backend/auth/totp/verify']);
 });

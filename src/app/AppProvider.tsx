@@ -17,11 +17,14 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 const api = config.dataMode === 'demo' ? createDemoApi() : createApiClient({ apiBaseUrl: config.apiBaseUrl, wsUrl: config.wsUrl });
 const PREFS_KEY = 'apcosys.view.v1';
-const defaults: Preferences = { theme: 'system', density: 'comfortable', language: 'en', fontScale: 100, reducedMotion: false };
+const defaults: Preferences = { theme: 'light', density: 'comfortable', language: 'en', fontScale: 100, reducedMotion: false };
 function readPreferences(): Preferences {
   try {
     const value = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
-    return { theme: ['light', 'dark', 'system'].includes(value.theme) ? value.theme : defaults.theme, density: value.density === 'compact' ? 'compact' : 'comfortable', language: 'en', fontScale: [100, 112, 125].includes(value.fontScale) ? value.fontScale : 100, reducedMotion: value.reducedMotion === true };
+    const savedTheme = ['light', 'dark', 'system'].includes(value.theme) ? value.theme : defaults.theme;
+    // The previous default was automatically persisted as System. Migrate that legacy default once.
+    const theme = savedTheme === 'system' && value.appearanceVersion !== 2 ? defaults.theme : savedTheme;
+    return { theme, density: value.density === 'compact' ? 'compact' : 'comfortable', language: 'en', fontScale: [100, 112, 125].includes(value.fontScale) ? value.fontScale : 100, reducedMotion: value.reducedMotion === true };
   } catch { return defaults; }
 }
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -99,7 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (frame.type === 'high_load_status') { const data = frame.data as { enabled?: boolean; message?: string } | undefined; setHighLoad(data?.enabled ? data.message || 'Search is taking longer than usual.' : null); }
   }), []);
   useEffect(() => {
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); } catch { /* Preferences also work when browser storage is unavailable. */ }
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...preferences, appearanceVersion: 2 })); } catch { /* Preferences also work when browser storage is unavailable. */ }
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => { const element = document.documentElement; element.dataset.theme = preferences.theme === 'system' ? media.matches ? 'dark' : 'light' : preferences.theme; element.dataset.density = preferences.density; element.dataset.reducedMotion = String(preferences.reducedMotion); element.style.setProperty('--font-scale', String(preferences.fontScale / 100)); element.lang = 'en'; };
     apply(); media.addEventListener('change', apply); return () => media.removeEventListener('change', apply);

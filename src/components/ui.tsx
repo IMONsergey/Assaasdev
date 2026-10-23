@@ -52,11 +52,12 @@ export function Pagination({ page, pageSize, count, total, maxPage, onPageChange
 }
 
 const figmaIcons: Record<string, string> = { search: 'home/imgIconSearch.svg', database: 'home/imgIconDatabase.svg', files: 'home/imgIconDatabase.svg', scan: 'home/imgIconScan.svg', code: 'home/imgIconCode.svg', api: 'home/imgIconCode.svg', card: 'home/imgIconCard.svg', bell: 'home/imgIconBell.svg', copy: 'results-heading/imgIconCopy.svg', download: 'results-heading/imgIconDownload.svg', external: 'host/imgIconExternal.svg' };
+const tablerIcons = new Set(['settings', 'help-circle', 'bookmark', 'chevrons-left', 'chevrons-right']);
 const paths: Record<string, ReactNode> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>, close: <path d="m6 6 12 12M6 18 18 6" />,
   'chevron-left': <path d="m14 5-7 7 7 7" />, 'chevron-right': <path d="m10 5 7 7-7 7" />, 'chevron-down': <path d="m5 9 7 7 7-7" />,
   plus: <path d="M12 5v14M5 12h14" />, arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
-  check: <path d="m5 12 4 4L19 6" />, settings: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2" /></>,
+  check: <path d="m5 12 4 4L19 6" />,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></>,
   moon: <path d="M20 14.3A8.5 8.5 0 0 1 9.7 4a8.5 8.5 0 1 0 10.3 10.3Z" />,
   refresh: <><path d="M20 4v5h-5M4 20v-5h5" /><path d="M5.5 8a7 7 0 0 1 12-2L20 9M4 15l2.5 3a7 7 0 0 0 12-2" /></>,
@@ -71,6 +72,7 @@ const paths: Record<string, ReactNode> = {
   list: <path d="M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01" />,
 };
 export function Icon({ name, size = 20, className }: { name: string; size?: number; className?: string }) {
-  if (figmaIcons[name]) return <img className={join('icon icon--figma', className)} src={asset(`figma/${figmaIcons[name]}`)} width={size} height={size} alt="" aria-hidden="true" />;
+  const iconPath = figmaIcons[name] ? `figma/${figmaIcons[name]}` : tablerIcons.has(name) ? `icons/${name}.svg` : null;
+  if (iconPath) return <span className={join('icon icon--asset', className)} style={{ width: size, height: size, maskImage: `url("${asset(iconPath)}")`, WebkitMaskImage: `url("${asset(iconPath)}")` }} aria-hidden="true" />;
   return <svg className={join('icon', className)} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.info}</svg>;
 }

@@ -26,6 +26,10 @@ for (const width of [1440, 390, 320]) {
         throw error;
       }
       await expect.poll(() => page.locator('img:visible').evaluateAll(images => images.every(node => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0))).toBe(true);
+      if (route === '/search' || route === '/settings') {
+        await page.evaluate(() => document.fonts.ready);
+        await page.screenshot({ path: test.info().outputPath(`${route.slice(1)}-${width}.png`), fullPage: false });
+      }
       if (route === '/scanner' && width < 720) {
         const action = page.getByRole('button', { name: 'Delete', exact: true }).first();
         await action.scrollIntoViewIfNeeded();
@@ -38,20 +42,104 @@ for (const width of [1440, 390, 320]) {
   });
 }
 
+test('search opens with a centered single-line title and keeps the query after cancelling filters', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto('/search');
+  const heading = page.getByRole('heading', { name: 'Search internet infrastructure', exact: true });
+  const query = page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true });
+  const form = page.locator('form').filter({ has: query });
+  await expect(heading).toBeVisible();
+  await expect(query).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const main = await page.getByRole('main').boundingBox();
+  const search = await form.boundingBox();
+  const title = await heading.evaluate(element => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lines = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0);
+    const bounds = range.getBoundingClientRect();
+    return { lines: new Set(lines.map(rect => Math.round(rect.top))).size, center: bounds.x + bounds.width / 2, top: bounds.top };
+  });
+  expect(main).not.toBeNull();
+  expect(search).not.toBeNull();
+  const mainCenter = main!.x + main!.width / 2;
+  expect(title.lines).toBe(1);
+  expect(Math.abs(title.center - mainCenter)).toBeLessThan(main!.width * 0.03);
+  expect(Math.abs(search!.x + search!.width / 2 - mainCenter)).toBeLessThan(main!.width * 0.03);
+  expect(search!.width).toBeGreaterThan(main!.width * 0.45);
+  expect(search!.width).toBeLessThan(main!.width * 0.8);
+  expect(title.top).toBeGreaterThan(960 * 0.25);
+  expect(search!.y + search!.height).toBeLessThan(960 * 0.75);
+  await page.screenshot({ path: test.info().outputPath('search-reference-1440.png'), fullPage: false });
+
+  await query.fill('nginx');
+  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  const conditions = page.getByRole('region', { name: 'Conditions', exact: true });
+  await expect(conditions).toBeVisible();
+  await conditions.getByRole('button', { name: 'Add condition', exact: true }).click();
+  await conditions.getByLabel('Field', { exact: true }).fill('country_code');
+  await conditions.getByLabel('Value', { exact: true }).fill('zz');
+  await conditions.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(conditions).toHaveCount(0);
+  await expect(query).toHaveValue('nginx');
+  await page.getByRole('button', { name: 'Run search', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '4 hosts returned', exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('q')).toBe('nginx');
+  expect(page.url()).not.toContain('country_code');
+});
+
+test('desktop navigation collapses, keeps Settings accessible and expands again', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto('/search');
+  const navigation = page.getByRole('complementary', { name: 'Workspace navigation' });
+  const main = page.getByRole('main');
+  const collapse = navigation.getByRole('button', { name: 'Collapse navigation', exact: true });
+  await expect(collapse).toHaveAttribute('aria-expanded', 'true');
+  const expandedMain = await main.boundingBox();
+  expect(expandedMain).not.toBeNull();
+  await collapse.click();
+  const expand = navigation.getByRole('button', { name: 'Expand navigation', exact: true });
+  await expect(expand).toHaveAttribute('aria-expanded', 'false');
+  await expect.poll(async () => (await main.boundingBox())?.width ?? 0).toBeGreaterThan(expandedMain!.width);
+
+  await navigation.getByRole('link', { name: 'Settings', exact: true }).click();
+  await expect(page).toHaveURL(/\/settings(?:\?|$)/);
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Appearance', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('button', { name: 'Light theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(navigation.getByRole('button', { name: /^(Light|Dark|System) theme$/ })).toHaveCount(0);
+  await expand.click();
+  await expect(collapse).toHaveAttribute('aria-expanded', 'true');
+  await expect(navigation.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
 test('view preferences survive reload and leave no account data in local storage', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('apcosys.view.v1')) localStorage.setItem('apcosys.view.v1', JSON.stringify({ theme: 'system', density: 'comfortable', language: 'en', fontScale: 100, reducedMotion: false }));
+  });
   await page.goto('/settings');
-  await page.getByRole('button', { name: /Dark A quieter/ }).click();
+  await expect(page.getByRole('button', { name: 'Light theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', { name: 'Dark theme', exact: true }).click();
   await page.getByLabel('Interface density').selectOption('compact');
   await page.getByLabel('Text size').selectOption('125');
+  await page.getByRole('switch', { name: 'Reduce interface motion', exact: true }).check();
   await page.reload();
+  await expect(page.getByRole('button', { name: 'Dark theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
   await expect(page.getByLabel('Text size')).toHaveValue('125');
+  await expect(page.getByRole('switch', { name: 'Reduce interface motion', exact: true })).toBeChecked();
   const storage = await page.evaluate(() => ({ keys: Object.keys(localStorage), values: Object.values(localStorage).join('') }));
   expect(storage.keys).toEqual(['apcosys.view.v1']);
   expect(storage.values).not.toMatch(/alex|api_key|session_id|backup|password|full_text_search/i);
+  await page.screenshot({ path: test.info().outputPath('settings-dark-large-text-1440.png'), fullPage: false });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('settings-dark-large-text-390.png'), fullPage: false });
 });
 
 test('mobile navigation traps focus, closes on Escape and opens the selected view', async ({ page }) => {
