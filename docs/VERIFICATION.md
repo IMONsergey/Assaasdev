@@ -1,8 +1,8 @@
 # Verification — 23 October 2026
 
-The final local source revision passed **TypeScript, 81 unit tests, the production build and all 19 committed browser tests**. The browser tests use Firefox with the explicit demo adapter or an intercepted local HTTP fixture. These results verify client behavior; they do not certify the customer's deployed backend.
+The complete local run for initial commit `507eb481` passed **TypeScript, 81 unit tests, the production build and all 19 committed browser tests**. The browser tests use Firefox with the explicit demo adapter or an intercepted local HTTP fixture. These results verify client behavior; they do not certify the customer's deployed backend.
 
-The machine-readable record is [verification.json](evidence/verification.json). Its source fingerprint identifies the application/config/test files checked before publication. The committed [GitHub Actions workflow](../.github/workflows/ci.yml) runs Chromium and a separate container fixture; consult [Actions](https://github.com/IMONsergey/Assaasdev/actions) for remote execution results.
+The machine-readable record is [verification.json](evidence/verification.json). Its source fingerprint identifies the initial application/config/test files checked before publication. The committed [GitHub Actions workflow](../.github/workflows/ci.yml) runs Chromium and a separate container fixture; consult [Actions](https://github.com/IMONsergey/Assaasdev/actions) for remote execution results.
 
 ## Final repeatable checks
 
@@ -56,6 +56,16 @@ These focused passes helped find and fix defects while building the application.
 | [Screenshot manifest](evidence/screenshots.json) | Nine unedited selected browser captures with SHA-256 checksums and source capture names. See the [gallery](GALLERY.md). |
 
 Earlier browser failures were addressed before the final suite: a test's sign-in button selector, contrast on the Business-plan action, an invalid accessible label on a status dot and a transient billing resize observation. Export finalization was additionally hardened against disk commit failure. Successful repeat runs do not erase those earlier observations.
+
+## First GitHub CI run and Chromium correction
+
+[Run 39952030517](https://github.com/IMONsergey/Assaasdev/actions/runs/39952030517), on initial commit `507eb481`, passed dependency installation, TypeScript, all 81 unit tests and the production build. Its **container job passed**, including SPA routes, runtime configuration, Pending2FA HTTP202, cookie flags, preserved Origin, API errors, OAuth redirect, unbuffered streaming, explicit WebSocket CSP and a real proxy upgrade against the isolated fixture.
+
+Chromium passed 17 of 19 browser tests. Both failures were the same reproducible layout problem: `/scanner` document overflow at 390 and 320 px. The earlier Firefox pass did not establish Chromium compatibility.
+
+The corrective change makes the scanner table's scroll wrapper a positioned containing block. This keeps its absolute, visually hidden column labels inside the local scrolling region. It does not hide page overflow or remove table actions. The route regression additionally scrolls to the rightmost Delete action and verifies both its visibility and the unchanged document width. Failure diagnostics now attach the concrete overflow bounds for future investigation. The [local containing-block control](evidence/scanner-layout-correction.json) records the off-screen label coordinates, its parent before/after, and accessible table scrolling at both mobile widths.
+
+The current [Actions page](https://github.com/IMONsergey/Assaasdev/actions) records the corrective run independently of the initial failure. Live backend acceptance remains separate even when both CI jobs pass.
 
 ## What remains an integration gate
 

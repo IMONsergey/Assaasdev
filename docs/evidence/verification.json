@@ -496,11 +496,17 @@
     },
     "localDocker": "NOT_RUN",
     "clientBackend": "NOT_RUN",
-    "remoteCI": "See GitHub Actions for the published commit"
+    "remoteCI": {
+      "runId": 39952030517,
+      "url": "https://github.com/IMONsergey/Assaasdev/actions/runs/39952030517",
+      "container": "PASS",
+      "application": "17/19 browser tests passed; scanner mobile overflow in Chromium led to corrective commit; see current Actions run."
+    }
   },
   "boundaries": [
     "No real email, OAuth provider, card payment, blockchain transfer, customer scan or live export was executed.",
     "Accessibility and viewport checks cover selected pages and states, not full certification.",
     "Historical 548 design states and 3868 research cases are not executed runtime-test counts."
-  ]
+  ],
+  "sourceRevision": "507eb4817f4c946d2a4227a042e1c4c52fcc96e2"
 }

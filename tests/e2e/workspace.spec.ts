@@ -11,8 +11,28 @@ for (const width of [1440, 390, 320]) {
       await expect(page.locator('main')).toBeVisible();
       await expect(page.locator('h1')).toBeVisible();
       await expect(page.locator('body')).not.toContainText('This view could not be displayed');
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+      try {
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+      } catch (error) {
+        const layout = await page.evaluate(() => ({
+          route: location.pathname, viewport: innerWidth, document: document.documentElement.scrollWidth,
+          outside: [...document.body.querySelectorAll('*')].map(node => {
+            const box = node.getBoundingClientRect(), css = getComputedStyle(node);
+            return { tag: node.tagName, className: node.className, text: node.textContent?.trim().slice(0, 60), left: box.left, right: box.right, width: box.width, position: css.position, overflowX: css.overflowX, containingBlock: (node as HTMLElement).offsetParent?.className };
+          }).filter(node => node.width > 0 && node.right > innerWidth + 1),
+        }));
+        await test.info().attach('layout-overflow.json', { body: JSON.stringify(layout, null, 2), contentType: 'application/json' });
+        console.error('LAYOUT_OVERFLOW', JSON.stringify(layout));
+        throw error;
+      }
       await expect.poll(() => page.locator('img:visible').evaluateAll(images => images.every(node => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0))).toBe(true);
+      if (route === '/scanner' && width < 720) {
+        const action = page.getByRole('button', { name: 'Delete', exact: true }).first();
+        await action.scrollIntoViewIfNeeded();
+        await expect(action).toBeInViewport();
+        expect(await page.locator('.scanner-tasks-table-wrap').evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+      }
     });
     expect(exceptions).toEqual([]);
   });

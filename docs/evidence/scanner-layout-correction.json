@@ -1,0 +1,92 @@
+{
+  "browser": "Firefox local control, not Chromium acceptance",
+  "widths": [
+    {
+      "width": 390,
+      "baseline": {
+        "viewport": 390,
+        "document": 390,
+        "wrapper": {
+          "position": "static",
+          "left": 16,
+          "right": 374,
+          "clientWidth": 356,
+          "scrollWidth": 740
+        },
+        "actionsLabel": {
+          "position": "absolute",
+          "offsetParent": "BODY",
+          "left": 661.2000122070312,
+          "right": 662.2000122070312,
+          "width": 1
+        },
+        "globalOverflowX": "visible"
+      },
+      "patched": {
+        "viewport": 390,
+        "document": 390,
+        "wrapper": {
+          "position": "relative",
+          "left": 16,
+          "right": 374,
+          "clientWidth": 356,
+          "scrollWidth": 740
+        },
+        "actionsLabel": {
+          "position": "absolute",
+          "offsetParent": "scanner-tasks-table-wrap",
+          "left": 661.2000122070312,
+          "right": 662.2000122070312,
+          "width": 1
+        },
+        "globalOverflowX": "visible"
+      },
+      "localScroll": 384,
+      "status": "PASS_LOCAL_CONTROL"
+    },
+    {
+      "width": 320,
+      "baseline": {
+        "viewport": 320,
+        "document": 320,
+        "wrapper": {
+          "position": "static",
+          "left": 16,
+          "right": 304,
+          "clientWidth": 286,
+          "scrollWidth": 740
+        },
+        "actionsLabel": {
+          "position": "absolute",
+          "offsetParent": "BODY",
+          "left": 661.2000122070312,
+          "right": 662.2000122070312,
+          "width": 1
+        },
+        "globalOverflowX": "visible"
+      },
+      "patched": {
+        "viewport": 320,
+        "document": 320,
+        "wrapper": {
+          "position": "relative",
+          "left": 16,
+          "right": 304,
+          "clientWidth": 286,
+          "scrollWidth": 740
+        },
+        "actionsLabel": {
+          "position": "absolute",
+          "offsetParent": "scanner-tasks-table-wrap",
+          "left": 661.2000122070312,
+          "right": 662.2000122070312,
+          "width": 1
+        },
+        "globalOverflowX": "visible"
+      },
+      "localScroll": 454,
+      "status": "PASS_LOCAL_CONTROL"
+    }
+  ],
+  "status": "PASS_LOCAL_CONTROL_REQUIRES_CHROMIUM_CI"
+}
