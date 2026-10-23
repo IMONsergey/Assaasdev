@@ -20,7 +20,7 @@ function checkedResult(value: unknown, view: FilesView): BucketResults | BucketA
 }
 
 function FileGlyph({ extension }: { extension?: string }) {
-  return <span className="files-record-glyph" aria-hidden="true"><img src={asset('figma/files/imgIconFile.svg')} width="20" height="20" alt="" />{extension && <small>{extension.slice(0, 4).toUpperCase()}</small>}</span>;
+  return <span className="files-record-glyph" aria-hidden="true"><span className="files-file-icon" style={{ maskImage: `url(${asset('figma/files/imgIconFile.svg')})`, WebkitMaskImage: `url(${asset('figma/files/imgIconFile.svg')})` }} />{extension && <small>{extension.slice(0, 4).toUpperCase()}</small>}</span>;
 }
 
 export function FilesPage() {
@@ -51,9 +51,18 @@ export function FilesPage() {
     },
   });
   useEffect(() => {
-    if (lastWritten.current === serialized) return;
+    if (lastWritten.current === serialized) { lastWritten.current = ''; return; }
     setDraft(draftFromFilter(restored.filter)); setView(restored.view); setFormError('');
-  }, [serialized, restored]);
+    setSelected(null); setExportOpen(false); setPaused(false);
+    // Back/forward restores a completed response without silently billing another search.
+    const canonical = fileParams(restored.filter, restored.view).toString();
+    const cached = queryClient.getQueryCache().findAll({ queryKey: ['bucket-results', principal, instanceId] })
+      .filter(entry => entry.state.status === 'success')
+      .map(entry => entry.state.data as Result | undefined)
+      .sort((a, b) => (b?.sequence ?? 0) - (a?.sequence ?? 0))
+      .find(entry => entry && entry.view === restored.view && fileParams(entry.filter, entry.view).toString() === canonical);
+    setJob(cached ?? null);
+  }, [serialized, restored, principal, instanceId, queryClient]);
   useEffect(() => { setJob(null); setPaused(false); setSelected(null); setExportOpen(false); }, [principal]);
   useEffect(() => {
     // At most six completed result snapshots; no data survives a principal change.
@@ -91,17 +100,20 @@ export function FilesPage() {
   }
   async function stop() { setPaused(true); await queryClient.cancelQueries({ queryKey, exact: true }); }
   async function copy(value: string) { try { await navigator.clipboard.writeText(value); toast('Copied to clipboard.', 'success'); } catch { toast('Copy was blocked by the browser. Select the text and copy it manually.', 'error'); } }
-  function openFilters() { setAdvanced(true); requestAnimationFrame(() => filterPanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }
+  function openFilters() {
+    setAdvanced(true);
+    requestAnimationFrame(() => filterPanel.current?.querySelector<HTMLElement>('select, input')?.focus());
+  }
 
   return <div className="files-page stack">
     <PageHeader title="Find files in cloud storage" description="Search indexed file records and inspect their metadata." />
-    <Tabs items={[{ id: 'files', label: 'Files' }, { id: 'hosts', label: 'Buckets' }]} value={view} onChange={value => { setView(value as FilesView); setSelected(null); }} />
+    <Tabs items={[{ id: 'files', label: 'Files' }, { id: 'hosts', label: 'Buckets' }]} value={view} onChange={value => { setView(value as FilesView); setSelected(null); const next = new URLSearchParams(params); next.set('view', value); lastWritten.current = next.toString(); setParams(next); }} />
     {restored.error && <Alert tone="error" title="These file filters could not be restored" actions={<Button variant="secondary" onClick={() => { lastWritten.current = ''; setParams({}); }}>Start a new search</Button>}>{restored.error}</Alert>}
     {!permitted && session.status !== 'loading' && <Alert tone="info" title={hasAccount ? 'File search is available on Plus and above' : 'Sign in to search files'} actions={<Link className="inline-link" to={hasAccount ? '/billing' : '/auth/login?returnTo=%2Ffiles'}>{hasAccount ? 'Compare plans' : 'Continue to sign in'} →</Link>}>Prepare your filters below. Files and bucket analytics use your account’s search access.</Alert>}
 
     <form className="files-filter-surface" onSubmit={submit} aria-label="File search filters">
       <div className="files-primary-grid">
-        <Field label="Hostname" placeholder="Any hostname" value={draft.host} onChange={event => edit('host', event.target.value)} />
+        <Field autoComplete="off" spellCheck={false} label="Hostname" placeholder="Any hostname" value={draft.host} onChange={event => edit('host', event.target.value)} />
         <Field label="Keywords" placeholder="documentation, report" value={draft.keywords} onChange={event => edit('keywords', event.target.value)} />
         <Field label="Stopwords" placeholder="backup, tmp" value={draft.stopWords} onChange={event => edit('stopWords', event.target.value)} />
         <Field label="Extensions" placeholder="pdf, txt" value={draft.extensions} onChange={event => edit('extensions', event.target.value)} />
@@ -109,8 +121,8 @@ export function FilesPage() {
         <Field label="Size to · MB" type="number" min="0" step="any" placeholder="No upper limit" value={draft.maxSize} onChange={event => edit('maxSize', event.target.value)} />
       </div>
       <div className="files-filter-actions">
-        <Button type="submit" loading={loading} disabled={!permitted}>{view === 'files' ? 'Search files' : 'Search buckets'}<img src={asset('figma/files/imgIconSearch1.svg')} width="20" height="20" alt="" /></Button>
-        <Button variant="secondary" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced} aria-controls="files-more-filters">{advanced ? 'Fewer filters' : 'More filters'}<img src={asset('figma/files/imgIconFilter.svg')} width="20" height="20" alt="" /></Button>
+        <Button type="submit" loading={loading} disabled={!permitted}>{view === 'files' ? 'Search files' : 'Search buckets'}<Icon name="search" size={20} /></Button>
+        <Button variant="secondary" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced} aria-controls="files-more-filters">{advanced ? 'Fewer filters' : 'More filters'}<Icon name="filter" size={20} /></Button>
         {draft.products && <Badge>Products · {draft.products.split(',').filter(part => part.trim()).length}</Badge>}
         {draft.alphabets && <Badge>Alphabets · {draft.alphabets}</Badge>}
         <span className="files-request-cost">1 search credit per request</span>
@@ -127,6 +139,7 @@ export function FilesPage() {
           <fieldset><legend>Last updated · UTC</legend><Field label="From, inclusive" type="datetime-local" step="1" value={draft.updatedFrom} onChange={event => edit('updatedFrom', event.target.value)} /><Field label="To, inclusive" type="datetime-local" step="1" value={draft.updatedTo} onChange={event => edit('updatedTo', event.target.value)} /></fieldset>
         </div>
         <div className="files-sorting-grid"><SelectField label="Sort order" value={draft.sort} onChange={event => edit('sort', event.target.value)}><option value="uts:desc">Most recently updated</option><option value="uts:asc">Least recently updated</option><option value="cts:desc">Most recently discovered</option><option value="cts:asc">Earliest discovered</option><option value="size_mb:desc">Largest first</option><option value="size_mb:asc">Smallest first</option></SelectField><SelectField label="Rows per page" value={draft.pageSize} onChange={event => edit('pageSize', event.target.value)}>{[10, 20, 25, 50].map(size => <option key={size} value={size}>{size}</option>)}{![10, 20, 25, 50].includes(Number(draft.pageSize)) && <option value={draft.pageSize}>{draft.pageSize}</option>}</SelectField></div>
+        <div className="files-advanced-actions"><Button type="submit" loading={loading} disabled={!permitted}>Apply filters</Button><Button variant="ghost" onClick={() => setAdvanced(false)}>Close filters</Button></div>
       </div>}
       {formError && <Alert tone="error" title="Check your filters">{formError}</Alert>}
     </form>
@@ -140,7 +153,7 @@ export function FilesPage() {
     {shown && response && <section className="files-result-section" aria-label={view === 'files' ? 'File results' : 'Bucket results'}>
       <div className="files-result-heading"><div><h2>{response.result_count.toLocaleString()} {view === 'files' ? 'file records' : 'bucket records'}</h2><p>{response.result.length.toLocaleString()} loaded · Page {shown.filter.page ?? 1}{previousResults ? ' · Previous response' : ''}</p></div><Button variant="secondary" size="sm" disabled={loading || !response.result.length || previousResults} onClick={() => setExportOpen(true)}>Download records<Icon name="download" size={20} /></Button></div>
       {appliedChips.length > 0 && <div className="files-applied-chips" aria-label="Applied filters"><span>Applied</span>{appliedChips.map(chip => <span key={chip}>{chip}</span>)}</div>}
-      {response.result.length > 0 ? view === 'files' ? <div className="files-table-wrap"><table className="files-table"><caption className="files-sr-only">Indexed file records returned by the server</caption><thead><tr><th>File / bucket</th><th>Size</th><th>Type</th><th>Last updated</th></tr></thead><tbody>{(response as BucketResults).result.map((file, index) => <tr key={`${file.host}/${file.container}/${file.key}/${index}`}><td><div className="files-name-row"><FileGlyph extension={file.extension} /><button type="button" className="files-record-name" onClick={() => setSelected(file)}>{fileName(file)}</button></div><div className="files-record-path">{bucketIdentity(file.host, file.container) || 'Bucket not provided'}{file.key?.includes('/') ? <span> / {file.key.slice(0, file.key.lastIndexOf('/'))}</span> : null}</div></td><td data-label="Size">{fileSize(file.size_mb)}</td><td data-label="Type"><span className="files-extension">{file.extension?.toUpperCase() || 'Not observed'}</span></td><td data-label="Last updated"><time dateTime={file.uts ? new Date(file.uts * 1000).toISOString() : undefined}>{formatTimestamp(file.uts)}</time></td></tr>)}</tbody></table></div> : <div className="files-table-wrap"><table className="files-table files-table--buckets"><caption className="files-sr-only">Bucket groups and observed file counts</caption><thead><tr><th>Bucket / container</th><th>Matching files</th><th>Explore</th></tr></thead><tbody>{(response as BucketAnalytics).result.map((bucket, index) => <tr key={`${bucket.host}/${bucket.container}/${index}`}><td><div className="files-bucket-name"><Icon name="database" size={19} /><strong>{bucket.host}</strong></div>{bucket.container && <span className="files-record-path">{bucket.container}</span>}</td><td data-label="Matching files">{bucket.file_count.toLocaleString()}</td><td><Button variant="secondary" size="sm" disabled={loading} onClick={() => run({ ...shown.filter, host: bucketIdentity(bucket.host, bucket.container), page: 1 }, 'files', true)}>Search this bucket<Icon name="arrow" size={15} /></Button></td></tr>)}</tbody></table></div> : <EmptyState title={view === 'files' ? 'No files match this search' : 'No buckets match this search'} description="Try a broader keyword, remove stopwords or adjust the file filters." actions={<Button variant="secondary" onClick={openFilters}>Edit filters</Button>} />}
+      {response.result.length > 0 ? view === 'files' ? <div className="files-table-wrap"><table className="files-table"><caption className="files-sr-only">Indexed file records returned by the server</caption><thead><tr><th>File / bucket</th><th>Size</th><th>Type</th><th>Last updated</th></tr></thead><tbody>{(response as BucketResults).result.map((file, index) => <tr key={`${file.host}/${file.container}/${file.key}/${index}`}><td><div className="files-name-row"><FileGlyph extension={file.extension} /><button type="button" className="files-record-name" onClick={() => setSelected(file)}>{fileName(file)}</button></div><div className="files-record-path">{bucketIdentity(file.host, file.container) || 'Bucket not provided'}{file.key?.includes('/') ? <span> / {file.key.slice(0, file.key.lastIndexOf('/'))}</span> : null}</div></td><td data-label="Size">{fileSize(file.size_mb)}</td><td data-label="Type"><span className="files-extension">{file.extension?.toUpperCase() || 'Not observed'}</span></td><td data-label="Last updated"><time dateTime={file.uts && Number.isFinite(new Date(file.uts * 1000).getTime()) ? new Date(file.uts * 1000).toISOString() : undefined}>{formatTimestamp(file.uts)}</time></td></tr>)}</tbody></table></div> : <div className="files-table-wrap"><table className="files-table files-table--buckets"><caption className="files-sr-only">Bucket groups and observed file counts</caption><thead><tr><th>Bucket / container</th><th>Matching files</th><th>Explore</th></tr></thead><tbody>{(response as BucketAnalytics).result.map((bucket, index) => <tr key={`${bucket.host}/${bucket.container}/${index}`}><td><div className="files-bucket-name"><Icon name="database" size={19} /><strong>{bucket.host}</strong></div>{bucket.container && <span className="files-record-path">{bucket.container}</span>}</td><td data-label="Matching files">{bucket.file_count.toLocaleString()}</td><td><Button variant="secondary" size="sm" disabled={loading} onClick={() => run({ ...shown.filter, host: bucketIdentity(bucket.host, bucket.container), page: 1 }, 'files', true)}>Search this bucket<Icon name="arrow" size={15} /></Button></td></tr>)}</tbody></table></div> : <EmptyState title={view === 'files' ? 'No files match this search' : 'No buckets match this search'} description="Try a broader keyword, remove stopwords or adjust the file filters." actions={<Button variant="secondary" onClick={openFilters}>Edit filters</Button>} />}
       <div className={loading ? 'files-pagination-disabled' : ''} inert={loading || undefined}><Pagination page={shown.filter.page ?? 1} pageSize={shown.filter.docs_per_page ?? 20} count={response.result.length} total={response.result_count} maxPage={maxPage} onPageChange={page => run({ ...shown.filter, page }, view)} /></div>
       <p className="files-result-note">Counts are the server’s reported {view === 'files' ? 'file records' : 'bucket groups'}. {view === 'hosts' ? 'Each group has its own matching file count. ' : ''}Stored size uses MB; an absent size is shown separately from zero.</p>
     </section>}

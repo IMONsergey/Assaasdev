@@ -103,6 +103,33 @@ export function searchPath(dataset: Dataset): string { return dataset === 'priva
 export function withoutShareToken(request: SearchRequest): SearchRequest { const { st: _st, share_token: _shareToken, ...body } = request; return body; }
 export function isShared(request: SearchRequest): boolean { return Boolean(request.st || request.share_token); }
 
+
+/** Analytics describes the matching set; presentation changes do not need another paid request.
+ * Shared tokens are bound to the exact body, so their payload must remain untouched. */
+export function analyticsRequest(request: SearchRequest): SearchRequest {
+  if (isShared(request)) return request;
+  const { page: _page, docs_per_page: _rows, sort_field: _sort, sort_direction: _direction, ...conditions } = request;
+  return conditions;
+}
+
+function isFacetCondition(filter: SearchFilter, field: string): boolean {
+  return !filter.operator ? filter.field === field : filter.operator === 'OR' && Boolean(filter.filters?.length) && filter.filters!.every(child => !child.operator && child.field === field);
+}
+
+/** Only direct facet rules are managed here; mixed or negated advanced groups stay intact. */
+export function activeFacetValues(request: SearchRequest, field: string): string[] {
+  return [...new Set((request.simple_search_filters || []).filter(filter => isFacetCondition(filter, field)).flatMap(filter => filter.operator ? filter.filters!.map(child => child.value!) : [filter.value!]))];
+}
+
+export function toggleFacet(request: SearchRequest, field: string, value: string): SearchRequest {
+  const current = activeFacetValues(request, field);
+  const values = current.includes(value) ? current.filter(item => item !== value) : [...current, value];
+  const filters = (request.simple_search_filters || []).filter(filter => !isFacetCondition(filter, field));
+  if (values.length === 1) filters.push({ field, value: values[0] });
+  else if (values.length > 1) filters.push({ operator: 'OR', filters: values.map(item => ({ field, value: item })) });
+  return { ...request, simple_search_filters: filters, page: 1 };
+}
+
 function stripField(nodes: SearchFilter[], field: string): SearchFilter[] {
   return nodes.flatMap(node => {
     if (!node.operator) return node.field === field ? [] : [node];

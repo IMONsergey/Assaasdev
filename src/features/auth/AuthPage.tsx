@@ -4,7 +4,7 @@ import { ApiError } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { asset } from '../../config';
 import { Alert, Button, Field, Spinner } from '../../components/ui';
-import { authReducer, authStepForPath, initialAuthState, safeReturnPath, type AuthStep } from './auth-state';
+import { authReducer, authStepForPath, initialAuthState, normalizeOneTimeCode, safeReturnPath, type AuthStep } from './auth-state';
 import './auth.css';
 
 const copy: Record<AuthStep, { title: string; description: string; action: string }> = {
@@ -28,6 +28,7 @@ export function AuthPage() {
   const [state, dispatch] = useReducer(authReducer, initialAuthState(authStepForPath(location.pathname, location.search)));
   const [showPassword, setShowPassword] = useState(false);
   const [backup, setBackup] = useState(false);
+  const [code, setCode] = useState('');
   const [notice, setNotice] = useState('');
   const [guestBusy, setGuestBusy] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -43,6 +44,7 @@ export function AuthPage() {
     active.current?.abort();
     inFlight.current = false;
     setNotice('');
+    setCode('');
     dispatch({ type: 'navigate', step: authStepForPath(location.pathname, location.search), email: navigationState?.email, identifier: navigationState?.identifier });
   }, [location.pathname, location.search, navigationState?.email, navigationState?.identifier]);
 
@@ -71,6 +73,16 @@ export function AuthPage() {
     const form = new FormData(event.currentTarget);
     const value = (key: string) => String(form.get(key) ?? '');
     const password = value('password');
+    if (['login', 'recover', 'reset'].includes(state.step) && !value('identifier').trim()) {
+      setNotice('Enter your email or username. Spaces alone cannot identify an account.');
+      event.currentTarget.querySelector<HTMLInputElement>('[name="identifier"]')?.focus();
+      return;
+    }
+    if (state.step === 'register' && !value('user_name').trim()) {
+      setNotice('Enter a username. Spaces alone cannot identify an account.');
+      event.currentTarget.querySelector<HTMLInputElement>('[name="user_name"]')?.focus();
+      return;
+    }
     if ((state.step === 'register' || state.step === 'reset') && password !== value('confirmation')) {
       setNotice('The passwords do not match. Please check both fields.');
       return;
@@ -155,7 +167,7 @@ export function AuthPage() {
 
   async function continueAsGuest() {
     setGuestBusy(true);
-    try { await startGuest(); navigate('/search'); }
+    try { await startGuest(); navigate(returnTo); }
     catch (error) { setNotice(error instanceof Error ? error.message : 'Guest access could not be started.'); }
     finally { setGuestBusy(false); }
   }
@@ -184,10 +196,10 @@ export function AuthPage() {
           {state.step === 'register' && <Field label="Username" name="user_name" autoComplete="username" required disabled={busy} hint="Choose the name you will use to sign in." />}
           {hasPassword && <div className="auth-password"><Field label={state.step === 'reset' ? 'New password' : 'Password'} name="password" type={showPassword ? 'text' : 'password'} autoComplete={state.step === 'login' ? 'current-password' : 'new-password'} minLength={state.step === 'register' ? 18 : 6} required disabled={busy} hint={state.step === 'register' ? 'Use at least 18 characters.' : state.step === 'reset' ? 'Use at least 6 characters.' : undefined} /><button className="auth-password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Hide password' : 'Show password'}</button></div>}
           {(state.step === 'register' || state.step === 'reset') && <Field label="Confirm password" name="confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required disabled={busy} />}
-          {(state.step === 'verify' || state.step === 'reset' || state.step === 'two-factor') && <Field label={state.step === 'two-factor' ? backup ? 'Backup code' : 'Authenticator code' : state.step === 'reset' ? 'Reset code' : 'Verification code'} name="code" autoComplete="one-time-code" inputMode={backup ? 'text' : 'numeric'} minLength={state.step === 'reset' ? undefined : backup ? 8 : 6} maxLength={state.step === 'reset' ? undefined : backup ? 8 : 6} required disabled={busy} hint={backup ? 'Each 8-character backup code can be used once.' : undefined} />}
+          {(state.step === 'verify' || state.step === 'reset' || state.step === 'two-factor') && <Field label={state.step === 'two-factor' ? backup ? 'Backup code' : 'Authenticator code' : state.step === 'reset' ? 'Reset code' : 'Verification code'} name="code" value={code} onChange={event => setCode(state.step === 'reset' ? event.target.value : normalizeOneTimeCode(event.target.value))} autoComplete="one-time-code" inputMode={backup || state.step === 'reset' ? 'text' : 'numeric'} minLength={state.step === 'reset' ? undefined : backup ? 8 : 6} maxLength={state.step === 'reset' ? undefined : 64} pattern={state.step === 'reset' ? undefined : backup ? '.{8}' : '[0-9]{6}'} autoFocus={state.step === 'two-factor'} required disabled={busy} hint={backup ? 'Each 8-character backup code can be used once.' : state.step === 'reset' ? 'Paste the complete reset code from your email.' : 'Enter all 6 digits. You can paste a code with spaces.'} />}
           {state.step === 'login' && <Link className="auth-forgot inline-link" to={routes.recover} state={{ returnTo }}>Forgot password?</Link>}
           <Button fullWidth type="submit" loading={busy} disabled={state.phase === 'unknown' || coolingDown}>{copy[state.step].action}</Button>
-          {state.step === 'two-factor' && <Button type="button" variant="ghost" onClick={() => setBackup(!backup)} disabled={busy}>{backup ? 'Use an authenticator code' : 'Use a backup code'}</Button>}
+          {state.step === 'two-factor' && <Button type="button" variant="ghost" onClick={() => { setBackup(!backup); setCode(''); }} disabled={busy}>{backup ? 'Use an authenticator code' : 'Use a backup code'}</Button>}
         </form>}
         {state.step === 'login' && state.phase !== 'authenticated' && <><div className="auth-social"><Button fullWidth variant="secondary" onClick={() => window.location.assign(api.url('/auth/google'))} disabled={busy || mode === 'demo'}><img src={asset('figma/login/imgApcosysGoogle.svg')} width="20" height="20" alt="" aria-hidden="true" />Google</Button><Button fullWidth variant="secondary" disabled aria-describedby="telegram-availability"><img src={asset('figma/login/imgApcosysTelegram.svg')} width="20" height="20" alt="" aria-hidden="true" />Telegram</Button></div><p id="telegram-availability" className="auth-provider-note">{mode === 'demo' ? 'External sign-in providers are unavailable in this demo.' : 'Telegram is not configured for this environment.'}</p><p className="auth-switch">New to APCOSYS? <Link to={routes.register} state={{ returnTo }}>Create an account</Link></p></>}
 

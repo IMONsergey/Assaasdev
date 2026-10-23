@@ -97,3 +97,37 @@
 .host-page > .tabs { width: 100%; padding: 0; gap: 24px; border-radius: 0; background: transparent; border-bottom: 1px solid var(--line); }
 .host-page > .tabs button { min-height: 44px; padding: 0 0 12px; border: 0; border-radius: 0; background: transparent; font-size: 1.071429rem; }
 .host-page > .tabs button[aria-selected="true"] { box-shadow: none; background: transparent; color: var(--accent-text); border-bottom: 2px solid var(--accent); font-weight: 600; }
+
+.host-page { container: host-details / inline-size; }
+.host-back-to-services { display: none; margin-bottom: 16px; }
+.host-detail-container:focus, .host-service-picker:focus { outline: none; }
+.host-service-picker { scroll-margin-top: 100px; }
+.host-data-array { min-width: 0; }
+.host-data-array > .pagination { flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.host-service-row { transition: border-color 160ms ease, background-color 160ms ease; }
+@container host-details (max-width: 680px) {
+  .host-attributes { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .host-attributes > div:last-child { grid-column: 1/-1; }
+  .host-identity-row { flex-direction: column; gap: 16px; }
+  .host-identity-actions { max-width: none; justify-content: flex-start; }
+  .host-services-layout { grid-template-columns: minmax(0,1fr); }
+  .host-service-picker { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+  .host-service-count, .host-service-window, .host-service-rows, .host-service-pagination, .host-service-empty, .host-local-note { grid-column: 1/-1; }
+  .host-service-rows { grid-template-columns: minmax(0,1fr) minmax(0,1fr); max-height: 220px; }
+  .host-service-sort { flex-direction: column; align-items: stretch; justify-content: end; gap: 8px; }
+  .host-service-sort select { min-height: 44px; width: 100%; }
+  .host-back-to-services { display: inline-flex; }
+  .host-secondary-facts { grid-template-columns: minmax(0,1fr); }
+  .host-section-heading { flex-wrap: wrap; }
+  .host-detail-container { scroll-margin-top: 100px; }
+}
+@container host-details (max-width: 460px) {
+  .host-attributes { grid-template-columns: minmax(0,1fr); }
+  .host-service-picker { grid-template-columns: minmax(0,1fr); }
+  .host-service-rows { grid-template-columns: minmax(0,1fr); max-height: 280px; }
+  .host-facts > div, .host-data-grid > div { grid-template-columns: minmax(0,1fr); gap: 4px; }
+  .host-identity h1 { font-size: clamp(1.75rem, 7cqi, 2.285714rem); }
+  .host-data-array > .pagination .cluster { flex-wrap: wrap; }
+}
+@media (max-width: 840px) { .host-back-to-services { display: inline-flex; } }
+@media (prefers-reduced-motion: reduce) { .host-service-row { transition: none; } }

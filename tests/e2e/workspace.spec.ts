@@ -34,7 +34,8 @@ for (const width of [1440, 390, 320]) {
         const action = page.getByRole('button', { name: 'Delete', exact: true }).first();
         await action.scrollIntoViewIfNeeded();
         await expect(action).toBeInViewport();
-        expect(await page.locator('.scanner-tasks-table-wrap').evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+        expect(await page.locator('.scanner-tasks-table-wrap').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+        await expect(page.getByRole('button', { name: 'Edit', exact: true }).first()).toBeInViewport();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       }
     });

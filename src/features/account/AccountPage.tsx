@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type Profile, type SessionData, type SessionRecord, type TOTPEnrollmentData, type TOTPValidationData } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, Spinner, Tabs } from '../../components/ui';
 import { copyText, formatDate, formatNumber, OperationNotice, responseData, useOperation } from './operation';
+import { normalizeOneTimeCode } from '../auth/auth-state';
 import './account.css';
 
 const accountTabs = [{ id: 'profile', label: 'Profile' }, { id: 'security', label: 'Security' }, { id: 'sessions', label: 'Sessions' }, { id: 'team', label: 'Organization' }];
@@ -13,12 +14,18 @@ export function AccountPage() {
   const { session, user } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
+  const accountRoot = useRef<HTMLDivElement>(null);
   const tab = accountTabs.find((item) => location.pathname.endsWith('/' + item.id))?.id ?? 'profile';
+  useLayoutEffect(() => {
+    if (session.status === 'authenticated' && location.state?.preserveTabFocus === true) {
+      accountRoot.current?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+    }
+  }, [location.key, location.state?.preserveTabFocus, session.status, tab]);
   if (session.status === 'loading') return <Spinner label="Loading your account…" />;
-  if (session.status !== 'authenticated' || !user) return <EmptyState title="Your account, in one place." description="Sign in to manage your profile, security, sessions and organization." actions={<Link className="inline-link" to="/auth/login?returnTo=%2Faccount">Sign in →</Link>} />;
-  return <div className="account-page stack">
+  if (session.status !== 'authenticated' || !user) return <EmptyState title="Your account, in one place." description="Sign in to manage your profile, security, sessions and organization." actions={<Link className="inline-link" to={`/auth/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}>Sign in →</Link>} />;
+  return <div ref={accountRoot} className="account-page stack">
     <PageHeader eyebrow="ACCOUNT" title="Made for your work." description="Your profile, security and access. Always under your control." />
-    <Tabs items={accountTabs} value={tab} onChange={(id) => navigate(id === 'profile' ? '/account' : '/account/' + id)} />
+    <Tabs items={accountTabs} value={tab} onChange={(id) => navigate(id === 'profile' ? '/account' : '/account/' + id, { state: { preserveTabFocus: true } })} />
     {tab === 'profile' && <ProfilePanel user={user} />}
     {tab === 'security' && <SecurityPanel user={user} />}
     {tab === 'sessions' && <SessionsPanel />}
@@ -33,31 +40,54 @@ function ProfilePanel({ user }: { user: Profile }) {
   const [pending, setPending] = useState(false);
   const [until, setUntil] = useState<number | null>(null);
   const [verifyCode, setVerifyCode] = useState('');
+  const [requested, setRequested] = useState<{ email: string; user_name: string } | null>(null);
+  const [profileNotice, setProfileNotice] = useState('');
+  const [checkingProfile, setCheckingProfile] = useState(false);
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const result = await update.run(() => api.http('/profile/update', { method: 'POST', mutation: true, body: { email: String(form.get('email')).trim(), user_name: String(form.get('user_name')).trim(), password: String(form.get('password')), ...(user.totp_active ? { totp_code: String(form.get('totp_code')).trim() } : {}) } }), 'A verification code has been sent. Verify it to apply your changes.');
-    if (result.ok) { setPending(true); setUntil(Date.now() + 15 * 60_000); }
+    const next = { email: String(form.get('email')).trim(), user_name: String(form.get('user_name')).trim() };
+    if (!next.user_name) { setProfileNotice('Enter a username. Spaces alone cannot identify an account.'); event.currentTarget.querySelector<HTMLInputElement>('[name="user_name"]')?.focus(); return; }
+    setRequested(next); setProfileNotice('');
+    const result = await update.run(() => api.http('/profile/update', { method: 'POST', mutation: true, body: { ...next, password: String(form.get('password')), ...(user.totp_active ? { totp_code: normalizeOneTimeCode(String(form.get('totp_code'))) } : {}) } }), 'A verification code has been sent. Verify it to apply your changes.');
+    if (result.ok) { setPending(true); setVerifyCode(''); verify.reset(); setUntil(Date.now() + 15 * 60_000); }
   }
   async function confirmProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = await verify.run(() => api.http('/profile/verify', { method: 'POST', mutation: true, body: { code: verifyCode.trim() } }), 'Your profile changes have been verified.');
-    if (result.ok) { setPending(false); setVerifyCode(''); update.reset(); await refreshSession().catch(() => undefined); }
+    if (result.ok) { setPending(false); setVerifyCode(''); setRequested(null); setUntil(null); update.reset(); await refreshSession().catch(() => undefined); }
+  }
+
+  async function checkProfile() {
+    setCheckingProfile(true); setProfileNotice('');
+    try {
+      const current = await api.http<Profile>('/whoami');
+      await refreshSession();
+      if (requested && current.email === requested.email && current.user_name === requested.user_name) {
+        setPending(false); setVerifyCode(''); setRequested(null); setUntil(null); update.reset(); verify.reset();
+        setProfileNotice('Your current profile confirms the requested email and username.');
+      } else {
+        setProfileNotice('The requested profile changes are not confirmed yet. Your current verified profile remains active. If a code arrived and is still valid, you can enter it below.');
+        // A status read never repeats the mutation. A subsequent code submit is explicit.
+        if (verify.state.status === 'unknown') verify.reset();
+      }
+    } catch (error) { setProfileNotice(error instanceof Error ? error.message : 'Your profile could not be checked. No change was sent again.'); }
+    finally { setCheckingProfile(false); }
   }
 
   return <div className="account-columns">
     <div className="stack">
       <Card className="account-identity"><div className="account-avatar" aria-hidden="true">{(user.user_name || user.email || 'A').slice(0, 2).toUpperCase()}</div><div><h2>{user.user_name || 'Your account'}</h2><p className="muted">{user.email || 'No email linked'}</p><Badge tone="accent">{user.subscription?.type ?? 'Account'}</Badge></div></Card>
-      <Card><h2 className="section-title">Profile details</h2><p className="muted">Changes are applied after email verification. The code expires after 15 minutes.</p><OperationNotice state={update.state} />
+      <Card><h2 className="section-title">Profile details</h2><p className="muted">Changes are applied after email verification. The code expires after 15 minutes.</p><OperationNotice state={update.state} onCheck={() => void checkProfile()} />{profileNotice && <Alert tone="info">{profileNotice}</Alert>}{checkingProfile && <Spinner label="Checking your current profile" />}
         <form key={(user.email ?? '') + (user.user_name ?? '')} className="stack" onSubmit={(event) => void saveProfile(event)}>
-          <Field label="Username" name="user_name" defaultValue={user.user_name} required autoComplete="username" />
-          <Field label="Email address" type="email" name="email" defaultValue={user.email} required autoComplete="email" />
-          <Field label={user.email ? 'Current password' : 'Create a password'} type="password" name="password" required minLength={6} autoComplete={user.email ? 'current-password' : 'new-password'} hint={user.email ? 'Required to authorize this change.' : 'Use at least 6 characters to add an email to this account.'} />
-          {user.totp_active && <Field label="Authenticator code" name="totp_code" autoComplete="one-time-code" inputMode="numeric" required minLength={6} maxLength={6} />}
-          <div className="form-actions"><Button type="submit" loading={update.busy} disabled={update.blocked}>Request profile change</Button></div>
+          <Field label="Username" name="user_name" defaultValue={user.user_name} required autoComplete="username" disabled={update.busy || verify.busy || checkingProfile} />
+          <Field label="Email address" type="email" name="email" defaultValue={user.email} required autoComplete="email" disabled={update.busy || verify.busy || checkingProfile} />
+          <Field label={user.email ? 'Current password' : 'Create a password'} type="password" name="password" required minLength={6} autoComplete={user.email ? 'current-password' : 'new-password'} disabled={update.busy || verify.busy || checkingProfile} hint={user.email ? 'Required to authorize this change.' : 'Use at least 6 characters to add an email to this account.'} />
+          {user.totp_active && <Field label="Authenticator code" name="totp_code" autoComplete="one-time-code" inputMode="numeric" required minLength={6} maxLength={64} pattern="[0-9]{6}" onChange={event => { event.currentTarget.value = normalizeOneTimeCode(event.currentTarget.value); }} hint="Enter all 6 digits. Paste spacing is removed." />}
+          <div className="form-actions"><Button type="submit" loading={update.busy} disabled={update.blocked || verify.busy || checkingProfile}>Request profile change</Button></div>
         </form>
-        {(pending || update.state.status === 'unknown') && <form className="account-verification stack" onSubmit={(event) => void confirmProfile(event)}><h3>Verify your changes</h3><p className="muted">{until ? `The verification window ends at approximately ${new Date(until).toLocaleTimeString()}.` : 'If a verification code arrived, you can confirm it here.'}</p><OperationNotice state={verify.state} /><Field label="Email verification code" value={verifyCode} onChange={(event) => setVerifyCode(event.target.value)} autoComplete="one-time-code" required minLength={6} maxLength={6} /><Button type="submit" loading={verify.busy} disabled={verify.blocked}>Verify changes</Button></form>}
+        {(pending || update.state.status === 'unknown') && <form className="account-verification stack" onSubmit={(event) => void confirmProfile(event)}><h3>Verify your changes</h3>{requested && <p className="muted account-break">Requested profile: {requested.user_name} · {requested.email}</p>}<p className="muted">{until ? `The verification window ends at approximately ${new Date(until).toLocaleTimeString()}.` : 'If a verification code arrived, you can confirm it here.'}</p><OperationNotice state={verify.state} onCheck={() => void checkProfile()} /><Field label="Email verification code" value={verifyCode} onChange={(event) => setVerifyCode(normalizeOneTimeCode(event.target.value))} autoComplete="one-time-code" inputMode="numeric" required minLength={6} maxLength={64} pattern="[0-9]{6}" disabled={verify.busy || checkingProfile} hint="Enter all 6 digits. You can paste a code with spaces." /><Button type="submit" loading={verify.busy} disabled={verify.blocked || checkingProfile}>Verify changes</Button></form>}
       </Card>
     </div>
     <div className="stack">
@@ -113,7 +143,7 @@ function SecurityPanel({ user }: { user: Profile }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const result = await validation.run(async () => {
-      const data = responseData(await api.request<TOTPValidationData>('totp_validate', { totp_code: String(form.get('totp_code')).trim() }, { mutation: true }));
+      const data = responseData(await api.request<TOTPValidationData>('totp_validate', { totp_code: normalizeOneTimeCode(String(form.get('totp_code'))) }, { mutation: true }));
       if (data.is_valid !== true) throw new Error('The authenticator code was not accepted.');
       return data;
     }, 'Two-factor authentication is enabled. Save your backup codes securely.');
@@ -140,12 +170,12 @@ function SecurityPanel({ user }: { user: Profile }) {
 
   return <div className="account-columns">
     <Card><h2 className="section-title">Password</h2><p className="muted">Use a unique password that you do not use anywhere else.</p>{notice && <Alert tone="warning">{notice}</Alert>}<OperationNotice state={password.state} />
-      <form className="stack" onSubmit={(event) => void changePassword(event)}><Field label="Current password" name="old_password" type="password" autoComplete="current-password" minLength={6} required /><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={6} required hint="At least 6 characters. A longer passphrase is recommended." /><Field label="Confirm new password" name="confirm_password" type="password" autoComplete="new-password" minLength={6} required /><div className="form-actions"><Button type="submit" loading={password.busy} disabled={password.blocked}>Update password</Button></div></form>
+      <form className="stack" onSubmit={(event) => void changePassword(event)}><Field label="Current password" name="old_password" type="password" autoComplete="current-password" minLength={6} required disabled={password.busy} /><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} hint="At least 6 characters. A longer passphrase is recommended." /><Field label="Confirm new password" name="confirm_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} /><div className="form-actions"><Button type="submit" loading={password.busy} disabled={password.blocked}>Update password</Button></div></form>
       {password.state.status === 'unknown' && <p className="muted">The password may have changed. Verify sign-in with the new password before requesting another change.</p>}
     </Card>
     <div className="stack"><Card><div className="cluster account-card-heading"><h2 className="section-title">Two-factor authentication</h2><Badge tone={factorEnabled ? 'success' : 'neutral'}>{factorEnabled ? 'Enabled' : 'Not enabled'}</Badge></div><p className="muted">An authenticator adds a second check when you sign in.</p>{factorNotice && <Alert tone="info">{factorNotice}</Alert>}<OperationNotice state={enrollment.state} onCheck={() => void checkFactor()} /><OperationNotice state={validation.state} onCheck={() => void checkFactor()} />{checkingFactor && <Spinner label="Checking two-factor status…" />}
       {!factorEnabled && !details && !codes && <Button variant="secondary" loading={enrollment.busy} disabled={enrollment.blocked} onClick={() => void beginEnrollment()}>Set up authenticator</Button>}
-      {details && <div className="stack account-totp-setup"><p>Scan this code with your authenticator app, or enter the setup key manually.</p>{qr && <img src={qr} width="192" height="192" className="account-qr" alt="Authenticator enrollment QR code" />}<Field label="Setup key" type={showSecret ? 'text' : 'password'} value={details.secret_key} readOnly /><div className="cluster"><Button size="sm" variant="ghost" onClick={() => setShowSecret(!showSecret)}>{showSecret ? 'Hide' : 'Reveal'} key</Button><Button size="sm" variant="ghost" onClick={() => void copyText(details.secret_key, toast)}>Copy key</Button></div><p className="muted">{expiresAt ? `The 15-minute setup window ends at approximately ${new Date(expiresAt).toLocaleTimeString()}.` : ''} Keep this key private.</p><form className="stack" onSubmit={(event) => void validateEnrollment(event)}><Field label="Authenticator code" name="totp_code" inputMode="numeric" autoComplete="one-time-code" minLength={6} maxLength={6} required /><Button type="submit" loading={validation.busy} disabled={validation.blocked}>Enable two-factor authentication</Button></form><Button variant="ghost" disabled={validation.busy || validation.blocked || enrollment.busy} onClick={() => { validation.reset(); setShowSecret(false); void beginEnrollment(); }}>Start a fresh setup</Button></div>}
+      {details && <div className="stack account-totp-setup"><p>Scan this code with your authenticator app, or enter the setup key manually.</p>{qr && <img src={qr} width="192" height="192" className="account-qr" alt="Authenticator enrollment QR code" />}<Field label="Setup key" type={showSecret ? 'text' : 'password'} value={details.secret_key} readOnly /><div className="cluster"><Button size="sm" variant="ghost" onClick={() => setShowSecret(!showSecret)}>{showSecret ? 'Hide' : 'Reveal'} key</Button><Button size="sm" variant="ghost" onClick={() => void copyText(details.secret_key, toast)}>Copy key</Button></div><p className="muted">{expiresAt ? `The 15-minute setup window ends at approximately ${new Date(expiresAt).toLocaleTimeString()}.` : ''} Keep this key private.</p><form className="stack" onSubmit={(event) => void validateEnrollment(event)}><Field label="Authenticator code" name="totp_code" inputMode="numeric" autoComplete="one-time-code" minLength={6} maxLength={64} pattern="[0-9]{6}" onChange={event => { event.currentTarget.value = normalizeOneTimeCode(event.currentTarget.value); }} required disabled={validation.busy || checkingFactor} hint="Enter all 6 digits. You can paste a code with spaces." /><Button type="submit" loading={validation.busy} disabled={validation.blocked}>Enable two-factor authentication</Button></form><Button variant="ghost" disabled={validation.busy || validation.blocked || enrollment.busy} onClick={() => { validation.reset(); setShowSecret(false); void beginEnrollment(); }}>Start a fresh setup</Button></div>}
       {codes && (codes.length === 5 ? <div className="stack account-backup"><h3>Keep these somewhere safe.</h3><p className="muted">Five backup codes. Each can be used once. They are shown here only during this setup.</p><div className="account-backup-grid">{codes.map((code) => <code key={code}>{code}</code>)}</div><Button variant="secondary" onClick={() => void copyText(codes.join('\n'), toast)}>Copy backup codes</Button><Button variant="ghost" onClick={() => { setCodes(null); void refreshSession().catch(() => undefined); }}>I have saved my codes</Button></div> : <Alert tone="warning">Two-factor authentication was enabled, but all five backup codes were not returned. Keep your authenticator accessible and contact support before signing out.</Alert>)}
     </Card><Card><h2 className="section-title">Connected sign-in</h2><p className="muted">Attach an external sign-in method to this account.</p><div className="cluster"><Button variant="secondary" disabled={mode === 'demo'} onClick={() => window.location.assign(api.url('/google/link'))}>Link Google</Button><Button variant="secondary" disabled={mode === 'demo'} onClick={() => window.location.assign(api.url('/telegram/link'))}>Link Telegram</Button></div>{mode === 'demo' && <p className="muted">External sign-in providers are unavailable in the demonstration environment.</p>}{user.telegram_account && <p className="muted">A Telegram account is linked.</p>}</Card></div>
   </div>;
@@ -156,7 +186,11 @@ function SessionsPanel() {
   const queryClient = useQueryClient();
   const operation = useOperation();
   const [target, setTarget] = useState<SessionRecord | 'others' | null>(null);
-  const sessions = useQuery({ queryKey: ['account-sessions', user?.user_id], queryFn: async ({ signal }) => responseData(await api.request<SessionData>('user_sessions', {}, { signal, mutation: false })) });
+  const sessions = useQuery({ queryKey: ['account-sessions', user?.user_id], queryFn: async ({ signal }) => {
+    const data = responseData(await api.request<SessionData>('user_sessions', {}, { signal, mutation: false }));
+    if (!Array.isArray(data.sessions) || data.sessions.some(item => !item || typeof item.session_id !== 'string')) throw new Error('The session list was incomplete. Refresh to request it again.');
+    return data;
+  } });
   async function reconcile() { const result = await sessions.refetch(); if (result.isSuccess) operation.reset(); }
   async function terminate() {
     if (!target) return;
@@ -175,18 +209,24 @@ function SessionsPanel() {
 }
 
 function TeamPanel({ user }: { user: Profile }) {
-  const { api, refreshSession } = useApp();
+  const { api, refreshSession, metadata } = useApp();
   const operation = useOperation();
   const [memberId, setMemberId] = useState('');
+  const [memberError, setMemberError] = useState('');
   const [target, setTarget] = useState<{ id: string; name: string } | 'leave' | null>(null);
   const isMember = user.team?.is_team_member === true;
   const isBusiness = user.subscription?.type === 'Business';
-  const canManage = isBusiness && !isMember && (!user.team?.team_owner_id || user.team.team_owner_id === user.user_id);
+  const canManage = (isBusiness || metadata?.full_access === true) && !isMember && (!user.team?.team_owner_id || user.team.team_owner_id === user.user_id);
   const members = user.team?.team_members ?? [];
   async function reconcile() { try { await api.http('/whoami'); await refreshSession(); operation.reset(); } catch { /* Keep uncertain state until a real read succeeds. */ } }
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = await operation.run(async () => responseData(await api.request<{ message: string }>('org_add', { user_id: memberId.trim() }, { mutation: true })), 'The member has been added.');
+    const id = memberId.trim();
+    if (!id) { setMemberError('Enter an existing APCOSYS user ID.'); return; }
+    if (id === user.user_id) { setMemberError('You already own this organization. Enter another user’s ID.'); return; }
+    if (members.some(member => member.user_id === id)) { setMemberError('This user is already listed in your organization.'); return; }
+    setMemberError('');
+    const result = await operation.run(async () => responseData(await api.request<{ message: string }>('org_add', { user_id: id }, { mutation: true })), 'The member has been added.');
     if (result.ok) { setMemberId(''); await refreshSession().catch(() => undefined); }
   }
   async function remove() {
@@ -198,6 +238,6 @@ function TeamPanel({ user }: { user: Profile }) {
   }
   return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Organization</h2><p className="muted">Share the account owner’s plan and credit balance with existing APCOSYS users.</p></div><Badge tone="accent">{isMember ? 'Member' : canManage ? 'Owner access' : 'Organization access'}</Badge></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
       {user.team?.team_owner_name && <p>Owner: <strong>{user.team.team_owner_name}</strong>{user.team.team_owner_email ? ` · ${user.team.team_owner_email}` : ''}</p>}
-      {canManage ? <><form className="account-member-form" onSubmit={(event) => void add(event)}><Field label="Member user ID" value={memberId} onChange={(event) => setMemberId(event.target.value)} required hint="Enter an existing APCOSYS user ID. This does not send an email invitation." /><Button type="submit" loading={operation.busy} disabled={operation.blocked || !memberId.trim()}>Add member</Button></form>{members.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Member</th><th>Added</th><th><span className="muted">Action</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.user_id}><td><strong>{member.user_name || member.user_id}</strong><div className="muted">{member.email || 'No email'}</div></td><td>{formatDate(member.added_at)}</td><td><Button variant="ghost" size="sm" disabled={operation.blocked} onClick={() => setTarget({ id: member.user_id, name: member.user_name || member.user_id })}>Remove</Button></td></tr>)}</tbody></table></div> : <EmptyState title="Your team starts here." description="Add an existing user by their APCOSYS user ID." />}</> : isMember ? <><p className="muted">The owner manages membership. You can leave the organization at any time.</p><Button variant="secondary" disabled={operation.blocked} onClick={() => setTarget('leave')}>Leave organization</Button></> : <Alert tone="info" actions={<Link className="inline-link" to="/billing">View plans →</Link>}>Organization membership is managed by a Business account owner.</Alert>}
+      {canManage ? <><form className="account-member-form" onSubmit={(event) => void add(event)}><Field label="Member user ID" value={memberId} onChange={(event) => { setMemberId(event.target.value); setMemberError(''); }} error={memberError} disabled={operation.busy} required hint="Enter an existing APCOSYS user ID. This does not send an email invitation." /><Button type="submit" loading={operation.busy} disabled={operation.blocked || !memberId.trim()}>Add member</Button></form>{members.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Member</th><th>Added</th><th><span className="muted">Action</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.user_id}><td><strong>{member.user_name || member.user_id}</strong><div className="muted">{member.email || 'No email'}</div></td><td>{formatDate(member.added_at)}</td><td><Button variant="ghost" size="sm" disabled={operation.blocked} onClick={() => setTarget({ id: member.user_id, name: member.user_name || member.user_id })}>Remove</Button></td></tr>)}</tbody></table></div> : <EmptyState title="Your team starts here." description="Add an existing user by their APCOSYS user ID." />}</> : isMember ? <><p className="muted">The owner manages membership. You can leave the organization at any time.</p><Button variant="secondary" disabled={operation.blocked} onClick={() => setTarget('leave')}>Leave organization</Button></> : <Alert tone="info" actions={<Link className="inline-link" to="/billing">View plans →</Link>}>Organization membership is managed by a Business account owner.</Alert>}
     </Card><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void remove()} title={target === 'leave' ? 'Leave this organization?' : 'Remove this member?'} description={target === 'leave' ? 'You will stop using the owner’s shared plan and credits.' : `Remove ${target && typeof target !== 'string' ? target.name : 'this member'} from the shared plan?`} confirmLabel={target === 'leave' ? 'Leave organization' : 'Remove member'} danger busy={operation.busy} /></div>;
 }

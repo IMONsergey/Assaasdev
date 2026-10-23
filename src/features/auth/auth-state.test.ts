@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authReducer, authStepForPath, initialAuthState, safeReturnPath } from './auth-state';
+import { authReducer, authStepForPath, initialAuthState, normalizeOneTimeCode, safeReturnPath } from './auth-state';
 
 describe('authentication transitions', () => {
   it('keeps a 202 login out of authenticated state until the challenge succeeds', () => {
@@ -49,5 +49,18 @@ describe('authentication routing', () => {
     for (const target of ['https://outside.example', '//outside.example', '/\\outside.example', '/login', '/register?next=/billing']) {
       expect(safeReturnPath(target)).toBe('/search');
     }
+  });
+});
+
+describe('one-time code entry', () => {
+  it('accepts paste spacing without losing leading zeroes', () => {
+    expect(normalizeOneTimeCode(' 012 345\n')).toBe('012345');
+    expect(normalizeOneTimeCode('012\u00a0345')).toBe('012345');
+  });
+
+  it('preserves the code alphabet and leaves invalid content available for validation', () => {
+    expect(normalizeOneTimeCode('abCD 1234')).toBe('abCD1234');
+    expect(normalizeOneTimeCode('123-456')).toBe('123-456');
+    expect(normalizeOneTimeCode('01234567')).toBe('01234567');
   });
 });

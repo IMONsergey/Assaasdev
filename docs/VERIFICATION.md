@@ -1,5 +1,7 @@
 # Verification — 23 October 2026
 
+**Latest UX iteration:** [the current readiness report](audit/2026-10-23-ux-readiness.md) records 93 unit tests, 55 distinct browser regressions, expanded viewport checks and the latest unedited screenshots. The entries below retain the evidence and limitations of the initial release and its subsequent corrections.
+
 The complete local run for initial commit `507eb481` passed **TypeScript, 81 unit tests, the production build and all 19 committed browser tests**. The browser tests use Firefox with the explicit demo adapter or an intercepted local HTTP fixture. These results verify client behavior; they do not certify the customer's deployed backend.
 
 The machine-readable record is [verification.json](evidence/verification.json). Its source fingerprint identifies the initial application/config/test files checked before publication. The committed [GitHub Actions workflow](../.github/workflows/ci.yml) runs the installed Google Chrome through Playwright’s Chromium engine and a separate container fixture; consult [Actions](https://github.com/IMONsergey/Assaasdev/actions) for remote execution results.

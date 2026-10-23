@@ -36,6 +36,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0), [highLoad, setHighLoad] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const identity = useRef<string | null>(null), balanceTimestamp = useRef(0), pending = useRef(false);
+  const currentSessionStatus = useRef<SessionStatus>('loading');
   const activeSessionRequest = useRef<Promise<void> | null>(null);
   const setPreferences = useCallback((partial: Partial<Preferences>) => updatePreferences(previous => ({ ...previous, ...partial })), []);
   const toast = useCallback((message: string, tone: Toast['tone'] = 'info') => {
@@ -45,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => setToasts(previous => previous.filter(item => item.id !== id)), tone === 'error' ? 10000 : 6000);
   }, []);
   const adopt = useCallback((user: Profile | null, status: SessionStatus) => {
+    currentSessionStatus.current = status;
     const nextIdentity = user?.user_id ?? (status === 'guest' ? 'guest' : null);
     if (identity.current !== nextIdentity) { queryClient.clear(); setMetadata(null); setUnreadCount(0); setHighLoad(null); balanceTimestamp.current = 0; }
     identity.current = nextIdentity;
@@ -60,7 +62,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         adopt(user, user.user_type === 'GUEST' ? 'guest' : 'authenticated');
         void api.connect().catch(() => undefined);
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) { pending.current = pending.current || /requires 2fa verification/i.test(error.message); adopt(null, pending.current ? 'pending-2fa' : 'anonymous'); return; }
+        if (error instanceof ApiError && error.status === 401) {
+          pending.current = pending.current || /requires 2fa verification/i.test(error.message);
+          // A deployment may intentionally disable guest /whoami. Do not discard an explicitly created guest session on that ambiguous response.
+          if (currentSessionStatus.current === 'guest' && !pending.current) {
+            const message = 'Guest status could not be verified. Your quota updates with search responses. Sign in if access has expired.';
+            setSession(previous => ({ ...previous, error: message }));
+            throw new Error(message);
+          }
+          adopt(null, pending.current ? 'pending-2fa' : 'anonymous'); return;
+        }
         setSession(previous => ({ ...previous, status: previous.user ? previous.status : 'error', error: error instanceof Error ? error.message : 'Unable to connect to the API.' }));
         throw error;
       }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { asset } from '../config';
+import { lockPageScroll } from '../lib/scroll-lock';
 
 const join = (...names: (string | undefined | false)[]) => names.filter(Boolean).join(' ');
 
@@ -36,7 +37,19 @@ export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'acce
 export function Spinner({ label = 'Loading…' }: { label?: string }) { return <span className="loading-state" role="status"><span className="spinner" aria-hidden="true" />{label}</span>; }
 export function Dialog({ open, onClose, title, children, footer, size = 'md' }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; size?: 'sm' | 'md' | 'lg' }) {
   const ref = useRef<HTMLDialogElement>(null), titleId = useId();
-  useEffect(() => { const dialog = ref.current; if (!dialog) return; if (open && !dialog.open) dialog.showModal(); else if (!open && dialog.open) dialog.close(); }, [open]);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (!open) { if (dialog.open) dialog.close(); return; }
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const unlock = lockPageScroll();
+    if (!dialog.open) dialog.showModal();
+    return () => {
+      if (dialog.open) dialog.close();
+      unlock();
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [open]);
   return createPortal(<dialog ref={ref} className={`dialog dialog--${size}`} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const rect = e.currentTarget.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}><header className="dialog-header"><h2 id={titleId}>{title}</h2><Button variant="ghost" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></header><div className="dialog-body">{children}</div>{footer && <footer className="dialog-footer">{footer}</footer>}</dialog>, document.body);
 }
 export function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLabel = 'Confirm', danger, busy, confirmDisabled }: { open: boolean; onClose: () => void; onConfirm: () => void | Promise<void>; title: ReactNode; description: ReactNode; confirmLabel?: string; danger?: boolean; busy?: boolean; confirmDisabled?: boolean }) {
@@ -46,9 +59,9 @@ export function EmptyState({ title, description, icon, actions }: { title: React
 export function Tabs({ items, value, onChange }: { items: { id: string; label: ReactNode; count?: number }[]; value: string; onChange: (id: string) => void }) {
   return <div className="tabs" role="tablist" onKeyDown={e => { const index = items.findIndex(item => item.id === value); const next = e.key === 'ArrowRight' ? (index + 1) % items.length : e.key === 'ArrowLeft' ? (index + items.length - 1) % items.length : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1; if (next >= 0) { e.preventDefault(); onChange(items[next].id); (e.currentTarget.children[next] as HTMLElement).focus(); } }}>{items.map(item => <button key={item.id} type="button" role="tab" aria-selected={value === item.id} tabIndex={value === item.id ? 0 : -1} onClick={() => onChange(item.id)}>{item.label}{item.count !== undefined && <span className="tab-count">{item.count}</span>}</button>)}</div>;
 }
-export function Pagination({ page, pageSize, count, total, maxPage, onPageChange }: { page: number; pageSize: number; count: number; total?: number; maxPage?: number; onPageChange: (page: number) => void }) {
+export function Pagination({ page, pageSize, count, total, maxPage, disabled = false, onPageChange }: { page: number; pageSize: number; count: number; total?: number; maxPage?: number; disabled?: boolean; onPageChange: (page: number) => void }) {
   const hasNext = (total === undefined ? count === pageSize : page * pageSize < total) && (maxPage === undefined || page < maxPage);
-  return <nav className="pagination" aria-label="Pagination"><p className="muted">{total !== undefined ? `${total.toLocaleString()} results · ` : ''}Page {page}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p><div className="cluster"><Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><Icon name="chevron-left" size={16} />Previous</Button><Button variant="secondary" size="sm" disabled={!hasNext} onClick={() => onPageChange(page + 1)}>Next<Icon name="chevron-right" size={16} /></Button></div></nav>;
+  return <nav className="pagination" aria-label="Pagination" aria-busy={disabled || undefined}><p className="muted" aria-live="polite" aria-atomic="true">{total !== undefined ? `${total.toLocaleString()} results · ` : ''}Page {page}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p><div className="cluster"><Button variant="secondary" size="sm" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}><Icon name="chevron-left" size={16} />Previous</Button><Button variant="secondary" size="sm" disabled={disabled || !hasNext} onClick={() => onPageChange(page + 1)}>Next<Icon name="chevron-right" size={16} /></Button></div></nav>;
 }
 
 const figmaIcons: Record<string, string> = { search: 'home/imgIconSearch.svg', database: 'home/imgIconDatabase.svg', files: 'home/imgIconDatabase.svg', scan: 'home/imgIconScan.svg', code: 'home/imgIconCode.svg', api: 'home/imgIconCode.svg', card: 'home/imgIconCard.svg', bell: 'home/imgIconBell.svg', copy: 'results-heading/imgIconCopy.svg', download: 'results-heading/imgIconDownload.svg', external: 'host/imgIconExternal.svg' };

@@ -4,7 +4,9 @@ export interface ServiceItem { key: string; record: PortRecord; receivedIndex: n
 export type ServiceOrder = 'received' | 'port-asc' | 'port-desc' | 'newest';
 
 export function displayValue(value: unknown): string {
-  if (value === undefined || value === null || value === '') return 'Not observed';
+  if (value === undefined) return 'Not provided';
+  if (value === null) return 'No value returned';
+  if (value === '') return 'Empty value';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) return value.length ? value.map(displayValue).join(' · ') : 'None returned';
   if (typeof value === 'object') return JSON.stringify(value);

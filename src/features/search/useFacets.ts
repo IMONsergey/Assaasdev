@@ -10,13 +10,18 @@ export function useFacets(request: SearchRequest, dataset: Dataset, enabled: boo
   const [partial, setPartial] = useState<{ identity: string; data: FacetData[] }>({ identity: '', data: [] });
   const query = useQuery({ queryKey: ['analytics', principal, dataset, request], enabled, staleTime: Infinity, queryFn: ({ signal }) => new Promise<FacetData[]>((resolve, reject) => {
     const facets = new Map<string, FacetData>();
-    const stop = api.stream<FacetData | CompleteData>(dataset === 'private' ? 'private_analytics' : 'analytics', request, {
+    setPartial({ identity, data: [] });
+    let stop = () => {};
+    const abort = () => { stop(); reject(new DOMException('The analytics request was cancelled.', 'AbortError')); };
+    const cleanup = () => signal.removeEventListener('abort', abort);
+    signal.addEventListener('abort', abort, { once: true });
+    stop = api.stream<FacetData | CompleteData>(dataset === 'private' ? 'private_analytics' : 'analytics', request, {
       signal,
       onFrame: frame => { if (frame.data && 'facet_name' in frame.data) { facets.set(frame.data.facet_name, frame.data); setPartial({ identity, data: [...facets.values()] }); } },
-      onComplete: () => resolve([...facets.values()]),
-      onError: reject,
+      onComplete: () => { cleanup(); resolve([...facets.values()]); },
+      onError: error => { cleanup(); reject(error); },
     });
-    signal.addEventListener('abort', () => { stop(); reject(new DOMException('The analytics request was cancelled.', 'AbortError')); }, { once: true });
+    if (signal.aborted) abort();
   }) });
   return { ...query, facets: query.data || (partial.identity === identity ? partial.data : []) };
 }

@@ -18,7 +18,9 @@ describe('received host records', () => {
   it('preserves zero and false and recognizes absent data', () => {
     expect(displayValue(0)).toBe('0');
     expect(displayValue(false)).toBe('No');
-    expect(displayValue(null)).toBe('Not observed');
+    expect(displayValue(undefined)).toBe('Not provided');
+    expect(displayValue(null)).toBe('No value returned');
+    expect(displayValue('')).toBe('Empty value');
     expect(displayValue([])).toBe('None returned');
   });
   it('only restores a local results route and handles domain map shapes', () => {

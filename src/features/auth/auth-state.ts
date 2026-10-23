@@ -83,3 +83,8 @@ export function safeReturnPath(value: string | null | undefined): string {
     return '/search';
   }
 }
+
+/** Keep leading zeroes and the server's code alphabet; remove paste spacing only. */
+export function normalizeOneTimeCode(value: string): string {
+  return value.replace(/\s+/gu, '');
+}

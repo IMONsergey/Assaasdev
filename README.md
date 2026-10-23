@@ -6,9 +6,11 @@ This repository contains the **working React application**, its website HTTP/Web
 
 **Release status:** client implementation and local browser verification are available. Acceptance against the client's actual HTTPS backend and external providers remains a separate release gate. See [release review](docs/RELEASE-2026-10-23.md), [implementation coverage](docs/IMPLEMENTATION-COVERAGE.md) and [verification evidence](docs/VERIFICATION.md).
 
+**Latest UX release:** clickable credit meters, responsive task cards, query/history restoration, request-efficient analytics, accessible navigation and expanded regression coverage. See the [UX readiness report and current screenshots](docs/audit/2026-10-23-ux-readiness.md) and [source-to-scenario review](docs/audit/2026-10-23-scenario-coverage.md).
+
 **Public review deployment:** the committed `vercel.json` publishes the explicit demo build at a domain root and supports direct links to application routes. This hosting configuration is for interface acceptance; the live backend deployment uses the separate proxy configuration below. Demo state resets after a page reload.
 
-![APCOSYS search workspace](docs/screenshots/search-home.png)
+![APCOSYS search workspace](docs/audit/screenshots/search-desktop.png)
 
 ## Run the interactive demo
 
@@ -19,7 +21,7 @@ npm ci
 npm run dev:demo
 ```
 
-Open `http://127.0.0.1:5173`. The **Demo** label stays visible. The adapter starts with a synthetic Business account and stores its working state in memory. Reloading recreates that state. It makes no backend calls, sends no emails, starts no network scans and performs no real payments.
+Open `http://127.0.0.1:5173`. Demo status is identified in the workspace, credit details and Settings. The adapter starts with a synthetic Business account and stores its working state in memory. Reloading recreates that state. It makes no backend calls, sends no emails, starts no network scans and performs no real payments.
 
 A short review route:
 
@@ -29,7 +31,7 @@ A short review route:
 4. Open **Private Scanner**, create a task from hosts/CIDR/CSV, review the estimate and edit its schedule. Demo tasks remain queued; no scan runs.
 5. Review **Plans & billing**, subscription renewal and payment history. Crypto activity includes an explicitly non-payable address and exact string amounts. Demo invoices remain pending; card checkout and the external portal clearly report unavailable providers.
 6. Review **Account** security, sessions and team; rotate the demo API key. Sign out and use an identifier containing `2fa` to exercise the login challenge. Demo verification/TOTP code: `123456`.
-7. Change theme, density, text size and reduced motion under **Preferences**. Only these view preferences persist in local storage.
+7. Change theme, density, text size and reduced motion under **Settings**. Only these view preferences persist in local storage. Click the credit meter to inspect separate search/scan balances and open credit packs.
 
 For signup use an 18-character password; verification does not silently log the new user in. Login/reset require at least six characters. The demo accepts validly shaped login credentials to exercise the interface; it is not an authentication service. Full fixture behavior is documented in [API integration](docs/API-INTEGRATION.md#11-explicit-demonstration-adapter).
 
