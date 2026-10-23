@@ -1,0 +1,136 @@
+{
+  "checks": [
+    {
+      "name": "No automatic initial search",
+      "pass": true
+    },
+    {
+      "name": "Eight file rows",
+      "pass": true
+    },
+    {
+      "name": "Desktop no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "Exact assets loaded at root dimensions",
+      "pass": true,
+      "detail": [
+        {
+          "src": "/assets/figma/files/imgIconSearch1.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFilter.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/results-heading/imgIconDownload.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "src": "/assets/figma/files/imgIconFile.svg",
+          "loaded": true,
+          "width": 20,
+          "height": 20
+        }
+      ]
+    },
+    {
+      "name": "Bucket tab does not charge",
+      "pass": true
+    },
+    {
+      "name": "Three actual bucket groups",
+      "pass": true
+    },
+    {
+      "name": "Bucket drilldown scopes host and container",
+      "pass": true
+    },
+    {
+      "name": "Zero-byte file is observed rather than missing",
+      "pass": true
+    },
+    {
+      "name": "Rejected filters preserved",
+      "pass": true
+    },
+    {
+      "name": "Both UTC date bounds are serialized",
+      "pass": true
+    },
+    {
+      "name": "Mobile eight rows",
+      "pass": true
+    },
+    {
+      "name": "Mobile no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "Mobile buckets no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "No runtime page errors",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "verifiedAt": "2026-10-23T11:48:54.960Z",
+  "evidenceExport": {
+    "source": "files-qa/results.json",
+    "sourceSha256": "1e296aa91bf6dd63278c03129e8ef9df9bc0ff28e05c90cb18b93fcdbcca4cae",
+    "normalization": "Workspace path prefix replaced with <workspace>; assertions unchanged."
+  }
+}

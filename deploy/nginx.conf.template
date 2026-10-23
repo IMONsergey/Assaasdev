@@ -1,0 +1,64 @@
+# Loaded in the official image's http context.
+map $http_upgrade $apcosys_connection_upgrade { default upgrade; '' close; }
+map $uri $apcosys_cache_control {
+    default "no-store";
+    '~^/assets/[^/]+-[A-Za-z0-9_-]{8,}\.(js|css|woff2)$' "public, max-age=31536000, immutable";
+}
+log_format apcosys_minimal '$remote_addr [$time_local] "$request_method $uri" $status $body_bytes_sent $request_time';
+
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 10m;
+    access_log /dev/stdout apcosys_minimal;
+    error_log /dev/stderr warn;
+
+    set $apcosys_upstream_host "${APCOSYS_API_HOST}";
+    set $apcosys_tls_name "${APCOSYS_TLS_NAME}";
+    set $apcosys_public_scheme "${APCOSYS_PUBLIC_SCHEME}";
+
+    add_header Cache-Control $apcosys_cache_control;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+    add_header X-Frame-Options DENY always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' ${APCOSYS_WS_SCHEME}://$http_host; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+    location = /runtime-config.js { try_files $uri =404; }
+
+    # API paths never fall back to SPA HTML. The trailing slash removes /backend/.
+    location ^~ /backend/ {
+        include /etc/nginx/apcosys/proxy-common.conf;
+        proxy_pass ${APCOSYS_API_UPSTREAM}/;
+    }
+
+    # Existing backend OAuth origins use these callback paths. Keep them distinct
+    # from SPA routes such as GET /auth/login and GET /auth/verify.
+    location = /auth/google/callback {
+        include /etc/nginx/apcosys/proxy-common.conf;
+        proxy_pass ${APCOSYS_API_UPSTREAM};
+    }
+    location = /auth/telegram/callback {
+        include /etc/nginx/apcosys/proxy-common.conf;
+        proxy_pass ${APCOSYS_API_UPSTREAM};
+    }
+    location = /google/link/callback {
+        include /etc/nginx/apcosys/proxy-common.conf;
+        proxy_pass ${APCOSYS_API_UPSTREAM};
+    }
+    location = /telegram/link/callback {
+        include /etc/nginx/apcosys/proxy-common.conf;
+        proxy_pass ${APCOSYS_API_UPSTREAM};
+    }
+    location = /s {
+        include /etc/nginx/apcosys/proxy-common.conf;
+        proxy_pass ${APCOSYS_API_UPSTREAM};
+    }
+    location /assets/ { try_files $uri =404; }
+    location / { try_files $uri $uri/ /index.html; }
+}
+

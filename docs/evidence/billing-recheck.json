@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-10-23T11:47:11.101Z",
+  "environment": "Firefox / local explicit demo",
+  "previousReport": "results.json",
+  "previousFailure": "Immediate desktop-to-mobile resize measurement observed 584px. It is preserved in results.json.",
+  "liveBackend": "NOT_RUN",
+  "checks": [
+    {
+      "name": "billing-accessibility-light",
+      "status": "PASS",
+      "violations": [],
+      "currentButton": {
+        "color": "rgb(16, 19, 25)",
+        "background": "rgb(245, 247, 248)"
+      }
+    },
+    {
+      "name": "billing-accessibility-dark",
+      "status": "PASS",
+      "violations": [],
+      "currentButton": {
+        "color": "rgb(16, 19, 25)",
+        "background": "rgb(245, 247, 248)"
+      }
+    },
+    {
+      "name": "billing-settled-width-1440",
+      "status": "PASS",
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "name": "billing-settled-width-390",
+      "status": "PASS",
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "billing-settled-width-320",
+      "status": "PASS",
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "billing-mobile-purchase-dialog",
+      "status": "PASS",
+      "width": 356,
+      "contentWidth": 356
+    }
+  ],
+  "browserErrors": [],
+  "status": "PASS",
+  "evidenceExport": {
+    "source": "identity-qa/billing-layout-recheck.json",
+    "sourceSha256": "fca8cd727c6f2605ea30592c719e6afe4726f0ec637083212de84eadeb5b3100",
+    "normalization": "Workspace path prefix replaced with <workspace>; assertions unchanged."
+  }
+}

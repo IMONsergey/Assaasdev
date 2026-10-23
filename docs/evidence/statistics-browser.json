@@ -1,0 +1,77 @@
+{
+  "scope": "Index statistics only",
+  "flows": [
+    {
+      "viewport": 1440,
+      "mode": "explicit demo adapter",
+      "collapsed": true,
+      "expansionDoesNotLoad": true,
+      "explicitLoad": true,
+      "refresh": true,
+      "countFields": 7,
+      "timestamp": "server UTC"
+    },
+    {
+      "viewport": 390,
+      "mode": "explicit demo adapter",
+      "collapsed": true,
+      "expansionDoesNotLoad": true,
+      "explicitLoad": true,
+      "refresh": true,
+      "countFields": 7,
+      "timestamp": "server UTC"
+    },
+    {
+      "mode": "localhost HTTP contract fixture, anonymous session",
+      "automaticRequests": 0,
+      "loadingState": true,
+      "zeroCountsPreserved": true,
+      "zeroTimestampPreserved": true,
+      "missingAndNull": "Not provided",
+      "refreshFailurePreservesSnapshot": true,
+      "automaticRetry": false,
+      "explicitRecovery": true,
+      "actualGetRequests": 4
+    }
+  ],
+  "viewportChecks": [
+    {
+      "width": 1440,
+      "documentWidth": 1440,
+      "status": "PASS"
+    },
+    {
+      "width": 390,
+      "documentWidth": 390,
+      "status": "PASS"
+    }
+  ],
+  "screenshots": [
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-statistics-collapsed-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-statistics-expanded-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-statistics-collapsed-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-statistics-expanded-390.png"
+  ],
+  "runtimeErrors": [],
+  "status": "PASS_SCOPED_STATISTICS_BROWSER",
+  "visualReview": {
+    "status": "PASS_SCOPED",
+    "method": "Manual inspection of the four actual desktop/mobile collapsed and expanded Firefox screenshots.",
+    "widths": [
+      1440,
+      390
+    ],
+    "findings": [
+      "The home hero, artwork and search composition are unchanged; only a compact collapsed statistics row is appended.",
+      "Expanded counters remain readable in one desktop row and two mobile columns.",
+      "Manual refresh and server UTC timestamp remain visible; demo data is explicitly labelled."
+    ]
+  },
+  "sourceContract": "docs/api/2026-10-22/web-api.md: GET /api/statistics, no authentication",
+  "boundary": "The responsive happy path uses the explicit demo adapter. Error/zero/missing/anonymous cases use intercepted localhost HTTP responses through the real HTTP client. No production backend acceptance is asserted.",
+  "evidenceExport": {
+    "source": "browser-qa-core/statistics-report.json",
+    "sourceSha256": "afc7f21748b53f8094367f7cfe69e83490ba13cb8d2f70bbd392a87847cd4f38",
+    "normalization": "Workspace path prefix replaced with <workspace>; assertions unchanged."
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "startedAt": "2026-10-23T11:46:47.568Z",
+  "mode": "explicit demo",
+  "viewportChecks": [
+    {
+      "name": "home",
+      "width": 1440,
+      "viewport": 1440,
+      "document": 1440,
+      "body": 1440,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "results",
+      "width": 1440,
+      "viewport": 1440,
+      "document": 1440,
+      "body": 1440,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "host",
+      "width": 1440,
+      "viewport": 1440,
+      "document": 1440,
+      "body": 1440,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "scanner",
+      "width": 1440,
+      "viewport": 1440,
+      "document": 1440,
+      "body": 1440,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "new-scan",
+      "width": 1440,
+      "viewport": 1440,
+      "document": 1440,
+      "body": 1440,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "home",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "body": 390,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "results",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "body": 390,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "host",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "body": 390,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "scanner",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "body": 390,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "new-scan",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "body": 390,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "home",
+      "width": 320,
+      "viewport": 320,
+      "document": 320,
+      "body": 320,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "results",
+      "width": 320,
+      "viewport": 320,
+      "document": 320,
+      "body": 320,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "host",
+      "width": 320,
+      "viewport": 320,
+      "document": 320,
+      "body": 320,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "scanner",
+      "width": 320,
+      "viewport": 320,
+      "document": 320,
+      "body": 320,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "new-scan",
+      "width": 320,
+      "viewport": 320,
+      "document": 320,
+      "body": 320,
+      "overflowNodes": [],
+      "status": "PASS"
+    },
+    {
+      "name": "nested-editor",
+      "width": 320,
+      "viewport": 320,
+      "document": 320,
+      "body": 320,
+      "overflowNodes": [],
+      "status": "PASS"
+    }
+  ],
+  "flows": [
+    {
+      "name": "Author artwork loads from local SVG",
+      "status": "PASS",
+      "complete": true,
+      "width": 360,
+      "height": 342
+    },
+    {
+      "name": "Real fixture text search returns four matching hosts",
+      "status": "PASS"
+    },
+    {
+      "name": "Conditions Cancel restores pre-editor draft",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved query without task IDs requires explicit visible dataset before Open",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved query create, Cancel, selected deletion and refreshed count",
+      "status": "PASS"
+    },
+    {
+      "name": "Limited link keeps exact request, locks editing and loads facets only explicitly",
+      "status": "PASS"
+    },
+    {
+      "name": "1,000 service records: local paging, filtering, selection, TLS false and DNS",
+      "status": "PASS"
+    },
+    {
+      "name": "Scanner /28×2 estimate28, create, schedule update and task removal",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored result deletion preserves task record and shows zero",
+      "status": "PASS"
+    },
+    {
+      "name": "Private search retains deleted task scope and returns real empty result",
+      "status": "PASS"
+    },
+    {
+      "name": "Planned task removal uses separate confirmation",
+      "status": "PASS"
+    },
+    {
+      "name": "Nested conditions remain usable at 320px and apply",
+      "status": "PASS"
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/results-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/host-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/scanner-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/new-scan-1440.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/results-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/host-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/host-detail-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/scanner-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/new-scan-390.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/home-320.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/results-320.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/host-320.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/host-detail-320.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/scanner-320.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/new-scan-320.png",
+    "<workspace>/audit-context/assaasdev/browser-qa-core/nested-editor-320.png"
+  ],
+  "dismissedTransientNotifications": 4,
+  "status": "PASS_SCOPED_DEMO_BROWSER",
+  "finishedAt": "2026-10-23T11:46:57.322Z",
+  "visualReview": {
+    "method": "Manual inspection of actual Firefox screenshots after transient notifications were dismissed with their visible controls. No CSS hiding or image edits.",
+    "status": "PASS_SCOPED",
+    "reviewed": [
+      "home-1440.png",
+      "results-1440.png",
+      "host-1440.png",
+      "scanner-1440.png",
+      "new-scan-1440.png",
+      "home-390.png",
+      "results-390.png",
+      "host-detail-390.png",
+      "nested-editor-320.png",
+      "scanner-320.png",
+      "new-scan-320.png"
+    ],
+    "observations": [
+      "Native APCOSYS artwork loads, query submit uses turquoise accent.",
+      "Desktop uses the source hierarchy: compact navigation, upper query, left analytics, result columns, host service master/detail and scanner summary/table.",
+      "Mobile 390 and 320 scenes retain readable controls without document overflow; horizontal tabs/table regions are deliberate and contained.",
+      "Service raw response and selected details stay readable; nested conditions expose sticky Apply/Clear/Cancel on 320px."
+    ]
+  },
+  "verificationBoundary": [
+    "Explicit deterministic demo adapter, not a production backend acceptance run.",
+    "Browser viewport checks cover 1440, 390 and 320 widths, not every breakpoint or 200% browser zoom.",
+    "Mutations change the in-memory demo state and reconcile through API adapter reads. Actual live scan execution and billing are not asserted.",
+    "Unknown outcomes are implemented with explicit reconciliation; their model/adapter contracts have separate unit tests, but this browser pass covers successful mutations and cancel."
+  ],
+  "evidenceExport": {
+    "source": "browser-qa-core/report.json",
+    "sourceSha256": "b15d2e4b62468c98dacdb526f372216b8df9de1c2e1586cd0fca8b786ffcd2d6",
+    "normalization": "Workspace path prefix replaced with <workspace>; assertions unchanged."
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "sourceFile": "lLMSuy0RrCiPhg873xpVUY",
+  "applicationPage": "899:3620",
+  "exportDate": "2026-10-23",
+  "assets": [
+    {
+      "asset": "figma/host/imgIconExternal.svg",
+      "bytes": 294,
+      "sha256": "25d66665aece89ab724ea4af8ec44e63455ef802e0795130214b2ebef9a16741",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/results-heading/imgIconDownload.svg",
+      "bytes": 302,
+      "sha256": "b94cb305d78bfba99a64ca502c4d8f79d23e74b17058b320866bf467ea44c442",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/results-heading/imgIconCopy.svg",
+      "bytes": 589,
+      "sha256": "f01410774a0cd47dda6b8294e7eb4848aa7d57293b4e8851e3be3a7a292f866a",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/files/imgIconSearch1.svg",
+      "bytes": 538,
+      "sha256": "67a6dd7e15753cd9630224d10ce6f6dabcfe5909cdb105782f256054b7e8a0d1",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/files/imgIconFilter.svg",
+      "bytes": 259,
+      "sha256": "10b42448fd1f6cc8a05091fbdc569e9620610aa3687bdb3914fd8cd6042298db",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/files/imgIconFile.svg",
+      "bytes": 340,
+      "sha256": "a1d4a42805f85ded522ad345f031242a18c8bd59991a549afdaaed304ebac4ce",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/results-facets/imgFrame1.svg",
+      "bytes": 407,
+      "sha256": "b979086c49e5d425862752f91e02c7d8cbf53ccf7d2ecffc2b8b9f7f3eb9405b",
+      "width": "24",
+      "height": "16",
+      "viewBox": "0 0 24 16"
+    },
+    {
+      "asset": "figma/results-facets/imgFrame2.svg",
+      "bytes": 405,
+      "sha256": "9fae46d104038394ac198a456ed7415321440ff9e68876e19a9f486b7cf6c5fc",
+      "width": "24",
+      "height": "16",
+      "viewBox": "0 0 24 16"
+    },
+    {
+      "asset": "figma/results-facets/imgFrame.svg",
+      "bytes": 10859,
+      "sha256": "d384e51946854a149d605c83dfdedacd6eebdffd5ed4496426d9e448da09efbb",
+      "width": "24",
+      "height": "16",
+      "viewBox": "0 0 24 16"
+    },
+    {
+      "asset": "figma/home/imgIconSearch.svg",
+      "bytes": 537,
+      "sha256": "896575295d0585e746aa2ccf8075f484d2940738661c1cee2b159c29bb7164dd",
+      "width": "19",
+      "height": "19",
+      "viewBox": "0 0 19 19"
+    },
+    {
+      "asset": "figma/home/imgIconCard.svg",
+      "bytes": 562,
+      "sha256": "abe06faafefaca959ff68352f559ab8c1e0fa101b6d9123bbdd9e3426a084772",
+      "width": "19",
+      "height": "19",
+      "viewBox": "0 0 19 19"
+    },
+    {
+      "asset": "figma/home/search-art.svg",
+      "bytes": 3810,
+      "sha256": "be6aa1990480356afe9275dff8430b8bcae2d6cbf0960b06a4dc7c22e5a275d5",
+      "width": "360",
+      "height": "342",
+      "viewBox": "0 0 360 342"
+    },
+    {
+      "asset": "figma/home/imgIconCode.svg",
+      "bytes": 304,
+      "sha256": "f497c5370fb1608370b18a9ff098d66b55d01052a7d2ba9936f72b353a1aa3c9",
+      "width": "19",
+      "height": "19",
+      "viewBox": "0 0 19 19"
+    },
+    {
+      "asset": "figma/home/imgGroup1.svg",
+      "bytes": 1113,
+      "sha256": "d6fc145c127e426f773a3c337956df3f305f9a691c70c563314cfca29083f0bc",
+      "width": "185",
+      "height": "185",
+      "viewBox": "0 0 185 185"
+    },
+    {
+      "asset": "figma/home/imgApcosysSymbol.svg",
+      "bytes": 807,
+      "sha256": "3fc2915dafca3ca2e21a035d753b38903e76d92b5a53950f7a8ea87d05c4aba8",
+      "width": "64",
+      "height": "64",
+      "viewBox": "0 0 64 64"
+    },
+    {
+      "asset": "figma/home/imgApcosysLogo.svg",
+      "bytes": 7608,
+      "sha256": "3be522c267ced1d0a57cd6e313d8511a80168c593dff147ee36d47c9c2132b51",
+      "width": "128",
+      "height": "25",
+      "viewBox": "0 0 128 25"
+    },
+    {
+      "asset": "figma/home/imgGroup.svg",
+      "bytes": 1863,
+      "sha256": "e82e8e12fb6099dfbebf2f2f90d0e8642401d449ecac0c5a23d2bb34a41ac336",
+      "width": "354",
+      "height": "315",
+      "viewBox": "0 0 354 315"
+    },
+    {
+      "asset": "figma/home/imgIconDatabase.svg",
+      "bytes": 650,
+      "sha256": "86f7d12cc282757135a9b9ac46e25995efadbea3d052cfb4642845d561eb1779",
+      "width": "19",
+      "height": "19",
+      "viewBox": "0 0 19 19"
+    },
+    {
+      "asset": "figma/home/imgVector3.svg",
+      "bytes": 199,
+      "sha256": "5711adc3af8d34dd248edcfd33d84eed3ddfa1722c66ee87ff018097cebc75aa",
+      "width": "7",
+      "height": "5",
+      "viewBox": "0 0 7 5"
+    },
+    {
+      "asset": "figma/home/imgD2SearchProduct.svg",
+      "bytes": 487,
+      "sha256": "2dbbba0c65fb5d3671537414687374b96814b601c309bb7ca7d1e433abfd29c0",
+      "width": "8",
+      "height": "8",
+      "viewBox": "0 0 8 8"
+    },
+    {
+      "asset": "figma/home/imgRunSearch.svg",
+      "bytes": 260,
+      "sha256": "b9b6d90ec3ebfa05d82fa31a099011d90bee302f2b44a4909e6c5bfcb5b720e2",
+      "width": "50",
+      "height": "50",
+      "viewBox": "0 0 50 50"
+    },
+    {
+      "asset": "figma/home/imgIconScan.svg",
+      "bytes": 333,
+      "sha256": "7cc2137eae2448dcea42241ed78289b2bfab2680fb9b7138848f582ecb18096e",
+      "width": "19",
+      "height": "19",
+      "viewBox": "0 0 19 19"
+    },
+    {
+      "asset": "figma/home/imgIconBell.svg",
+      "bytes": 472,
+      "sha256": "f9bee370618913136484aabe39e91eec0fa443f4fdbd4f5327a44bfc72e664e1",
+      "width": "19",
+      "height": "19",
+      "viewBox": "0 0 19 19"
+    },
+    {
+      "asset": "figma/login/imgApcosysGoogle.svg",
+      "bytes": 1120,
+      "sha256": "b18e9224af243b20f07222054a14155e35b10e273dbf245f8aa74bedbec63c4f",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    },
+    {
+      "asset": "figma/login/auth-art.png",
+      "bytes": 112010,
+      "sha256": "5ae76457082743729b706950594f565aa273709ec9425886e6a8bebd3bdfda12"
+    },
+    {
+      "asset": "figma/login/imgApcosysTelegram.svg",
+      "bytes": 1616,
+      "sha256": "b6720814019978cd0c082cb2356ddf1cb470f5b11d0658e2442888b78336bb53",
+      "width": "20",
+      "height": "20",
+      "viewBox": "0 0 20 20"
+    }
+  ]
+}

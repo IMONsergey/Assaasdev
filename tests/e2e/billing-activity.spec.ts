@@ -1,0 +1,43 @@
+import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('tracked crypto activity preserves exact amounts and never grants access from received transfers', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/billing');
+  await expect(page.locator('.billing-metric')).toHaveCount(3);
+  const before = await page.locator('.billing-metric').allTextContents();
+  await expect(page.getByRole('button', { name: 'Load tracked addresses', exact: true })).toBeVisible();
+  await expect(page.locator('.crypto-address')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Load tracked addresses', exact: true }).click();
+  const address = page.locator('.crypto-address');
+  await expect(address).toHaveCount(1);
+  await expect(address).toContainText('DEMO_ONLY_NOT_A_PAYMENT_ADDRESS');
+  await expect(address).toContainText('900719925.474099312345678901');
+  await expect(address).toContainText('900719925474099312345678901');
+  await expect(page.locator('.crypto-activity')).toContainText('invalid and cannot receive funds');
+  await page.locator('.crypto-activity').screenshot({ path: testInfo.outputPath('crypto-addresses-1440.png') });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await expect.poll(() => page.locator('.app-sidebar').evaluate(node => node.getBoundingClientRect().right <= 1)).toBe(true);
+  await page.locator('.crypto-activity').screenshot({ path: testInfo.outputPath('crypto-addresses-390.png') });
+  await page.getByRole('button', { name: 'View transactions for DEMO on demo-network', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Address transactions', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('crypto-raw-amount')).toHaveText('900719925474099312345678901');
+  await expect(dialog.getByText('9007199254740993', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('received', { exact: true })).toBeVisible();
+  await expect(dialog).toContainText('1 returned · 1 reported');
+  await expect(dialog.getByText('Decimal places', { exact: true }).locator('..')).toContainText('18');
+  await expect(dialog.getByRole('link')).toHaveCount(0);
+  await expect.poll(() => dialog.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(accessibility.violations.map(item => ({ id: item.id, targets: item.nodes.map(node => node.target) }))).toEqual([]);
+  await dialog.screenshot({ path: testInfo.outputPath('crypto-transactions-390.png') });
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(await page.locator('.billing-metric').allTextContents()).toEqual(before);
+  await expect(page.locator('.page-description')).toContainText('Current plan: Business');
+  expect(errors).toEqual([]);
+});

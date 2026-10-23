@@ -1,0 +1,101 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { HostCard, SearchRequest } from '../../api';
+import { useApp } from '../../app/AppProvider';
+import { asset } from '../../config';
+import { Alert, Badge, Button, EmptyState, Icon, Pagination, Spinner } from '../../components/ui';
+import { ExportDialog } from '../files/ExportDialog';
+import { ConditionsEditor } from './ConditionsEditor';
+import { IndexStatistics } from './IndexStatistics';
+import { FacetPanel } from './FacetPanel';
+import { useFacets } from './useFacets';
+import { dateLabel, decodeSearch, encodeSearch, filterSummary, isShared, PAGE_CAPS, searchPath, selectedType, searchAccessIssues, validateSearchRequest, withoutShareToken, withType } from './model';
+import type { Dataset } from './model';
+import './search.css';
+
+function countryName(code: string | undefined): string {
+  if (!code) return 'Location not provided';
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code.toUpperCase()) || code; } catch { return code; }
+}
+
+export function SearchAccessNotice() {
+  const { session, startGuest } = useApp();
+  const location = useLocation();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (session.status === 'authenticated' || session.status === 'guest') return null;
+  if (session.status === 'loading') return <Spinner label="Checking your session" />;
+  return <Alert tone="info" title="Choose how to continue" actions={<><Button variant="secondary" loading={busy} onClick={async () => { setBusy(true); setError(''); try { await startGuest(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Guest access could not be started.'); } finally { setBusy(false); } }}>Continue as guest</Button><Link className="inline-link" to={`/auth/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}>Sign in</Link></>}>Guest search has a limited daily allowance. Your query will stay here.{error && <p role="alert">{error}</p>}</Alert>;
+}
+
+function AuthorArtwork() {
+  return <div className="search-author-art" aria-hidden="true"><img className="search-art-complete" src={asset('figma/home/search-art.svg')} alt="" /></div>;
+}
+
+function ResultRow({ host, request, dataset }: { host: HostCard; request: SearchRequest; dataset: Dataset }) {
+  const shared = isShared(request);
+  const params = new URLSearchParams(encodeSearch(withoutShareToken(request)));
+  params.set('back', `${searchPath(dataset)}?${encodeSearch(request)}`);
+  if (shared) params.set('own_access', '1');
+  const path = `${dataset === 'private' ? '/private' : ''}/hosts/${encodeURIComponent(host.ip)}`;
+  const portHref = (port: number, protocol?: string) => { const next = new URLSearchParams(params); next.set('port', String(port)); if (protocol) next.set('protocol', protocol); return `${path}?${next}`; };
+  const ports = host.open_ports;
+  return <article className="search-result-row"><div className="search-result-address"><Link className="search-result-ip" to={`${path}?${params}`}>{host.ip}</Link><p>{host.org || <span className="muted">Organization not provided</span>}</p>{host.os && <p className="search-row-meta">{host.os}</p>}{host.labels_list?.length ? <div className="search-labels">{host.labels_list.slice(0, 3).map(label => <Badge key={label}>{label}</Badge>)}{host.labels_list.length > 3 && <span className="muted">+{host.labels_list.length - 3} labels</span>}</div> : null}{shared && <small className="muted">Open details with your own access</small>}</div><div className="search-result-services"><div className="search-port-chips">{ports?.slice(0, 6).map((port, index) => <Link className="search-port-chip" key={`${port.port}-${port.protocol}-${index}`} to={portHref(port.port, port.protocol)} title={`View ${port.port}${port.protocol ? ` / ${port.protocol}` : ''}${shared ? ' using your own access' : ''}`}>{port.port}</Link>)}{ports && ports.length > 6 && <Link className="search-port-overflow" to={`${path}?${params}`}>+{ports.length - 6} more</Link>}</div><p className="search-row-meta">{ports === undefined ? 'Service list not provided' : ports.length === 0 ? '0 observed ports' : [...new Set(ports.map(port => port.protocol).filter(Boolean))].join(' · ') || `${ports.length} observed ports`}</p></div><div className="search-result-observation"><p>{countryName(host.country_code)}</p>{(host.city_name || host.region) && <p className="search-row-meta">{[host.city_name, host.region].filter((value, index, list) => value && list.indexOf(value) === index).join(' · ')}</p>}<time className="search-row-meta">{dateLabel(host.uts)}</time></div></article>;
+}
+
+export function SearchPage() {
+  const { api, user, session, metadata } = useApp();
+  const location = useLocation(), navigate = useNavigate();
+  const [params] = useSearchParams();
+  const serializedParams = params.toString();
+  const parsed = useMemo(() => decodeSearch(new URLSearchParams(serializedParams)), [serializedParams]);
+  const dataset: Dataset = location.pathname.startsWith('/private/') || params.get('dataset') === 'private' ? 'private' : 'public';
+  const applied = parsed.request, appliedKey = JSON.stringify(applied), shared = isShared(applied);
+  const [draft, setDraft] = useState<SearchRequest>(applied);
+  const beforeEditor = useRef<SearchRequest>(applied);
+  const [editorOpen, setEditorOpen] = useState(params.get('conditions') === '1');
+  const [inputError, setInputError] = useState('');
+  const [toolbar, setToolbar] = useState<HTMLElement | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [facetsRequested, setFacetsRequested] = useState('');
+  const [mobileFacets, setMobileFacets] = useState(false);
+  useEffect(() => { setDraft(applied); setInputError(''); }, [appliedKey]);
+  useEffect(() => { setToolbar(document.getElementById('workspace-tools')); }, []);
+  const principal = user?.user_id || user?.session_id || session.status;
+  const accessIssues = searchAccessIssues(applied, metadata?.search_restrictions);
+  const hasAccess = session.status === 'authenticated' || (dataset === 'public' && session.status === 'guest');
+  const results = useQuery({ queryKey: ['search', principal, dataset, applied], enabled: hasAccess && parsed.hasSearch && !parsed.error && accessIssues.length === 0, staleTime: Infinity, placeholderData: keepPreviousData, queryFn: async ({ signal }) => {
+    const frame = await api.request<HostCard[]>(dataset === 'private' ? 'private_hosts' : 'hosts', applied, { signal });
+    if (!Array.isArray(frame.data)) throw new Error('The server returned an unexpected host list. Your search has been kept.');
+    return { hosts: frame.data, metadata: frame.metadata, request: applied };
+  } });
+  const facetsEnabled = hasAccess && parsed.hasSearch && !parsed.error && accessIssues.length === 0 && (!shared || facetsRequested === appliedKey);
+  const analytics = useFacets(applied, dataset, facetsEnabled, principal);
+  const plan = results.data?.metadata?.subscription_type || user?.subscription?.type || (session.status === 'guest' ? 'Guest' : 'Free');
+  const maxPage = PAGE_CAPS[plan] || 2;
+  const bodyRequest = results.data?.request || applied;
+  const page = applied.page || 1, pageSize = applied.docs_per_page || 20;
+
+  function run(next: SearchRequest) {
+    if (shared || isShared(next)) { setInputError('This shared search is fixed. Start your own search to change the query.'); return; }
+    try {
+      const normalized = validateSearchRequest({ ...next, page: next.page || 1, docs_per_page: next.docs_per_page || 20 });
+      const blocked = searchAccessIssues(normalized, metadata?.search_restrictions);
+      if (blocked.length) { setInputError(blocked.join(' ') + ' Your draft has been kept.'); return; }
+      if ((normalized.page || 1) > maxPage) { setInputError(`Your current plan allows up to ${maxPage} result pages.`); return; }
+      const target = `${searchPath(dataset)}?${encodeSearch(normalized)}`;
+      setEditorOpen(false); setInputError('');
+      if (JSON.stringify(normalized) === appliedKey && parsed.hasSearch) { void results.refetch(); if (!shared) void analytics.refetch(); }
+      else navigate(target);
+    } catch (cause) { setInputError(cause instanceof Error ? cause.message : 'Check the search.'); }
+  }
+  function chooseType(type: string) { const next = withType(draft, type); setDraft(next); if (parsed.hasSearch) run(next); }
+  function addFacet(field: string, value: string) { run({ ...applied, page: 1, simple_search_filters: [...(applied.simple_search_filters || []), { field, value }] }); }
+  function openEditor() { beforeEditor.current = draft; setEditorOpen(true); }
+  function cancelEditor() { setDraft(beforeEditor.current); setEditorOpen(false); }
+  const type = selectedType(draft);
+  const tools = <div className="search-toolbar-tools"><Button variant="secondary" size="sm" disabled={shared} onClick={() => editorOpen ? cancelEditor() : openEditor()} aria-expanded={editorOpen}>Filters <span aria-hidden="true">+</span></Button><label className="search-type-select"><span className="search-sr-only">Result type</span><select value={type} disabled={shared} onChange={event => chooseType(event.target.value)}><option value="">All Types</option><option value="ipv4">IPv4</option><option value="ipv6">IPv6</option><option value="domain">Domain</option>{type === 'custom' && <option value="custom" disabled>Custom type logic</option>}{type && !['ipv4', 'ipv6', 'domain', 'custom'].includes(type) && <option value={type}>{type}</option>}</select></label></div>;
+  return <div className={`search-page ${parsed.hasSearch ? 'search-page-results' : 'search-page-home'}`}>{toolbar ? createPortal(tools, toolbar) : tools}{!parsed.hasSearch && <section className="search-home-hero"><div className="search-home-copy"><h1>Search internet<br />infrastructure.</h1><p>Find hosts, services and networks.<br />Start with a query. Follow the evidence.</p></div><AuthorArtwork /></section>}{dataset === 'private' && <div className="search-private-context"><Badge tone="accent">Private results</Badge><span>{applied.task_ids?.length ? `Tasks: ${applied.task_ids.join(', ')}` : 'All accessible scan tasks'}</span><Link to="/scanner">Back to scanner</Link></div>}<form className="search-query-bar" onSubmit={event => { event.preventDefault(); run({ ...draft, page: 1 }); }}><label className="search-sr-only" htmlFor="main-search-query">Search internet infrastructure</label><input id="main-search-query" value={draft.full_text_search || ''} onChange={event => setDraft({ ...draft, full_text_search: event.target.value })} placeholder="Search an IP, domain, technology or text" readOnly={shared} spellCheck={false} autoComplete="off" /><button type="submit" className="search-submit" disabled={shared || results.isFetching} aria-label="Run search">{results.isFetching ? <Spinner label="Searching" /> : <Icon name="arrow" size={20} />}</button></form>{!parsed.hasSearch && <><div className="search-examples"><span>Try a search</span>{[{ label: 'Text query', request: { full_text_search: 'nginx' } }, { label: 'Domain', request: { full_text_search: 'example.com' } }, { label: 'IP / CIDR', request: { full_text_search: '192.0.2.0/24' } }, { label: 'Technology', request: { simple_search_filters: [{ field: 'products', value: 'nginx' }] } }].map(example => <button type="button" key={example.label} onClick={() => run({ ...example.request, page: 1, docs_per_page: 20 })}>{example.label}</button>)}</div><p className="search-home-hint">Use filters for a specific field or range.</p><IndexStatistics /></>}{parsed.error && <Alert tone="error" title="This search link could not be restored" actions={<Button variant="secondary" onClick={() => navigate(searchPath(dataset))}>Start a new search</Button>}>{parsed.error}</Alert>}{accessIssues.length > 0 && <Alert tone="warning" title="Some conditions need different access" actions={<Button variant="secondary" onClick={openEditor}>Edit conditions</Button>}>{accessIssues.join(" ")} Your search has been kept. <Link to="/billing">Compare plans</Link></Alert>}{inputError && <Alert tone="error" title="Check your search">{inputError}</Alert>}{shared && <Alert tone="info" title="Shared search">This exact search uses the creator’s access. Filters, paging and export are locked. Host details use your own access. <Link to={`${searchPath(dataset)}?${encodeSearch(withoutShareToken(applied))}`}>Start your own search</Link></Alert>}{editorOpen && !shared && <ConditionsEditor request={draft} onChange={setDraft} onApply={request => run({ ...request, page: 1 })} onCancel={cancelEditor} busy={results.isFetching} />}{!editorOpen && (applied.simple_search_filters?.length || applied.range_filter?.length) ? <div className="search-applied-chips"><span>Applied</span>{applied.simple_search_filters?.map((filter, index) => <button type="button" key={index} disabled={shared} onClick={openEditor}>{filterSummary(filter)}</button>)}{applied.range_filter?.map((range, index) => <span key={`range-${index}`} className="search-range-chip">{range.field}: {range.start ?? 'Any'}–{range.end ?? 'Any'}</span>)}</div> : null}{!hasAccess && (parsed.hasSearch || session.status !== 'loading') && (dataset === 'private' ? <Alert tone="info" title="Sign in to view private results"><Link to={`/auth/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}>Continue to sign in</Link></Alert> : <SearchAccessNotice />)}{parsed.hasSearch && hasAccess && !parsed.error && accessIssues.length === 0 && <><div className="search-result-heading"><div><h1>{results.data ? `${results.data.hosts.length.toLocaleString()} hosts returned` : results.isPending ? 'Searching hosts' : 'Search results'}</h1><p className="muted">Page {page} · {dataset === 'private' ? 'Private scan results' : 'Observed services and metadata'}{results.isPlaceholderData ? ' · Showing the previous search while updating' : ''}</p></div><div className="search-result-actions"><Link className="search-secondary-link" to={`/search/share?${encodeSearch(applied)}${dataset === 'private' ? '&dataset=private' : ''}`}><Icon name="copy" size={18} />Share</Link><Button variant="secondary" size="sm" disabled={shared || results.isFetching || !results.data?.hosts.length} onClick={() => setExportOpen(true)}><Icon name="download" size={18} />Export</Button><Link className="search-secondary-link" to={`/search/saved?${encodeSearch(applied)}${dataset === 'private' ? '&dataset=private' : ''}`}>Saved queries</Link></div></div>{results.isFetching && <div className="search-request-status" role="status"><Spinner label={results.data ? 'Updating results; previous results are shown until the response arrives.' : 'Loading hosts'} /></div>}{results.error && <Alert tone="error" title="Search could not be completed" actions={<><Button variant="secondary" onClick={() => void results.refetch()}>Try again</Button><Link to="/billing">Compare plans</Link></>}>{results.error.message} Your query and conditions have been kept.</Alert>}{Boolean(results.data?.metadata?.result_restrictions?.hidden_fields?.length || results.data?.metadata?.result_restrictions?.hidden_labels?.length) && <p className="search-access-note">Some fields or labels are hidden by your access. {results.data?.metadata?.result_restrictions?.hidden_fields?.length ? `Hidden fields: ${results.data.metadata.result_restrictions.hidden_fields.join(", ")}. ` : ""}{results.data?.metadata?.result_restrictions?.hidden_labels?.length ? `Hidden labels: ${results.data.metadata.result_restrictions.hidden_labels.join(", ")}.` : ""} <Link to="/billing">View plans</Link></p>}<div className="search-result-toolbar"><Button className="search-mobile-facets-toggle" variant="secondary" size="sm" onClick={() => setMobileFacets(!mobileFacets)} aria-expanded={mobileFacets}>Analytics</Button><label>Sort <select value={`${applied.sort_field || 'uts'}:${applied.sort_direction || 'desc'}`} disabled={shared} onChange={event => { const [sort_field, sort_direction] = event.target.value.split(':'); run({ ...applied, sort_field, sort_direction, page: 1 }); }}><option value="uts:desc">Newest observation</option><option value="uts:asc">Oldest observation</option><option value="ip:asc">Address ascending</option><option value="ip:desc">Address descending</option></select></label><label>Rows <select value={pageSize} disabled={shared} onChange={event => run({ ...applied, docs_per_page: Number(event.target.value), page: 1 })}>{[10, 20, 25, 50].map(size => <option key={size} value={size}>{size}</option>)}{![10, 20, 25, 50].includes(pageSize) && <option value={pageSize}>{pageSize}</option>}</select></label></div><div className={`search-results-workspace ${mobileFacets ? 'search-facets-open' : ''}`}><FacetPanel facets={analytics.facets} pending={analytics.isFetching} error={analytics.error} onSelect={addFacet} onRetry={() => void analytics.refetch()} disabled={shared} shared={shared} loaded={facetsEnabled} onLoad={() => setFacetsRequested(appliedKey)} /><div className="search-results-list"><div className="search-results-columns" aria-hidden="true"><span>Host / network</span><span>Services</span><span>Observation</span></div>{results.data?.hosts.map((host, index) => <ResultRow key={`${host.ip}-${index}`} host={host} request={bodyRequest} dataset={dataset} />)}{results.isSuccess && !results.data.hosts.length && <EmptyState title="No matching hosts" description={page > 1 ? 'No records were returned on this page. Return to the previous page or change your search.' : 'Try changing the text or removing a condition.'} actions={<Button variant="secondary" onClick={() => { if (page > 1) run({ ...applied, page: page - 1 }); else openEditor(); }}>{page > 1 ? 'Previous page' : 'Edit filters'}</Button>} />}{results.isPending && !results.data && <div className="search-results-skeleton" aria-hidden="true">{[0, 1, 2, 3].map(row => <div key={row}><span /><span /><span /></div>)}</div>}{results.data && !shared && <><Pagination page={page} pageSize={pageSize} count={results.data.hosts.length} maxPage={maxPage} onPageChange={next => run({ ...applied, page: next })} /><p className="search-pagination-note">The server returns a page of hosts without a total. {page >= maxPage ? `Your plan’s ${maxPage}-page limit is reached.` : 'A full page may have a following page.'}</p></>}</div></div></>}<ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} query={applied} privateSearch={dataset === 'private'} taskIds={applied.task_ids} shareToken={applied.st || applied.share_token} /></div>;
+}

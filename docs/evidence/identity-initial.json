@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-10-23T11:40:25.741Z",
+  "environment": "Firefox / explicit local demo / 127.0.0.1:5173",
+  "liveBackend": "NOT_RUN",
+  "results": [
+    {
+      "name": "billing-layout-and-pricing",
+      "status": "FAIL",
+      "error": "billing 390 horizontal overflow\n\nexpect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 391\nReceived:    584",
+      "browserErrors": [],
+      "externalRequests": []
+    },
+    {
+      "name": "billing-promo-card-and-crypto",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "subscription-cancel-resume",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "api-key-rotation",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "sessions-and-organization",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "profile-verification",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "totp-enrollment-and-one-time-codes",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "auth-layout-pending2fa",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "signup-minimum-and-verification",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    },
+    {
+      "name": "password-recovery-error-and-success",
+      "status": "PASS",
+      "browserErrors": 0,
+      "externalRequests": 0
+    }
+  ],
+  "evidenceExport": {
+    "source": "identity-qa/results.json",
+    "sourceSha256": "0254a79ec05b7c494eb727e09259dec0c6b98af66e4a48c473c7cec510a72923",
+    "normalization": "Workspace path prefix replaced with <workspace>; assertions unchanged."
+  }
+}

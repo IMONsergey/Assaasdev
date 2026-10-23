@@ -1,0 +1,60 @@
+{
+  "mode": "Explicit synthetic local demo",
+  "capturedOn": "2026-10-23",
+  "images": [
+    {
+      "path": "docs/screenshots/search-home.png",
+      "captureSource": "browser-qa-core/home-statistics-collapsed-1440.png",
+      "sha256": "4a2ea5de027441a74b764cbd5b1edc3b411141854f69b73ae13c00e085939488",
+      "bytes": 146268
+    },
+    {
+      "path": "docs/screenshots/search-results.png",
+      "captureSource": "browser-qa-core/results-1440.png",
+      "sha256": "913f4df2c845c6ea9491d25d2ebf08c7c85243e4cd8a78cbdd2f4d60a6755785",
+      "bytes": 163266
+    },
+    {
+      "path": "docs/screenshots/host-details.png",
+      "captureSource": "browser-qa-core/host-1440.png",
+      "sha256": "65a343a4aee7440e0a83a8364c9d0d977153dbc6d350deb6a1d17f5b2877996f",
+      "bytes": 172616
+    },
+    {
+      "path": "docs/screenshots/files-desktop.png",
+      "captureSource": "files-qa/files-desktop-1440.png",
+      "sha256": "a1be0ca356f6172900a8cad764076eb984129d4601e04090340ca76b573af5d2",
+      "bytes": 180692
+    },
+    {
+      "path": "docs/screenshots/scanner-desktop.png",
+      "captureSource": "browser-qa-core/scanner-1440.png",
+      "sha256": "122c66bfe5300d80bc4da7df184ece221b133fba910b74f95a6099d1b3ba14ac",
+      "bytes": 151434
+    },
+    {
+      "path": "docs/screenshots/login-desktop.png",
+      "captureSource": "identity-qa/auth-1440.png",
+      "sha256": "1148dfa52bfced6599a36facb86de5f5d03c4da027669757fa92fc70264589bc",
+      "bytes": 203833
+    },
+    {
+      "path": "docs/screenshots/billing-desktop.png",
+      "captureSource": "identity-qa/billing-1440-verified.png",
+      "sha256": "3c1b8f008203a139acdf187690750e3879e7b01eb3cc601269171196d742b51e",
+      "bytes": 152630
+    },
+    {
+      "path": "docs/screenshots/search-mobile.png",
+      "captureSource": "browser-qa-core/results-390.png",
+      "sha256": "3da3cb0d7cc4369ea70284037cdcf0e31aa72d9508ab627363c5069a2e2569bb",
+      "bytes": 58167
+    },
+    {
+      "path": "docs/screenshots/files-mobile.png",
+      "captureSource": "files-qa/files-mobile-390.png",
+      "sha256": "e8e260313b4a8071e3760c9347d7ebc1f9f14c8ff34808fd7d185b0d87ff02cb",
+      "bytes": 165795
+    }
+  ]
+}
