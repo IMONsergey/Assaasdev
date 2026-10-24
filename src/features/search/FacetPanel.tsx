@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError, isApiError } from '../../api';
 import type { AnalyticsFacet, FacetData } from '../../api';
@@ -58,10 +58,38 @@ function FacetValues({ facet, selected, disabled, shared, onSelect }: { facet: F
   </section>;
 }
 
-export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled, loadDisabled, shared, onLoad, loaded, selectedValues }: { facets: FacetData[]; pending: boolean; error: Error | null; onSelect: (field: string, value: string) => void; onRetry: () => void; disabled: boolean; loadDisabled: boolean; shared: boolean; onLoad: () => void; loaded: boolean; selectedValues: (field: string) => string[] }) {
+export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled, loadDisabled, shared, onLoad, loaded, selectedValues, requestKey }: { facets: FacetData[]; pending: boolean; error: Error | null; onSelect: (field: string, value: string) => void; onRetry: () => void; disabled: boolean; loadDisabled: boolean; shared: boolean; onLoad: () => void; loaded: boolean; selectedValues: (field: string) => string[]; requestKey: string }) {
   const { api, toast, user, refreshSession } = useApp();
+  const analyticsActions = useRef<HTMLDivElement>(null);
+  const initialLoadFocus = useRef<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AnalyticsFacet[]>([]);
+  useEffect(() => {
+    const cancelFocus = () => { initialLoadFocus.current = null; };
+    const changedFocus = (event: FocusEvent) => { if (event.target !== document.body) cancelFocus(); };
+    document.addEventListener('focusin', changedFocus, true);
+    document.addEventListener('pointerdown', cancelFocus, true);
+    document.addEventListener('keydown', cancelFocus, true);
+    window.addEventListener('blur', cancelFocus);
+    window.addEventListener('popstate', cancelFocus);
+    return () => {
+      document.removeEventListener('focusin', changedFocus, true);
+      document.removeEventListener('pointerdown', cancelFocus, true);
+      document.removeEventListener('keydown', cancelFocus, true);
+      window.removeEventListener('blur', cancelFocus);
+      window.removeEventListener('popstate', cancelFocus);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (pending || initialLoadFocus.current === null) return;
+    const requestedFocus = initialLoadFocus.current;
+    initialLoadFocus.current = null;
+    // The initial action disappears while loading. Restore its replacement
+    // only if this request still owns focus and the user has stayed here.
+    if (!loaded || loadDisabled || requestedFocus !== requestKey || document.activeElement !== document.body || !document.hasFocus()) return;
+    const reload = analyticsActions.current?.querySelector<HTMLButtonElement>('[aria-label="Reload analytics"]');
+    if (reload && !reload.disabled && reload.getClientRects().length) reload.focus({ preventScroll: true });
+  }, [pending, loaded, loadDisabled, requestKey]);
   const save = useMutation({ mutationFn: async (reset: boolean) => { const response = await api.request<{ success: boolean }>(reset ? 'analytics_settings_delete' : 'analytics_settings', reset ? {} : { facets: settings.map((facet, priority) => ({ ...facet, priority })) }, { mutation: true }); if (response.data?.success !== true) throw new ApiError('unknown', 'The server has not confirmed the settings change.', { outcome: 'unknown' }); }, onSuccess: async () => { toast('Analytics settings saved.', 'success'); setSettingsOpen(false); await refreshSession(); } });
   const unknownSettings = isApiError(save.error) && save.error.outcome === 'unknown';
   function openSettings() {
@@ -76,9 +104,9 @@ export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled
   return <aside className="search-facets" aria-label="Result analytics">
     <div className="search-facets-heading">
       <div><h2>{loaded ? 'Search breakdown' : 'Analytics'}</h2>{loaded && <p>Applied search</p>}</div>
-      <div className="cluster">{!shared && <Button className="search-analytics-settings" variant="ghost" size="sm" aria-label="Analytics settings" onClick={openSettings}><Icon name="settings" size={16} /><span className="search-analytics-settings-label">Settings</span></Button>}{loaded && <Button variant="secondary" size="sm" loading={pending} disabled={loadDisabled} aria-label="Reload analytics" title={loadDisabled ? 'Apply or cancel changes first' : shared ? 'Uses another link use' : 'Uses analytics credits'} onClick={onRetry}><Icon name="refresh" size={16} />Reload</Button>}</div>
+      <div ref={analyticsActions} className="cluster">{!shared && <Button className="search-analytics-settings" variant="ghost" size="sm" aria-label="Analytics settings" onClick={openSettings}><Icon name="settings" size={16} /><span className="search-analytics-settings-label">Settings</span></Button>}{loaded && <Button variant="secondary" size="sm" loading={pending} disabled={loadDisabled} aria-label="Reload analytics" title={loadDisabled ? 'Apply or cancel changes first' : shared ? 'Uses another link use' : 'Uses analytics credits'} onClick={onRetry}><Icon name="refresh" size={16} />Reload</Button>}</div>
     </div>
-    {!loaded && !pending && !error && <div className="search-analytics-start"><span className="search-analytics-symbol"><Icon name="chart" size={30} /></span><h3>Understand the matching hosts</h3><p>Compare countries, networks, ports and products.</p><Button disabled={loadDisabled} onClick={onLoad} title={loadDisabled ? 'Apply or cancel changes first' : undefined}>Load analytics</Button><small>{loadDisabled ? 'Apply or cancel your changes to continue.' : shared ? 'Uses one link use and the creator’s access.' : 'Uses analytics credits.'}</small></div>}
+    {!loaded && !pending && !error && <div className="search-analytics-start"><span className="search-analytics-symbol"><Icon name="chart" size={30} /></span><h3>Understand the matching hosts</h3><p>Compare countries, networks, ports and products.</p><Button disabled={loadDisabled} onClick={event => { initialLoadFocus.current = document.activeElement === event.currentTarget ? requestKey : null; onLoad(); }} title={loadDisabled ? 'Apply or cancel changes first' : undefined}>Load analytics</Button><small>{loadDisabled ? 'Apply or cancel your changes to continue.' : shared ? 'Uses one link use and the creator’s access.' : 'Uses analytics credits.'}</small></div>}
     {pending && !facets.length && <div className="search-facet-grid" aria-label="Loading analytics">{[0, 1, 2].map(index => <Skeleton key={index} rows={6} className="search-facet-skeleton" />)}</div>}
     {error && <Alert tone="warning" title={facets.length ? 'Some analytics is unavailable' : 'Analytics is unavailable'} actions={<Button variant="secondary" size="sm" disabled={loadDisabled || pending} onClick={onRetry}>Retry analytics</Button>}>{error.message}</Alert>}
     {!pending && !error && loaded && !facets.length && <EmptyState title="No analytics returned" description="Try different conditions or choose another set of facets." />}

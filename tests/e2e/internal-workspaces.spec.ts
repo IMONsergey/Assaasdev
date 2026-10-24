@@ -109,6 +109,47 @@ test('scanner filters all loaded tasks and preserves the list page through priva
   await expect(page.locator('.scanner-task-table--planned')).toContainText('plan-999');
 });
 
+test('rapid scanner filters compose the current URL and preserve Back and Forward history', async ({ page }) => {
+  const tasks = Array.from({ length: 1000 }, (_, index): PrivateTask => ({ id: `task-${index}`, status: index % 2 ? 'completed' : 'running', host_list: [`host-${index}.example.test`], port_list: [443], result_count: 1 }));
+  const frames = await internalApi(page, { tasks });
+  const initial = '/scanner?tab=all&q=host-999&status=running&rows=10&page=7';
+  await page.goto(initial);
+  await expect(page.getByRole('heading', { name: 'No tasks match this filter', exact: true })).toBeVisible();
+  const query = page.getByLabel('Find a task', { exact: true });
+  const status = page.getByLabel('Task status', { exact: true });
+  const pagination = page.getByRole('navigation', { name: 'Pagination', exact: true });
+  const reads = frames.filter(frame => ['private_tasks_get', 'private_planning_tasks_get'].includes(frame.type)).length;
+
+  // One task reproduces the interval between synchronous history and React render.
+  await status.evaluate(element => {
+    const select = element as HTMLSelectElement;
+    const clear = [...document.querySelectorAll<HTMLButtonElement>('.scanner-page button')]
+      .find(button => button.textContent?.trim() === 'Clear task filter');
+    if (!clear) throw new Error('The unmatched scanner query must expose its clear action.');
+    clear.click();
+    select.value = 'completed';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect(page).toHaveURL(url => url.searchParams.get('tab') === 'all'
+    && !url.searchParams.has('q') && !url.searchParams.has('page')
+    && url.searchParams.get('status') === 'completed' && url.searchParams.get('rows') === '10');
+  await expect(query).toHaveValue('');
+  await expect(status).toHaveValue('completed');
+  await expect(pagination).toContainText('500 results');
+  await expect(page.locator('.scanner-task-table tbody tr')).toHaveCount(10);
+
+  await page.goBack();
+  await expect(query).toHaveValue('');
+  await expect(status).toHaveValue('');
+  await expect(pagination).toContainText('1,000 results');
+  await page.goForward();
+  await expect(query).toHaveValue('');
+  await expect(status).toHaveValue('completed');
+  await expect(pagination).toContainText('500 results');
+  expect(frames.filter(frame => ['private_tasks_get', 'private_planning_tasks_get'].includes(frame.type))).toHaveLength(reads);
+  expect(frames.filter(frame => ['private_task_add', 'private_task_update', 'private_task_remove', 'private_planning_task_remove', 'private_task_results_delete'].includes(frame.type))).toEqual([]);
+});
+
 test('payment history searches 5,000 records locally with bounded rendering and keeps zero amounts', async ({ page }) => {
   const payments = Array.from({ length: 5000 }, (_, index): BillingPayment => ({ payment_id: `payment-${String(index).padStart(4, '0')}`, amount_usd: index === 4999 ? 0 : 50, subscription: 'Plus', created_at: 1800000000 + index, ...(index === 4999 ? {} : { status: index % 2 ? 'pending' : 'completed' }) }));
   const frames = await internalApi(page, { payments });

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 type RecordedRequest = { type: string; data: Record<string, unknown> };
-async function setupSearch(page: Page, requests: RecordedRequest[]) {
+async function setupSearch(page: Page, requests: RecordedRequest[], deferAnalytics?: (reply: () => void) => void) {
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__ = {dataMode:"live", apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user_id: 'search-ux', user_name: 'search_ux', user_type: 'USER', credits: 5000, subscription: { type: 'Business', credits: 5000 } }) }));
   await page.routeWebSocket('**/backend/ws', socket => {
@@ -11,8 +11,11 @@ async function setupSearch(page: Page, requests: RecordedRequest[]) {
       const send = (data: unknown) => socket.send(JSON.stringify({ type: request.type, id: request.id, data, metadata: { subscription_type: 'Business' } }));
       if (request.type === 'hosts') send(Array.from({ length: Number(request.data.docs_per_page) || 20 }, (_, index) => ({ ip: `192.0.2.${index + 1}`, org: 'Network A', country_code: 'DE', open_ports: [{ port: 443, protocol: 'https' }], uts: 1709251199 })));
       else if (request.type === 'analytics') {
-        send({ facet_name: 'country_name', facet_values: [{ key: 'Germany', doc_count: 120 }, { key: 'France', doc_count: 0 }] });
-        send({ complete: true });
+        const reply = () => {
+          send({ facet_name: 'country_name', facet_values: [{ key: 'Germany', doc_count: 120 }, { key: 'France', doc_count: 0 }] });
+          send({ complete: true });
+        };
+        if (deferAnalytics) deferAnalytics(reply); else reply();
       } else if (request.type === 'autocomplete') send({ results: [], has_more: false });
       else send({ unread_count: 0 });
     });
@@ -21,7 +24,8 @@ async function setupSearch(page: Page, requests: RecordedRequest[]) {
 
 test('local search views preserve drafts and analytics requires an explicit request', async ({ page }) => {
   const requests: RecordedRequest[] = [];
-  await setupSearch(page, requests);
+  const analyticsReplies: (() => void)[] = [];
+  await setupSearch(page, requests, reply => analyticsReplies.push(reply));
   await page.goto('/search?q=network&run=1');
   await expect(page.getByRole('heading', { name: '20 hosts returned' })).toBeVisible();
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
@@ -29,7 +33,11 @@ test('local search views preserve drafts and analytics requires an explicit requ
   await expect(page.getByRole('button', { name: 'Load analytics', exact: true })).toBeVisible();
   expect(new URL(page.url()).searchParams.get('view')).toBe('analytics');
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
-  await page.getByRole('button', { name: 'Load analytics', exact: true }).click();
+  await page.getByRole('button', { name: 'Load analytics', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => requests.filter(item => item.type === 'analytics').length).toBe(1);
+  analyticsReplies.shift()!();
+  await expect(page.getByRole('button', { name: 'Reload analytics', exact: true })).toBeFocused();
   const analytics = page.getByRole('complementary', { name: 'Result analytics' });
   const germany = analytics.getByRole('button', { name: /^Germany/ });
   await expect(germany).toContainText('120');
@@ -52,6 +60,25 @@ test('local search views preserve drafts and analytics requires an explicit requ
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
   await page.getByRole('button', { name: 'Reload analytics', exact: true }).click();
   await expect.poll(() => requests.filter(item => item.type === 'analytics').length).toBe(2);
+  analyticsReplies.shift()!();
+  await expect(page.getByRole('button', { name: 'Reload analytics', exact: true })).toBeEnabled();
+
+  // A later explicit load must not take focus back after the user leaves Analytics.
+  await page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true }).fill('different network');
+  await page.getByRole('button', { name: 'Run search', exact: true }).click();
+  await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(3);
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await page.getByRole('button', { name: 'Load analytics', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => requests.filter(item => item.type === 'analytics').length).toBe(3);
+  const resultsTab = page.getByRole('tab', { name: 'Results', exact: true });
+  await resultsTab.click();
+  analyticsReplies.shift()!();
+  await expect(page.getByRole('button', { name: 'Reload analytics', exact: true, includeHidden: true })).toBeEnabled();
+  await expect(resultsTab).toBeFocused();
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await expect(germany).toBeVisible();
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(3);
 });
 
 test('observation dates apply UTC seconds without rewriting complex rules', async ({ page }) => {

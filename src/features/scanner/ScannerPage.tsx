@@ -132,7 +132,8 @@ export function ScannerPage() {
   function reviewAgain() { operation.reset(); setConfirm(null); setRetryNotice('The previous outcome was not confirmed. Review the refreshed task list and the scope before making another request.'); }
   const tab = ['all', 'active', 'history', 'planned'].includes(params.get('tab') || '') ? params.get('tab')! : 'all';
   function updateList(values: Record<string, string>, replace = false) {
-    const next = new URLSearchParams(params);
+    // History is synchronous; the router's rendered params can trail a rapid edit.
+    const next = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(values)) { if (value) next.set(key, value); else next.delete(key); }
     if (!('page' in values)) next.delete('page');
     setParams(next, { replace, state: { preserveTabFocus: true } });

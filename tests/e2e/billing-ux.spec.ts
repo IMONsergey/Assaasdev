@@ -53,6 +53,70 @@ test('billing sections preserve local payment filters and history without extra 
   }
 });
 
+test('rapid payment filters compose the current URL across section changes and browser history', async ({ page }) => {
+  const frames = await billingApi(page);
+  const initial = '/billing?section=payments&history_query=payment-0001&history_rows=10&history_page=3&history_order=oldest';
+  await page.goto(initial);
+  const history = page.getByRole('region', { name: 'Payment history records', exact: true });
+  const query = history.getByLabel('Search payment history', { exact: true });
+  const status = history.getByLabel('Payment status filter', { exact: true });
+  await expect(history.locator('tbody tr')).toHaveCount(1);
+  await expect(history.locator('tbody tr')).toContainText('payment-0001');
+  const reads = frames.filter(frame => frame.type === 'user_billing').length;
+
+  // Both ordinary control events run before the router transition can render.
+  await status.evaluate(element => {
+    const select = element as HTMLSelectElement;
+    const clear = [...select.closest('.billing-history')!.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Clear filters');
+    if (!clear) throw new Error('The current payment query must expose Clear filters.');
+    clear.click();
+    select.value = 'completed';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect(page).toHaveURL(url => url.searchParams.get('section') === 'payments'
+    && !url.searchParams.has('history_query') && !url.searchParams.has('history_page')
+    && url.searchParams.get('history_status') === 'completed'
+    && url.searchParams.get('history_rows') === '10' && url.searchParams.get('history_order') === 'oldest');
+  await expect(query).toHaveValue('');
+  await expect(status).toHaveValue('completed');
+  await expect(history).toContainText('40 matching');
+  await expect(history.locator('tbody tr')).toHaveCount(10);
+
+  await page.goBack();
+  await expect(query).toHaveValue('');
+  await expect(status).toHaveValue('');
+  await expect(history).toContainText('80 matching');
+  await page.goBack();
+  await expect(page).toHaveURL(initial);
+  await expect(query).toHaveValue('payment-0001');
+  await expect(history.locator('tbody tr')).toHaveCount(1);
+  await page.goForward();
+  await expect(history).toContainText('80 matching');
+  await page.goForward();
+  await expect(status).toHaveValue('completed');
+  await expect(history).toContainText('40 matching');
+
+  // Parent section navigation must preserve a child's not-yet-rendered filter.
+  await status.evaluate(element => {
+    const select = element as HTMLSelectElement;
+    const overview = document.querySelector<HTMLButtonElement>('#billing-tab-overview');
+    if (!overview) throw new Error('The Overview tab must be available.');
+    select.value = 'pending';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    overview.click();
+  });
+  await expect(page).toHaveURL(url => url.searchParams.get('section') === 'overview'
+    && url.searchParams.get('history_status') === 'pending' && !url.searchParams.has('history_query'));
+  await expect(history).not.toBeVisible();
+  await page.getByRole('tab', { name: 'Payments', exact: true }).click();
+  await expect(status).toHaveValue('pending');
+  await expect(query).toHaveValue('');
+  await expect(history).toContainText('40 matching');
+  expect(frames.filter(frame => frame.type === 'user_billing')).toHaveLength(reads);
+  expect(frames.filter(frame => ['init_checkout', 'confirm_payment', 'delete_payment', 'pay_with_balance', 'get_address'].includes(frame.type))).toEqual([]);
+});
+
 test('payment return is explicit and an unknown check remains blocked through section navigation', async ({ page }) => {
   const frames = await billingApi(page, { mismatchPayment: true });
   await page.goto('/billing/return?payment_id=payment-0001');

@@ -100,14 +100,15 @@ export function BillingPage() {
   }, [location.search, selection, paymentStatus]);
 
   function changeSection(next: BillingSection) {
-    const params = new URLSearchParams(location.search);
+    // A history filter can already be in the URL while its render is pending.
+    const params = new URLSearchParams(window.location.search);
     params.set('section', next);
     navigate({ search: `?${params}`, hash: '' }, { state: { preserveTabFocus: true } });
   }
 
   function changeCadence(value: BillingCadence) {
     setCadence(value); setPromoResult(null); promoCheck.reset();
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(window.location.search);
     params.set('cadence', value);
     navigate({ search: `?${params}` }, { replace: true, state: { preserveTabFocus: true } });
   }

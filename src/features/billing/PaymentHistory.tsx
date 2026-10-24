@@ -19,7 +19,9 @@ export function PaymentHistory({ payments, onCheck, onRemove, checkDisabled, rem
   const [params, setParams] = useSearchParams();
   const { query, status, order, rows, page } = paymentHistoryState(params);
   function update(values: Record<string, string>, replace = false) {
-    const next = new URLSearchParams(params);
+    // BrowserRouter updates history before its transition renders new params.
+    // Compose consecutive controls from that current URL, including Back/Forward.
+    const next = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(values)) {
       if (value) next.set(`history_${key}`, value); else next.delete(`history_${key}`);
     }
