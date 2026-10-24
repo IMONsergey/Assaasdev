@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 
 type Request = { type: string; data: Record<string, unknown> };
@@ -99,9 +100,9 @@ test('delete and clear support undo, filters work and local changes survive relo
   }, historyKey('history-qa'));
   await page.goto('/search/history'); await expect(historyRows(page)).toHaveCount(3);
   await page.getByLabel('Find a search', { exact: true }).fill('nginx'); await expect(historyRows(page)).toHaveCount(1);
-  await page.getByLabel('Find a search', { exact: true }).fill(''); await page.getByLabel('Scope', { exact: true }).selectOption('private'); await expect(historyRows(page)).toHaveCount(1); await expect(historyRows(page)).toContainText('private audit');
-  await page.getByLabel('Scope', { exact: true }).selectOption('all'); await page.getByLabel('Period', { exact: true }).selectOption('7'); await expect(historyRows(page)).toHaveCount(2);
-  await page.getByLabel('Period', { exact: true }).selectOption('90');
+  await page.getByLabel('Find a search', { exact: true }).fill(''); await chooseOption(page.getByLabel('Scope', { exact: true }), 'private'); await expect(historyRows(page)).toHaveCount(1); await expect(historyRows(page)).toContainText('private audit');
+  await chooseOption(page.getByLabel('Scope', { exact: true }), 'all'); await chooseOption(page.getByLabel('Period', { exact: true }), '7'); await expect(historyRows(page)).toHaveCount(2);
+  await chooseOption(page.getByLabel('Period', { exact: true }), '90');
   await page.getByRole('button', { name: 'Delete search: nginx', exact: true }).click(); await expect(historyRows(page)).toHaveCount(2);
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await expect(historyRows(page)).toHaveCount(3);
   await page.getByRole('button', { name: 'Clear history', exact: true }).click();

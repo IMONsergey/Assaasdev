@@ -4,6 +4,13 @@ import { asset } from '../config';
 import { lockPageScroll } from '../lib/scroll-lock';
 import { useTabOverflow } from '../lib/tab-overflow';
 import { OrbCubeLoader } from './brand';
+import { SelectControl } from './form-controls/SelectControl';
+import { DateTimeControl } from './form-controls/DateTimeControl';
+import { textFromNode } from './form-controls/shared';
+import './form-controls/form-controls.css';
+export { SelectControl } from './form-controls/SelectControl';
+export { ComboBoxField } from './form-controls/ComboBoxField';
+export type { ComboBoxOption, ComboBoxFieldProps } from './form-controls/ComboBoxField';
 
 const join = (...names: (string | undefined | false)[]) => names.filter(Boolean).join(' ');
 
@@ -19,6 +26,7 @@ export function FilterButton({ active, count, children = 'Filters', className, .
 type FieldMeta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; icon?: ReactNode };
 export function Field({ label, hint, error, icon, id: explicit, className, ...props }: InputHTMLAttributes<HTMLInputElement> & FieldMeta) {
   const generated = useId(), id = explicit ?? generated;
+  if (props.type === 'datetime-local' || props.type === 'date') return <div className={join('field', className)}><label htmlFor={id}>{label}</label><DateTimeControl {...props} id={id} labelText={textFromNode(label)} aria-invalid={!!error || undefined} aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined} />{error ? <span id={`${id}-error`} className="field-error" role="alert">{error}</span> : hint ? <span id={`${id}-hint`} className="field-hint">{hint}</span> : null}</div>;
   return <div className={join('field', className)}><label htmlFor={id}>{label}</label><div className={join('field-control', !!icon && 'field-control--icon')}>{icon}<input id={id} aria-invalid={!!error || undefined} aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined} {...props} /></div>{error ? <span id={`${id}-error`} className="field-error" role="alert">{error}</span> : hint ? <span id={`${id}-hint`} className="field-hint">{hint}</span> : null}</div>;
 }
 export function TextArea({ label, hint, error, id: explicit, className, icon: _icon, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & FieldMeta) {
@@ -27,11 +35,11 @@ export function TextArea({ label, hint, error, id: explicit, className, icon: _i
 }
 export function SelectField({ label, hint, error, id: explicit, className, children, icon: _icon, ...props }: SelectHTMLAttributes<HTMLSelectElement> & FieldMeta) {
   const generated = useId(), id = explicit ?? generated;
-  return <div className={join('field', className)}><label htmlFor={id}>{label}</label><select id={id} aria-invalid={!!error || undefined} aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined} {...props}>{children}</select>{error ? <span id={`${id}-error`} className="field-error" role="alert">{error}</span> : hint ? <span id={`${id}-hint`} className="field-hint">{hint}</span> : null}</div>;
+  return <div className={join('field', className)}><label htmlFor={id}>{label}</label><SelectControl id={id} aria-invalid={!!error || undefined} aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined} {...props}>{children}</SelectControl>{error ? <span id={`${id}-error`} className="field-error" role="alert">{error}</span> : hint ? <span id={`${id}-hint`} className="field-hint">{hint}</span> : null}</div>;
 }
 export function Checkbox({ label, hint, id: explicit, className, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode; hint?: ReactNode }) {
   const generated = useId(), id = explicit ?? generated;
-  return <div className={join('checkbox-field', className)}><input {...props} type="checkbox" id={id} aria-describedby={hint ? `${id}-hint` : undefined} /><div><label htmlFor={id}>{label}</label>{hint && <div id={`${id}-hint`} className="field-hint">{hint}</div>}</div></div>;
+  return <label className={join('checkbox-field', className)} htmlFor={id}><input {...props} type="checkbox" id={id} aria-describedby={hint ? `${id}-hint` : undefined} /><span className="checkbox-copy"><span className="checkbox-label">{label}</span>{hint && <span id={`${id}-hint`} className="field-hint">{hint}</span>}</span></label>;
 }
 export function PageHeader({ title, eyebrow, description, actions }: { title: ReactNode; eyebrow?: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return <header className="page-heading"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h1>{title}</h1>{description && <p className="page-description">{description}</p>}</div>{actions && <div className="page-heading-actions">{actions}</div>}</header>;
@@ -77,8 +85,8 @@ export function Dialog({ open, onClose, title, children, footer, size = 'md', pl
   const workspaceStyle = scope === 'workspace' ? { '--dialog-workspace-left': `${bounds.left}px`, '--dialog-workspace-top': `${bounds.top}px` } as CSSProperties : undefined;
   return createPortal(<dialog ref={ref} tabIndex={-1} style={workspaceStyle} className={join('dialog', `dialog--${size}`, placement === 'left' && 'dialog--left', scope === 'workspace' && 'dialog--workspace', className)} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const rect = e.currentTarget.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}><header className="dialog-header"><h2 id={titleId}>{title}</h2><Button variant="ghost" className="dialog-close icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></header><div className="dialog-body">{children}</div>{footer && <footer className="dialog-footer">{footer}</footer>}</dialog>, document.body);
 }
-export function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLabel = 'Confirm', danger, busy, confirmDisabled }: { open: boolean; onClose: () => void; onConfirm: () => void | Promise<void>; title: ReactNode; description: ReactNode; confirmLabel?: string; danger?: boolean; busy?: boolean; confirmDisabled?: boolean }) {
-  return <Dialog open={open} onClose={() => { if (!busy) onClose(); }} title={title} size="sm" footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button variant={danger ? 'danger' : 'primary'} loading={busy} disabled={confirmDisabled} onClick={() => void onConfirm()}>{confirmLabel}</Button></>}><div className="confirm-description">{description}</div></Dialog>;
+export function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLabel = 'Confirm', danger, busy, confirmDisabled, confirmHook }: { open: boolean; onClose: () => void; onConfirm: () => void | Promise<void>; title: ReactNode; description: ReactNode; confirmLabel?: string; danger?: boolean; busy?: boolean; confirmDisabled?: boolean; confirmHook?: string }) {
+  return <Dialog open={open} onClose={() => { if (!busy) onClose(); }} title={title} size="sm" footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button variant={danger ? 'danger' : 'primary'} loading={busy} disabled={confirmDisabled} data-onboarding={confirmHook} onClick={() => void onConfirm()}>{confirmLabel}</Button></>}><div className="confirm-description">{description}</div></Dialog>;
 }
 export function EmptyState({ title, description, icon, actions }: { title: ReactNode; description?: ReactNode; icon?: ReactNode; actions?: ReactNode }) { return <div className="empty-state">{icon && <div className="empty-state-icon">{icon}</div>}<h2>{title}</h2>{description && <p>{description}</p>}{actions && <div className="cluster">{actions}</div>}</div>; }
 export function Tabs({ items, value, onChange, variant = 'line', ariaLabel = 'Sections', idPrefix }: { items: { id: string; label: ReactNode; count?: number; icon?: string }[]; value: string; onChange: (id: string) => void; variant?: 'line' | 'segmented'; ariaLabel?: string; idPrefix?: string }) {

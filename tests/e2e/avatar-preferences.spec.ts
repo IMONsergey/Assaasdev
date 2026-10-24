@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
@@ -57,7 +58,7 @@ test('mobile settings and avatar controls stay reachable with dark theme and lar
   await page.setViewportSize({ width: 320, height: 640 });
   await page.goto('/settings?section=appearance');
   await page.getByRole('button', { name: 'Dark theme', exact: true }).click();
-  await page.getByLabel('Text size', { exact: true }).selectOption('125');
+  await chooseOption(page.getByLabel('Text size', { exact: true }), '125');
   for (const name of ['Profile', 'Security', 'Sessions', 'Organization', 'Workspace', 'Legal']) {
     await page.getByRole('button', { name: /^Choose settings section:/ }).click();
     const categories = page.getByRole('dialog', { name: 'Settings categories', exact: true });

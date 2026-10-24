@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 import { seedPricing, seedProfile } from '../../src/demo/fixtures';
 import type { BillingPayment, PlanningTask, PrivateTask } from '../../src/api';
@@ -88,13 +89,13 @@ test('scanner filters all loaded tasks and preserves the list page through priva
   await page.getByLabel('Find a task', { exact: true }).fill('task-0999');
   await expect(page.locator('.scanner-task-table tbody tr')).toHaveCount(1);
   await expect(page.locator('.scanner-task-table tbody tr')).toContainText('host-999.example.test');
-  await page.getByLabel('Task status', { exact: true }).selectOption('running');
+  await chooseOption(page.getByLabel('Task status', { exact: true }), 'running');
   await expect(page.getByRole('heading', { name: 'No tasks match this filter', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Clear task filter', exact: true }).click();
-  await page.getByLabel('Task status', { exact: true }).selectOption('completed');
+  await chooseOption(page.getByLabel('Task status', { exact: true }), 'completed');
   await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toContainText('500 results');
   expect(frames.filter(frame => frame.type === 'private_tasks_get')).toHaveLength(before);
-  await page.getByLabel('Task status', { exact: true }).selectOption('');
+  await chooseOption(page.getByLabel('Task status', { exact: true }), '');
   await page.getByRole('navigation', { name: 'Pagination', exact: true }).getByRole('button', { name: 'Next', exact: true }).click();
   const listUrl = page.url();
   await page.locator('.scanner-task-table tbody tr').first().getByRole('link', { name: 'View results', exact: true }).click();
@@ -121,30 +122,29 @@ test('rapid scanner filters compose the current URL and preserve Back and Forwar
   const reads = frames.filter(frame => ['private_tasks_get', 'private_planning_tasks_get'].includes(frame.type)).length;
 
   // One task reproduces the interval between synchronous history and React render.
-  await status.evaluate(element => {
-    const select = element as HTMLSelectElement;
+  await status.click();
+  await page.getByRole('option', { name: 'completed', exact: true }).evaluate(option => {
     const clear = [...document.querySelectorAll<HTMLButtonElement>('.scanner-page button')]
       .find(button => button.textContent?.trim() === 'Clear task filter');
     if (!clear) throw new Error('The unmatched scanner query must expose its clear action.');
     clear.click();
-    select.value = 'completed';
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    (option as HTMLElement).click();
   });
   await expect(page).toHaveURL(url => url.searchParams.get('tab') === 'all'
     && !url.searchParams.has('q') && !url.searchParams.has('page')
     && url.searchParams.get('status') === 'completed' && url.searchParams.get('rows') === '10');
   await expect(query).toHaveValue('');
-  await expect(status).toHaveValue('completed');
+  await expect(status).toHaveAttribute('data-control-value', 'completed');
   await expect(pagination).toContainText('500 results');
   await expect(page.locator('.scanner-task-table tbody tr')).toHaveCount(10);
 
   await page.goBack();
   await expect(query).toHaveValue('');
-  await expect(status).toHaveValue('');
+  await expect(status).toHaveAttribute('data-control-value', '');
   await expect(pagination).toContainText('1,000 results');
   await page.goForward();
   await expect(query).toHaveValue('');
-  await expect(status).toHaveValue('completed');
+  await expect(status).toHaveAttribute('data-control-value', 'completed');
   await expect(pagination).toContainText('500 results');
   expect(frames.filter(frame => ['private_tasks_get', 'private_planning_tasks_get'].includes(frame.type))).toHaveLength(reads);
   expect(frames.filter(frame => ['private_task_add', 'private_task_update', 'private_task_remove', 'private_planning_task_remove', 'private_task_results_delete'].includes(frame.type))).toEqual([]);
@@ -163,9 +163,9 @@ test('payment history searches 5,000 records locally with bounded rendering and 
   await expect(history.locator('tbody tr')).toContainText('$0');
   await expect(history.locator('tbody tr')).toContainText('Not provided');
   await history.getByRole('button', { name: 'Clear filters', exact: true }).click();
-  await history.getByLabel('Payment status filter', { exact: true }).selectOption('completed');
+  await chooseOption(history.getByLabel('Payment status filter', { exact: true }), 'completed');
   await expect(history).toContainText('2,500 matching');
-  await history.getByLabel('Payments per page', { exact: true }).selectOption('10');
+  await chooseOption(history.getByLabel('Payments per page', { exact: true }), '10');
   await expect(history.locator('tbody tr')).toHaveCount(10);
   await history.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(history.getByRole('navigation', { name: 'Pagination', exact: true })).toContainText('Page 2');

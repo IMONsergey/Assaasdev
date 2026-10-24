@@ -9,6 +9,7 @@ import { CreditBalance } from './CreditBalance';
 import { SupportDialog } from '../features/support/SupportDialog';
 import { ScenarioGuide } from '../features/journeys/ScenarioGuide';
 import { AccountMenu } from './AccountMenu';
+import './shell-polish.css';
 
 const navigation = [
     { to: '/search', icon: 'search', label: 'Search' },
@@ -19,7 +20,7 @@ const navigation = [
 ];
 
 function NavigationToggleIcon({ collapsed }: { collapsed: boolean }) {
-  return <svg className="navigation-toggle-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" /><path className={collapsed ? 'is-collapsed' : undefined} d="m16 9-3 3 3 3" /></svg>;
+  return <svg className="navigation-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" /><path className={collapsed ? 'is-collapsed' : undefined} d="m16 9-3 3 3 3" /></svg>;
 }
 
 export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean; onCollapsedChange: (value: boolean) => void }) {
@@ -35,6 +36,14 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
   const navigate = useNavigate();
 
   useEffect(() => { setMenu(false); }, [location.pathname, location.search]);
+  useEffect(() => {
+    const header = topbar.current;
+    if (!header) return;
+    const syncSurface = () => { header.dataset.overContent = String(window.scrollY > 2); };
+    syncSurface();
+    window.addEventListener('scroll', syncSurface, { passive: true });
+    return () => window.removeEventListener('scroll', syncSurface);
+  }, []);
   useLayoutEffect(() => {
     const header = topbar.current, content = main.current;
     if (!header || !content) return;
@@ -108,7 +117,7 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
     <button type="button" className={`mobile-nav-backdrop${menu ? ' is-open' : ''}`} tabIndex={-1} aria-label="Close navigation" onClick={() => setMenu(false)} />
     <aside ref={sidebar} id="workspace-navigation" className={`app-sidebar${menu ? ' is-open' : ''}`} aria-label="Workspace navigation" inert={mobile && !menu}>
       <div className="brand-slot">
-        <Link to="/search" className="brand-link" aria-label="APCOSYS home">
+        <Link to="/search" className="brand-link" aria-label="APCOSYS home" tabIndex={collapsed && !mobile ? -1 : undefined} aria-hidden={collapsed && !mobile || undefined}>
           <img className="brand-logo" src={asset('figma/home/imgApcosysLogo.svg')} width="120" height="24" alt="apcosys" />
           <span className="brand-symbol icon icon--asset" style={{ width: 26, height: 26, maskImage: `url("${asset('figma/home/imgApcosysSymbol.svg')}")`, WebkitMaskImage: `url("${asset('figma/home/imgApcosysSymbol.svg')}")` }} aria-hidden="true" />
         </Link>

@@ -1,0 +1,44 @@
+.toast.toast--polished {
+  --toast-color: var(--accent-text);
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 32px;
+  gap: 11px;
+  align-items: center;
+  min-height: 58px;
+  padding: 12px 12px 13px;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  border-radius: 13px;
+  box-shadow: 0 12px 34px rgb(13 31 43 / 10%), 0 2px 5px rgb(13 31 43 / 4%);
+  overflow: hidden;
+  font-size: .85rem;
+  line-height: 1.5;
+  animation: toast-arrive 240ms cubic-bezier(.22, 1, .36, 1);
+}
+.toast.toast--error { --toast-color: var(--danger); }
+.toast.toast--success { --toast-color: var(--success); }
+.toast.toast--polished > .toast-signal {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--toast-color) 8%, var(--bg));
+  color: var(--toast-color);
+}
+.toast.toast--polished > .toast-copy { min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; }
+.toast.toast--polished .toast-dismiss { width: 32px; min-width: 32px; height: 32px; min-height: 32px; margin: 0; border-radius: 8px; opacity: .7; transition: opacity 140ms ease, background-color 140ms ease; }
+.toast.toast--polished .toast-dismiss:hover, .toast.toast--polished .toast-dismiss:focus-visible { opacity: 1; }
+.toast.toast--polished > .toast-lifetime { position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--toast-color); opacity: .35; transform-origin: left; animation: toast-lifetime var(--toast-duration) linear forwards; }
+.toast.toast--polished[data-paused='true'] > .toast-lifetime { animation-play-state: paused; }
+.toast.toast--polished.is-leaving { animation: toast-depart 180ms ease forwards; }
+@keyframes toast-arrive { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes toast-depart { to { opacity: 0; transform: translateY(5px) scale(.985); } }
+@keyframes toast-lifetime { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (max-width: 760px) {
+  .toast.toast--polished { grid-template-columns: 30px minmax(0, 1fr) 36px; gap: 9px; padding: 10px; }
+  .toast.toast--polished .toast-dismiss { width: 36px; min-width: 36px; height: 40px; min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .toast.toast--polished, .toast.toast--polished.is-leaving { animation: none; }.toast.toast--polished > .toast-lifetime { display: none; } }
+:root[data-reduced-motion='true'] .toast.toast--polished, :root[data-reduced-motion='true'] .toast.toast--polished.is-leaving { animation: none; }
+:root[data-reduced-motion='true'] .toast.toast--polished > .toast-lifetime { display: none; }

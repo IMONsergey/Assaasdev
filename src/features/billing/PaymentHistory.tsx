@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import type { BillingPayment } from '../../api';
 import { Badge, Button, EmptyState, Field, Icon, Pagination, SelectField } from '../../components/ui';
 import { formatDate } from '../account/operation';
 import { paymentHistoryState } from './navigation';
 import { unavailablePaymentValue } from './payment-display';
+import { orderPath, paymentHistoryPath } from './order-model';
 
 type Props = {
   payments: BillingPayment[];
@@ -13,10 +14,13 @@ type Props = {
   checkDisabled: boolean;
   removeDisabled: boolean;
   formatAmount: (amount: number | undefined) => string;
+  cryptoAmount?: (paymentId: string) => string | undefined;
 };
 
-export function PaymentHistory({ payments, onCheck, onRemove, checkDisabled, removeDisabled, formatAmount }: Props) {
+export function PaymentHistory({ payments, onCheck, onRemove, checkDisabled, removeDisabled, formatAmount, cryptoAmount }: Props) {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const returnTo = paymentHistoryPath(params);
   const { query, status, order, rows, page } = paymentHistoryState(params);
   function update(values: Record<string, string>, replace = false) {
     // BrowserRouter updates history before its transition renders new params.
@@ -54,12 +58,12 @@ export function PaymentHistory({ payments, onCheck, onRemove, checkDisabled, rem
       <SelectField label="Payments per page" value={rows} onChange={event => update({ rows: event.target.value })}>{[10, 25, 50, 100].map(count => <option key={count} value={count}>{count}</option>)}</SelectField>
     </div>
     <div className="billing-history-summary"><p className="muted">{matches.length.toLocaleString()} matching · {payments.length.toLocaleString()} loaded</p>{(query || status) && <Button variant="ghost" size="sm" onClick={clear}>Clear filters</Button>}</div>
-    {shown.length ? <div className="table-wrap"><table className="data-table billing-history-table"><caption className="sr-only">Payments reported by the account</caption><thead><tr><th>Payment</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>{shown.map(item => <tr key={item.payment_id}>
-      <td><strong>{item.subscription ?? 'Payment'}</strong><div className="mono muted">{item.payment_id}</div></td>
-      <td data-label="Amount">{formatAmount(item.amount_usd)}{item.coin && !unavailablePaymentValue(item.coin) && <div className="muted">{item.amount ?? 'Amount not provided'} {item.coin}</div>}</td>
+    {shown.length ? <div className="table-wrap"><table className="data-table billing-history-table"><caption className="sr-only">Payments reported by the account</caption><thead><tr><th>Payment</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>{shown.map(item => <tr key={item.payment_id} onClick={event => { if (!(event.target as HTMLElement).closest('a,button,input,select')) navigate(orderPath(item.payment_id, returnTo)); }}>
+      <td><Link className="billing-payment-link" to={orderPath(item.payment_id, returnTo)} aria-label={`View payment ${item.payment_id}`}><Icon name="receipt" size={20} /><span><strong>{item.subscription ?? 'Payment'}</strong><span className="mono muted" style={{ display: 'block' }}>{item.payment_id}</span></span></Link></td>
+      <td data-label="Amount">{formatAmount(item.amount_usd)}{item.coin && !unavailablePaymentValue(item.coin) && <div className="muted">{cryptoAmount?.(item.payment_id) ?? item.amount ?? 'Amount not provided'} {item.coin}</div>}</td>
       <td data-label="Status"><Badge tone={item.status === 'completed' ? 'success' : 'neutral'}>{item.status || 'Not provided'}</Badge></td>
       <td data-label="Date">{formatDate(item.created_at)}</td>
-      <td className="billing-history-actions"><div className="cluster"><Button size="sm" variant="ghost" disabled={checkDisabled} onClick={() => onCheck(item.payment_id)}><Icon name="refresh" size={15} />Check</Button><Button size="sm" variant="ghost" disabled={removeDisabled} onClick={() => onRemove(item)}><Icon name="trash" size={15} />Remove record</Button></div></td>
+      <td className="billing-history-actions"><div className="cluster"><Link className="button button--ghost button--sm order-details-link" to={orderPath(item.payment_id, returnTo)}>Details<Icon name="chevron-right" size={14} /></Link><Button size="sm" variant="ghost" disabled={checkDisabled} onClick={() => onCheck(item.payment_id)}><Icon name="refresh" size={15} />Check</Button><Button size="sm" variant="ghost" disabled={removeDisabled} onClick={() => onRemove(item)} aria-label="Remove record" title={`Remove payment ${item.payment_id}`}><Icon name="trash" size={15} /></Button></div></td>
     </tr>)}</tbody></table></div> : <EmptyState title="No payments match" description="Try another payment ID, plan or status." actions={<Button variant="secondary" onClick={clear}>Clear filters</Button>} />}
     <Pagination page={currentPage} pageSize={rows} count={shown.length} total={matches.length} onPageChange={page => update({ page: String(page) })} />
   </div>;

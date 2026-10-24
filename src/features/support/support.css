@@ -2,3 +2,32 @@
 @media(max-width:600px){.support-dialog .dialog-body{padding:18px}.support-form-row{grid-template-columns:1fr;gap:18px}.support-resource-list>a{padding:14px;gap:11px}.support-resource-icon{width:36px;height:36px}.support-resource-list small{font-size:.81rem}.support-copy-row{align-items:flex-start;flex-direction:column;gap:12px}.support-dialog .dialog-footer{gap:10px}.support-dialog .dialog-footer .button{font-size:.85rem;flex:1;min-width:0}.support-review-fields>div{grid-template-columns:54px minmax(0,1fr);gap:10px}.support-shortcut{font-size:.75rem;gap:6px}.support-contact-line{font-size:.8rem}.support-message-preview{padding:14px}}
 @media(prefers-reduced-motion:reduce){.support-resource-list>a{transition:none}}:root[data-reduced-motion=true] .support-resource-list>a{transition:none}
 @media(max-width:360px){.support-dialog .dialog-footer>.button{padding-inline:12px;min-height:44px}.support-dialog .dialog-footer>.button:last-child .icon{display:none}}
+
+/* A compact help hub with one clear route into guided work. */
+.dialog.support-dialog--help{width:560px;max-width:calc(100vw - 24px)}
+.support-dialog--help .dialog-header{padding-bottom:18px;border-bottom:0}
+.support-dialog--help .dialog-body{padding-top:4px}
+.support-home{display:grid;gap:16px}
+.support-feature{display:flex;align-items:center;gap:16px;padding:19px 18px;border:1px solid color-mix(in srgb,var(--accent) 15%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--tint) 35%,var(--bg));color:var(--text);text-decoration:none;transition:background-color .18s ease,border-color .18s ease}
+.support-feature:hover{background:color-mix(in srgb,var(--tint) 65%,var(--bg));border-color:color-mix(in srgb,var(--accent) 30%,var(--line));text-decoration:none}
+.support-feature-art{flex:none;display:grid;place-items:center;color:var(--accent-text)}
+.support-feature>span:nth-child(2){display:grid;gap:5px;min-width:0;flex:1}
+.support-feature strong{font-size:.97rem;font-weight:550;line-height:1.4}
+.support-feature small{font-size:.8rem;line-height:1.5;color:var(--muted)}
+.support-feature>.icon{color:var(--accent-text);flex:none;transition:transform .2s ease}
+.support-feature:hover>.icon{transform:translateX(3px)}
+.support-resource-list--compact{gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.support-resource-list--compact>a{padding:13px 15px;border:0;border-radius:0;gap:12px;min-height:70px}
+.support-resource-list--compact>a+a{border-top:1px solid var(--line)}
+.support-resource-list--compact .support-resource-icon{width:32px;height:32px;background:var(--surface);border-radius:8px;color:var(--muted)}
+.support-resource-list--compact strong{font-size:.86rem}
+.support-resource-list--compact small{font-size:.77rem}
+.support-resource-list--compact>a>span:nth-child(2){gap:2px}
+.support-home .support-contact-line{border-top:0;padding:4px 2px 0;justify-content:center;align-items:center;gap:8px;font-size:.8rem}
+.support-home .support-contact-line>a{color:var(--muted);text-decoration:none}
+.support-home .support-contact-line>a:hover{color:var(--accent-text)}
+.support-dialog--help .dialog-footer{border-top:0;padding-top:0}
+.support-dialog--help .dialog-footer>.button{width:100%;justify-content:center}
+@media(max-width:600px){.support-feature{gap:12px;padding:16px 14px}.support-feature-art svg{width:52px;height:42px}.support-feature strong{font-size:.91rem}.support-feature small{font-size:.76rem}.support-resource-list--compact>a{min-height:68px;padding:12px}.support-dialog--help .dialog-header{padding-bottom:14px}}
+@media(prefers-reduced-motion:reduce){.support-feature,.support-feature>.icon{transition:none}}
+:root[data-reduced-motion=true] .support-feature,:root[data-reduced-motion=true] .support-feature>.icon{transition:none}

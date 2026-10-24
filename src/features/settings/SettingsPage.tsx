@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { Link, useSearchParams } from 'react-router';
 import { ApiError } from '../../api';
 import { useApp } from '../../app/AppProvider';
-import { Alert, Button, ConfirmDialog, Dialog, EmptyState, Icon, PageHeader, Skeleton } from '../../components/ui';
+import { Alert, Button, ConfirmDialog, Dialog, EmptyState, Icon, PageHeader, Skeleton, SelectControl } from '../../components/ui';
 import { errorMessage } from '../../lib/format';
 import { useTabOverflow } from '../../lib/tab-overflow';
 import { ProfilePanel, SecurityPanel, SessionsPanel, TeamPanel } from '../account/AccountPage';
@@ -96,10 +96,10 @@ export function SettingsPage() {
 
       <div className="settings-group settings-controls-group">
         <SettingsRow title="Interface density" description="Choose more space or a more compact view." htmlFor="settings-density">
-          <select id="settings-density" value={preferences.density} aria-describedby="settings-density-description" onChange={event => setPreferences({ density: event.target.value as 'comfortable' | 'compact' })}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select>
+          <SelectControl id="settings-density" value={preferences.density} aria-describedby="settings-density-description" onChange={event => setPreferences({ density: event.target.value as 'comfortable' | 'compact' })}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></SelectControl>
         </SettingsRow>
         <SettingsRow title="Text size" description="Adjust text throughout the workspace." htmlFor="settings-text-size">
-          <select id="settings-text-size" value={preferences.fontScale} aria-describedby="settings-text-size-description" onChange={event => setPreferences({ fontScale: Number(event.target.value) as 100 | 112 | 125 })}><option value={100}>Default · 100%</option><option value={112}>Larger · 112%</option><option value={125}>Largest · 125%</option></select>
+          <SelectControl id="settings-text-size" value={preferences.fontScale} aria-describedby="settings-text-size-description" onChange={event => setPreferences({ fontScale: Number(event.target.value) as 100 | 112 | 125 })}><option value={100}>Default · 100%</option><option value={112}>Larger · 112%</option><option value={125}>Largest · 125%</option></SelectControl>
         </SettingsRow>
         <SettingsRow title="Reduce interface motion" description="Use quieter transitions. Your device’s motion preference also applies." htmlFor="settings-reduce-motion">
           <label className="settings-switch"><input id="settings-reduce-motion" type="checkbox" role="switch" aria-describedby="settings-reduce-motion-description" checked={preferences.reducedMotion} onChange={event => setPreferences({ reducedMotion: event.target.checked })} /><span aria-hidden="true" /></label>

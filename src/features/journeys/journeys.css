@@ -36,6 +36,33 @@
 .dialog:has(>.scenario-tour-layer[data-docked="true"])>.dialog-footer{order:3;flex:none;position:relative}
 .dialog:has(>.scenario-tour-layer[data-docked="true"])>.scenario-tour-layer{order:4}
 .scenario-guide.is-keyboard-compact .scenario-guide-tools .button:first-child{display:none}
+/* A field popup owns attention until its selection closes. Keep the reserved
+   guide row stable while letting the form's options receive pointer and focus. */
+body:has([data-control-popup]) .scenario-guide,body:has([data-control-popup]) .scenario-spotlight{visibility:hidden;pointer-events:none}
+.scenario-payment-collection{margin-bottom:28px;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.scenario-payment-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:15px}
+.scenario-payment-heading h2{font:550 .98rem/1.4 var(--font-ui);letter-spacing:-.01em}
+.scenario-payment-heading>button{display:inline-flex;align-items:center;gap:7px;min-height:32px;border:0;padding:4px 0;background:transparent;color:var(--muted);font-size:.78rem;text-align:right}
+.scenario-payment-heading>button:hover{color:var(--text)}
+.scenario-payment-methods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.scenario-payment-method{display:flex;align-items:center;gap:14px;min-width:0;min-height:98px;padding:18px 16px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--text);text-align:left;transition:border-color .22s ease,box-shadow .22s ease,transform .26s cubic-bezier(.22,1,.36,1)}
+.scenario-payment-art{position:relative;isolation:isolate;display:grid;place-items:center;flex:none;width:48px;height:48px;color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));border-radius:11px;background:var(--bg);transition:transform .26s cubic-bezier(.22,1,.36,1)}
+.scenario-payment-art>span:not(.icon){position:absolute;inset:0;border:1px solid var(--line);border-radius:inherit;background:var(--bg);z-index:-1;transform:translate(-3px,3px);transition:transform .26s cubic-bezier(.22,1,.36,1)}
+.scenario-payment-art>span:not(.icon):last-child{z-index:-2;transform:translate(-6px,6px)}
+.scenario-payment-art>.icon{z-index:1}
+.scenario-payment-copy{display:grid;gap:5px;flex:1;min-width:0}
+.scenario-payment-copy strong{font-size:.86rem;font-weight:550;line-height:1.35}
+.scenario-payment-copy small{font-size:.74rem;line-height:1.45;color:var(--muted)}
+.scenario-payment-method>.icon{flex:none;color:var(--muted);transition:transform .22s ease}
+.scenario-payment-method:hover{border-color:color-mix(in srgb,var(--accent) 32%,var(--line));box-shadow:0 4px 12px #10202b08;transform:translateY(-2px)}
+.scenario-payment-method:hover>.icon{transform:translateX(3px);color:var(--accent-text)}
+.scenario-payment-method:hover .scenario-payment-art{transform:translate(1px,-1px)}
+.scenario-payment-method:hover .scenario-payment-art>span:not(.icon){transform:translate(-4px,4px)}
+.scenario-payment-method:hover .scenario-payment-art>span:not(.icon):last-child{transform:translate(-8px,8px)}
+@container workspace (max-width:1020px){.scenario-payment-method{padding:15px 12px;gap:12px}.scenario-payment-art{width:38px;height:42px}.scenario-payment-method>.icon{display:none}}
+@media(max-width:760px){.scenario-payment-collection{padding:16px;margin-bottom:20px}.scenario-payment-methods{grid-template-columns:1fr;gap:8px}.scenario-payment-method{min-height:78px;padding:15px 16px;gap:17px}.scenario-payment-method>.icon{display:block}.scenario-payment-art{width:38px;height:38px}.scenario-payment-heading{gap:10px}.scenario-payment-heading h2{font-size:.9rem}.scenario-payment-heading>button{font-size:.72rem}.scenario-payment-copy small{font-size:.74rem}}
+@media(prefers-reduced-motion:reduce){.scenario-payment-method,.scenario-payment-method>.icon,.scenario-payment-art,.scenario-payment-art>span{transition:none;transform:none!important}}
+:root[data-reduced-motion=true] .scenario-payment-method,:root[data-reduced-motion=true] .scenario-payment-method>.icon,:root[data-reduced-motion=true] .scenario-payment-art,:root[data-reduced-motion=true] .scenario-payment-art>span{transition:none;transform:none!important}
 @keyframes tour-card-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes tour-step-in{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}
 @keyframes tour-focus-in{from{opacity:0}to{opacity:1}}

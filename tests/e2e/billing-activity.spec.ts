@@ -20,9 +20,8 @@ test('tracked crypto activity preserves exact amounts and never grants access fr
   await expect(page.locator('.billing-metric')).toHaveCount(3);
   const before = await page.locator('.billing-metric').allTextContents();
   await page.getByRole('tab', { name: 'Crypto activity', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Load tracked addresses', exact: true })).toBeVisible();
-  await expect(page.locator('.crypto-address')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Load tracked addresses', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Refresh addresses', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Load tracked addresses', exact: true })).toHaveCount(0);
   const address = page.locator('.crypto-address');
   await expect(address).toHaveCount(1);
   await expect(address).toContainText('account-address-1');

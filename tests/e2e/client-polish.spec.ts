@@ -32,7 +32,11 @@ test('search entry, focus and workspace filters have consistent geometry', async
     expect(Math.abs(close!.width - close!.height)).toBeLessThanOrEqual(1);
     await expect(filters.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
     const select = filters.getByRole('combobox', { name: 'Result type', exact: true });
-    expect(await select.evaluate(element => parseFloat(getComputedStyle(element).paddingRight))).toBeGreaterThanOrEqual(36);
+    const chevron = await select.locator('.form-select-chevron').boundingBox();
+    const selectedText = await select.locator('.form-select-value').boundingBox();
+    const selectBox = await select.boundingBox();
+    expect(selectBox!.x + selectBox!.width - chevron!.x - chevron!.width).toBeGreaterThanOrEqual(10);
+    expect(chevron!.x - selectedText!.x - selectedText!.width).toBeGreaterThanOrEqual(10);
     await page.screenshot({ path: testInfo.outputPath(`search-filters-${width}.png`), fullPage: false, animations: 'disabled' });
     const a11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(a11y.violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => node.target) }))).toEqual([]);
@@ -61,7 +65,7 @@ test('typing suggestions never searches and selected values become explicit filt
   await option.click();
   const filters = page.getByRole('dialog', { name: 'Filters', exact: true });
   await expect(filters).toBeVisible();
-  await expect(filters.getByRole('combobox', { name: 'Field', exact: true })).toHaveValue('country_name');
+  await expect(filters.getByRole('combobox', { name: 'Field', exact: true })).toHaveValue('Country');
   await expect(filters.getByRole('combobox', { name: 'Value', exact: true })).toHaveValue('Germany');
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(0);
   await filters.getByRole('button', { name: 'Apply conditions', exact: true }).click();

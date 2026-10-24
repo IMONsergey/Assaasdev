@@ -43,17 +43,18 @@ export function SupportDialog({ open, onClose, initialTopic, initialMessage }: {
     setError(''); setView('review');
   }
   const footer = view === 'help' ? <Button key="contact" onClick={contact}><Icon name="mail" size={17} />Contact support</Button> : view === 'form' ? <><Button key="back" variant="secondary" onClick={() => setView('help')}><Icon name="chevron-left" size={16} />Back</Button><Button key="prepare" type="submit" form="support-request">Prepare email<Icon name="arrow" size={16} /></Button></> : <><Button key="edit" variant="secondary" onClick={() => setView('form')}>Edit message</Button><a key="open-email" className="button button--primary" href={prepared.mailto} onClick={() => toast('Your email app will open with the draft. Send it there when ready.','info')}>Open email app<Icon name="arrow-up-right" size={16} /></a></>;
-  return <Dialog open={open} onClose={close} title={view === 'help' ? 'Help & support' : view === 'form' ? 'Contact support' : 'Review your message'} size="md" footer={footer} className="support-dialog">
+  return <Dialog open={open} onClose={close} title={view === 'help' ? 'Help & support' : view === 'form' ? 'Contact support' : 'Review your message'} size="md" footer={footer} className={`support-dialog${view === 'help' ? ' support-dialog--help' : ''}`}>
     <div ref={bodyRef}>
     {view === 'help' ? <div className="support-home">
-      <p className="support-intro">Find a workflow or get help with your account.</p>
-      <div className="support-resource-list">
-        <Link to="/scenarios" onClick={close}><span className="support-resource-icon"><Icon name="grid" size={21} /></span><span><strong>Follow a scenario</strong><small>Step-by-step guides for search, data, scanning and billing.</small></span><Icon name="chevron-right" size={18} /></Link>
-        <Link to="/api" onClick={close}><span className="support-resource-icon"><Icon name="code" size={21} /></span><span><strong>API access</strong><small>Your integration key, credits and account limits.</small></span><Icon name="chevron-right" size={18} /></Link>
-        <Link to="/settings?section=legal" onClick={close}><span className="support-resource-icon"><Icon name="file" size={21} /></span><span><strong>Policies & agreements</strong><small>Official service, privacy and data documents.</small></span><Icon name="chevron-right" size={18} /></Link>
+      <Link to="/scenarios" className="support-feature" onClick={close}>
+        <span className="support-feature-art" aria-hidden="true"><svg width="68" height="46" viewBox="0 0 68 46" fill="none"><path d="M15 23h38" stroke="currentColor" strokeOpacity=".35" strokeWidth="1.4" /><rect x="2" y="10" width="26" height="26" rx="7" fill="var(--bg)" stroke="currentColor" strokeOpacity=".3" /><path d="m11 23 3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><rect x="40" y="10" width="26" height="26" rx="7" fill="var(--bg)" stroke="currentColor" strokeOpacity=".3" /><path d="M48 23h10m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+        <span><strong>Follow a scenario</strong><small>Search, investigation and payments</small></span><Icon name="arrow" size={18} />
+      </Link>
+      <div className="support-resource-list support-resource-list--compact">
+        <Link to="/api" onClick={close}><span className="support-resource-icon"><Icon name="code" size={20} /></span><span><strong>API access</strong><small>Keys, usage and limits</small></span><Icon name="chevron-right" size={16} /></Link>
+        <Link to="/settings?section=legal" onClick={close}><span className="support-resource-icon"><Icon name="file" size={20} /></span><span><strong>Policies & agreements</strong><small>Terms, privacy and data</small></span><Icon name="chevron-right" size={16} /></Link>
       </div>
-      <div className="support-shortcut"><span>Jump to search</span><kbd>⌘ / Ctrl K</kbd><span className="muted">or</span><kbd>/</kbd></div>
-      <div className="support-contact-line"><span>Prefer a direct email?</span><a href={`mailto:${supportEmail}`}>{supportEmail}<Icon name="arrow-up-right" size={15} /></a></div>
+      <div className="support-contact-line"><Icon name="mail" size={15} /><a href={`mailto:${supportEmail}`}>{supportEmail}<Icon name="arrow-up-right" size={14} /></a></div>
     </div> : view === 'form' ? <form id="support-request" ref={formRef} onSubmit={prepare} className="support-request-form">
       <p className="support-intro">Describe your question. You can review the message before opening your email app.</p>
       <div className="support-form-row"><Field label="Name" name="support-name" autoComplete="name" required maxLength={100} value={draft.name} onChange={event => {setDraft({...draft,name:event.target.value});setError('');}} /><Field label="Reply email" name="support-email" type="email" autoComplete="email" required maxLength={200} value={draft.email} onChange={event => setDraft({...draft,email:event.target.value})} /></div>

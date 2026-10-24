@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-24",
+  "baseCommit": "e4ac2f95afc4f9a0f722c8f17b014fffe88b450e",
+  "finalSourceSha256": "a313451960316cfe3fafa63005728177e3b26869f550e5104f64d658f671963e",
+  "sourceFiles": 584,
+  "unit": {
+    "command": "npm test",
+    "passed": 192,
+    "files": 28,
+    "failed": 0
+  },
+  "builds": [
+    {
+      "command": "npm run build",
+      "typecheck": true,
+      "mode": "live",
+      "exitCode": 0
+    },
+    {
+      "command": "npx vite build --mode demo --outDir /tmp/apcosys-controls-release-final",
+      "mode": "demo",
+      "exitCode": 0
+    }
+  ],
+  "browser": [
+    {
+      "label": "chromium-full",
+      "phase": "before one scoped Firefox focus CSS fix",
+      "startTime": "2026-10-24T11:18:24.013Z",
+      "duration": 346594.355,
+      "expected": 234,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    {
+      "label": "chromium-affected-final",
+      "phase": "final source",
+      "startTime": "2026-10-24T11:23:05.337Z",
+      "duration": 30166.599,
+      "expected": 18,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    {
+      "label": "firefox-affected-final",
+      "phase": "final source",
+      "startTime": "2026-10-24T11:23:15.903Z",
+      "duration": 37573.849,
+      "expected": 18,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  ],
+  "finalDeltaFromFullChromium": [
+    "One selector in form-controls.css restores keyboard focus for pointer-opened custom selects in Firefox. Existing pointer focus behavior is unchanged."
+  ],
+  "sourceFrozen": true
+}

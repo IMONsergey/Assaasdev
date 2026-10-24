@@ -29,7 +29,7 @@ export function billingSection(location: { pathname: string; search: string; has
 /** Presentation changes do not consume or recreate an order intent. */
 export function billingIntent(params: URLSearchParams) {
   const plan = params.get('plan'), pack = params.get('pack');
-  return plan || pack ? JSON.stringify([plan, pack, params.get('cadence')]) : '';
+  return plan || pack ? JSON.stringify([plan, pack, params.get('cadence'), params.get('method'), params.get('promo'), params.get('network'), params.get('coin')]) : '';
 }
 
 export function paymentHistoryState(params: URLSearchParams) {

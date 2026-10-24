@@ -1,0 +1,73 @@
+/* The workspace has one continuous canvas; only its tools float above content. */
+.app-shell .app-topbar {
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.app-shell .app-topbar[data-over-content='true'] { background: var(--bg); }
+.app-shell .notification-link { background: color-mix(in srgb, var(--bg) 94%, transparent); }
+.app-shell .notification-link:hover { background: var(--surface-hover); }
+.app-shell .app-sidebar { --shell-motion: 360ms; transition: width var(--shell-motion) cubic-bezier(.22, 1, .36, 1); }
+.app-shell .app-topbar, .app-shell .workspace-main {
+  transition: margin-left 360ms cubic-bezier(.22, 1, .36, 1), padding-inline 360ms cubic-bezier(.22, 1, .36, 1);
+}
+.app-shell .navigation-toggle {
+  color: var(--muted);
+  opacity: .6;
+  background: transparent;
+  transition: opacity 180ms ease, background-color 180ms ease, color 180ms ease, right 360ms cubic-bezier(.22, 1, .36, 1);
+}
+.app-shell .navigation-toggle:hover, .app-shell .navigation-toggle:focus-visible { opacity: 1; color: var(--text); background: var(--surface-hover); }
+.app-shell .navigation-toggle-icon > path:last-child { transition-duration: 360ms; }
+.app-shell .account-nav[aria-expanded='true'] { background: color-mix(in srgb, var(--bg) 55%, transparent); border-color: transparent; }
+.app-shell .account-nav-chevron { color: var(--muted); opacity: .55; }
+
+@media (min-width: 761px) {
+  .app-shell .brand-slot { position: relative; justify-content: flex-start; flex-direction: row; padding-inline: 22px 58px; overflow: hidden; }
+  .app-shell .brand-link { display: block; width: 120px; max-width: 120px; opacity: 1; overflow: hidden; transform: translateX(0); transition: opacity 140ms ease 100ms, max-width 300ms ease, transform 300ms ease; }
+  .app-shell .brand-logo { display: block; }
+  .app-shell .brand-symbol { display: none; }
+  .app-shell .navigation-toggle { position: absolute; right: 12px; top: 14px; width: 40px; height: 40px; min-height: 40px; }
+  .app-shell .app-sidebar .sidebar-primary { padding: 20px 14px; }
+  .app-shell .app-sidebar .sidebar-bottom { margin-inline: 14px; }
+  .app-shell .app-sidebar .nav-link { justify-content: flex-start; gap: 11px; padding-inline: 12px; overflow: hidden; transition: background-color 160ms ease, color 160ms ease, padding 360ms cubic-bezier(.22, 1, .36, 1), gap 300ms ease; }
+  .app-shell .app-sidebar .nav-label { display: block; max-width: 180px; opacity: 1; transform: translateX(0); transition: opacity 160ms ease 100ms, max-width 320ms cubic-bezier(.22, 1, .36, 1), transform 300ms ease; }
+  .app-shell .app-sidebar .account-nav-copy { display: flex; }
+  .app-shell .app-sidebar .sidebar-account-row { flex-direction: row; gap: 0; }
+  .app-shell .sidebar-account-row .account-nav { flex: 1; width: 100%; min-height: 60px; padding: 10px; transition: padding 360ms cubic-bezier(.22, 1, .36, 1), background-color 180ms ease; }
+  .app-shell .account-nav > .user-avatar { flex: 0 0 36px; }
+  .app-shell .account-nav > .account-nav-chevron { display: inline-block; max-width: 16px; transition: opacity 140ms ease, max-width 260ms ease, transform 180ms ease; }
+  .app-shell.app-shell--collapsed .brand-slot { padding-inline: 0; }
+  .app-shell.app-shell--collapsed .brand-link { display: block; max-width: 0; opacity: 0; transform: translateX(-8px); pointer-events: none; transition-delay: 0s; }
+  .app-shell.app-shell--collapsed .brand-logo { display: block; }
+  .app-shell.app-shell--collapsed .brand-symbol { display: none; }
+  .app-shell.app-shell--collapsed .navigation-toggle { right: 16px; }
+  .app-shell.app-shell--collapsed .app-sidebar .nav-link { gap: 0; }
+  .app-shell.app-shell--collapsed .app-sidebar .nav-label { display: block; max-width: 0; opacity: 0; transform: translateX(-5px); pointer-events: none; transition-delay: 0s; }
+  .app-shell.app-shell--collapsed .sidebar-account-row .account-nav { padding-inline: 4px; }
+  .app-shell.app-shell--collapsed .account-nav > .account-nav-chevron { display: inline-block; opacity: 0; max-width: 0; }
+}
+
+.account-popover.account-popover--quiet { padding: 6px; border-radius: 12px; border-color: color-mix(in srgb, var(--line) 90%, transparent); box-shadow: 0 12px 32px rgb(10 25 35 / 9%), 0 2px 5px rgb(10 25 35 / 4%); }
+.account-popover.account-popover--quiet:popover-open { animation: account-quiet-in 220ms cubic-bezier(.22, 1, .36, 1); }
+.account-popover--quiet .account-popover-identity { padding: 12px 10px 14px; gap: 10px; }
+.account-popover--quiet .account-popover-identity strong { font-size: .85rem; }
+.account-popover--quiet .account-popover-identity span:not(.user-avatar) { font-size: .75rem; }
+.account-popover--quiet .account-menu-item { padding: 10px 12px; gap: 11px; font-size: .84rem; border-radius: 8px; text-decoration: none; transition: background-color 160ms ease; }
+.account-popover--quiet .account-menu-item > .icon { opacity: .78; }
+.account-popover--quiet .account-menu-plan { margin-top: 6px; padding-top: 13px; border-radius: 0 0 8px 8px; background: transparent; }
+.account-popover--quiet .account-menu-plan > span:not(.icon) { flex-direction: row; align-items: center; gap: 8px; }
+.account-popover--quiet .account-menu-plan strong { font-size: .82rem; font-weight: 500; }
+.account-popover--quiet .account-menu-plan small { font-size: .75rem; }
+@keyframes account-quiet-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 760px) {
+  .app-shell .app-topbar, .app-shell .workspace-main { transition: none; }
+  .app-shell .app-sidebar { transition: transform 320ms cubic-bezier(.22, 1, .36, 1); }
+  .app-shell .mobile-nav-backdrop { transition: opacity 280ms ease, visibility 280ms; }
+  .account-popover--quiet .account-menu-item { min-height: 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .app-sidebar, .app-shell .app-topbar, .app-shell .workspace-main, .app-shell .brand-link, .app-shell .nav-label, .app-shell .navigation-toggle, .app-shell .navigation-toggle-icon > path:last-child, .app-shell .nav-link, .app-shell .account-nav, .app-shell .account-nav-chevron, .account-popover.account-popover--quiet:popover-open { transition: none !important; animation: none !important; }
+}
+:root[data-reduced-motion='true'] :is(.app-sidebar, .app-topbar, .workspace-main, .brand-link, .nav-label, .navigation-toggle, .navigation-toggle-icon > path:last-child, .nav-link, .account-nav, .account-nav-chevron), :root[data-reduced-motion='true'] .account-popover.account-popover--quiet:popover-open { transition: none !important; animation: none !important; }

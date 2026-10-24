@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { scenarios } from '../../src/features/journeys/catalog';
 
 test('scenario directory filters real workflows and guides a host investigation without losing query context',async ({page},testInfo) => {
   await page.goto('/scenarios');
   await expect(page.getByRole('heading',{name:'Scenarios',exact:true})).toBeVisible();
-  await expect(page.locator('.scenario-card')).toHaveCount(51);
+  await expect(page.locator('.scenario-card')).toHaveCount(scenarios.length);
   await page.getByRole('textbox',{name:'Find a scenario'}).fill('certificate');
   await expect(page.getByRole('button',{name:'View scenario: Inspect HTTP and TLS evidence'})).toBeVisible();
   await expect(page.locator('.scenario-card')).toHaveCount(1);
@@ -97,7 +98,7 @@ for (const width of [1440,390,320]) {
   test(`scenarios, legal and support fit ${width}px`,async ({page},testInfo) => {
     await page.setViewportSize({width,height:width>760?1000:844});
     await page.goto('/scenarios');
-    await expect(page.locator('.scenario-card')).toHaveCount(51);
+    await expect(page.locator('.scenario-card')).toHaveCount(scenarios.length);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
     await page.screenshot({path:testInfo.outputPath(`scenarios-${width}.png`),animations:'disabled'});
     await page.getByRole('button',{name:'View scenario: Run your first search'}).click();
@@ -117,6 +118,10 @@ for (const width of [1440,390,320]) {
     await page.screenshot({path:testInfo.outputPath(`legal-${width}.png`),fullPage:true});
     if(width<=760) await page.getByRole('button',{name:'Open navigation',exact:true}).click();
     await page.getByRole('button',{name:'Support',exact:true}).click();
+    const help=page.getByRole('dialog',{name:'Help & support',exact:true});
+    await expect(help.locator('kbd')).toHaveCount(0);
+    await expect(help.getByRole('link',{name:'Follow a scenario Search, investigation and payments'})).toBeVisible();
+    await page.screenshot({path:testInfo.outputPath(`support-overview-${width}.png`),animations:'disabled'});
     await page.getByRole('button',{name:'Contact support',exact:true}).click();
     await expect(page.getByRole('dialog',{name:'Contact support',exact:true})).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);

@@ -59,7 +59,7 @@ test('overview reports scoped observations, caps domain preview and opens a filt
   await capture(page, testInfo.outputPath('host-overview-desktop.png'), true);
   await protocols.getByRole('button', { name: 'HTTPS 500', exact: true }).click();
   const list = page.getByRole('complementary', { name: 'Service list', exact: true });
-  await expect(list.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveValue('https');
+  await expect(list.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveAttribute('data-control-value', 'https');
   await expect(list.locator('.host-service-window')).toContainText('500 matching');
   await expect(list.locator('.host-service-row')).toHaveCount(25);
   expect(hostRequests(requests)).toHaveLength(1);
@@ -188,7 +188,7 @@ test('adjacent services cross catalog pages while keeping the filtered scope and
   await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10050');
   await expect(page.getByRole('navigation', { name: 'Received service pages', exact: true })).toContainText('2 / 20');
   await expect(page.getByRole('tab', { name: 'TLS', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveValue('https');
+  await expect(page.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveAttribute('data-control-value', 'https');
   await navigation.getByRole('button', { name: 'Previous matching service', exact: true }).click();
   await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10048');
   await expect(page.getByRole('navigation', { name: 'Received service pages', exact: true })).toContainText('1 / 20');

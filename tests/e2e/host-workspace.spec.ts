@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 
 async function hostWorkspaceFixture(page: Page, requests: string[]) {
@@ -27,8 +28,8 @@ test('classifying and returning to a thousand-service list retains local context
   const list = page.getByRole('complementary', { name: 'Service list', exact: true });
   await expect(list.locator('.host-service-row')).toHaveCount(25);
   await list.locator('summary').filter({ hasText: 'Classify services' }).click();
-  await list.getByRole('combobox', { name: 'Protocol', exact: true }).selectOption('https');
-  await list.getByRole('combobox', { name: 'Contains', exact: true }).selectOption('tls');
+  await chooseOption(list.getByRole('combobox', { name: 'Protocol', exact: true }), 'https');
+  await chooseOption(list.getByRole('combobox', { name: 'Contains', exact: true }), 'tls');
   await list.getByRole('textbox', { name: 'Port or range', exact: true }).fill('10800-10999');
   await expect(list.locator('.host-service-row')).toHaveCount(20);
   await expect(list.locator('.host-service-window')).toContainText('20 matching');
@@ -55,21 +56,21 @@ test('rapid service filters and nested tabs compose the current URL without losi
   await expect(list.locator('.host-service-row')).toHaveCount(25);
   await list.locator('summary').filter({ hasText: 'Classify services' }).click();
 
-  // These input events run before the router can commit any intermediate render.
-  await list.locator('.host-service-filters').evaluate(element => {
-    const [protocol, content] = element.querySelectorAll<HTMLSelectElement>('select');
-    const port = element.querySelector<HTMLInputElement>('input');
+  await chooseOption(list.getByRole('combobox', { name: 'Protocol', exact: true }), 'https');
+  await list.getByRole('combobox', { name: 'Contains', exact: true }).click();
+  // The menu selection and port edit run before an intermediate router render.
+  await page.getByRole('option', { name: /^TLS certificate ·/ }).evaluate(option => {
+    const port = document.querySelector<HTMLInputElement>('.host-service-filters input');
     const setInputValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-    if (!protocol || !content || !port || !setInputValue) throw new Error('Service filters must be available.');
-    protocol.value = 'https'; protocol.dispatchEvent(new Event('change', { bubbles: true }));
-    content.value = 'tls'; content.dispatchEvent(new Event('change', { bubbles: true }));
+    if (!port || !setInputValue) throw new Error('Service filters must be available.');
+    (option as HTMLElement).click();
     setInputValue.call(port, '10800-10999'); port.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await expect(page).toHaveURL(url => url.searchParams.get('service_protocol') === 'https'
     && url.searchParams.get('service_content') === 'tls' && url.searchParams.get('service_port') === '10800-10999'
     && url.searchParams.get('service_page') === '1' && url.searchParams.get('q') === 'retained'
     && url.searchParams.get('back') === '/search?q=retained&run=1');
-  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
+  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveAttribute('data-control-value', 'tls');
   await expect(list.locator('.host-service-row')).toHaveCount(20);
   await expect(list.locator('.host-service-window')).toContainText('20 matching');
 
@@ -92,14 +93,14 @@ test('rapid service filters and nested tabs compose the current URL without losi
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(restoredLocation);
-  await expect(list.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveValue('https');
-  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
+  await expect(list.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveAttribute('data-control-value', 'https');
+  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveAttribute('data-control-value', 'tls');
   await expect(list.getByRole('textbox', { name: 'Port or range', exact: true })).toHaveValue('10800-10999');
   await expect(list.locator('.host-service-row')).toHaveCount(20);
   await page.setViewportSize({ width: 320, height: 900 });
   await page.getByRole('button', { name: 'Back to service list', exact: true }).click();
   await expect(list).toBeVisible();
-  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
+  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveAttribute('data-control-value', 'tls');
   await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('host-filters-mobile.png') });
   expect(requests.filter(type => type === 'hostinfo')).toHaveLength(1);
 });
@@ -115,7 +116,7 @@ test('all ten thousand received rows are searchable and numerically sortable wit
   await expect(table.locator('tbody tr')).toHaveCount(1);
   await expect(table).toContainText('entry-09999');
   await search.fill('');
-  await page.getByRole('combobox', { name: 'Sort by', exact: true }).selectOption('1');
+  await chooseOption(page.getByRole('combobox', { name: 'Sort by', exact: true }), '1');
   await page.getByRole('button', { name: 'Sort descending', exact: true }).click();
   await expect(table.locator('tbody tr').first()).toContainText('entry-09999');
   await expect(table.locator('tbody tr')).toHaveCount(50);

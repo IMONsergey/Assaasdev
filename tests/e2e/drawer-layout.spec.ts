@@ -13,7 +13,7 @@ test('left filter drawers keep their actions reachable with dark theme and enlar
       await expect(dialog).toBeVisible();
       if (kind === 'search') {
         await dialog.getByRole('button', { name: 'Add group', exact: true }).click();
-        await dialog.locator('.search-condition-group').first().getByRole('button', { name: 'Add group', exact: true }).click();
+        await dialog.getByRole('button', { name: 'Add group', exact: true }).click();
       }
       const box = await dialog.boundingBox();
       const workspace = await page.locator('.workspace-main').boundingBox();

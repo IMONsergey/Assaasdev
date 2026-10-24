@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 
 async function openAnalytics(page: Page) {
@@ -20,7 +21,7 @@ test('editing result type keeps condition drafts uncommitted and Escape restores
   await editor.getByRole('button', { name: 'Add condition', exact: true }).click();
   await editor.getByLabel('Field', { exact: true }).fill('country_name');
   await editor.getByLabel('Value', { exact: true }).fill('Germany');
-  await editor.getByRole('combobox', { name: 'Result type', exact: true }).selectOption('ipv4');
+  await chooseOption(editor.getByRole('combobox', { name: 'Result type', exact: true }), 'ipv4');
   await expect(editor).toBeVisible();
   expect(page.url()).toBe(before);
   // Move out of the native suggestions popup: its first Escape dismisses
@@ -29,7 +30,7 @@ test('editing result type keeps condition drafts uncommitted and Escape restores
   await page.keyboard.press('Escape');
   await expect(editor).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeFocused();
-  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('');
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveAttribute('data-control-value', '');
   expect(page.url()).toBe(before);
 });
 
@@ -91,7 +92,7 @@ test('a mobile deep service link reveals its page and supports returning to the 
 
 test('result and 1000-service layouts fit intermediate widths with large text', async ({ page }, testInfo) => {
   await page.goto('/settings?section=appearance');
-  await page.getByLabel('Text size').selectOption('125');
+  await chooseOption(page.getByLabel('Text size'), '125');
   for (const width of [1024, 820, 540, 320]) {
     await page.setViewportSize({ width, height: 780 });
     for (const path of ['/search?run=1', '/hosts/198.51.100.24']) {
@@ -151,10 +152,10 @@ test('pagination, sorting and row count reuse analytics instead of spending anot
   await pages.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(pages).toContainText('Page 2');
   await expect(page.getByRole('combobox', { name: 'Sort', exact: true })).toBeEnabled();
-  await page.getByRole('combobox', { name: 'Sort', exact: true }).selectOption('ip:asc');
+  await chooseOption(page.getByRole('combobox', { name: 'Sort', exact: true }), 'ip:asc');
   await expect(pages).toContainText('Page 1');
   await expect(page.getByRole('combobox', { name: 'Rows', exact: true })).toBeEnabled();
-  await page.getByRole('combobox', { name: 'Rows', exact: true }).selectOption('10');
+  await chooseOption(page.getByRole('combobox', { name: 'Rows', exact: true }), '10');
   await expect(page.getByRole('heading', { name: '10 hosts returned', exact: true })).toBeVisible();
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(4);
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
@@ -221,7 +222,9 @@ test('filters open from the left without moving the home search and keep actions
     expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
     await editor.getByRole('button', { name: 'Add group', exact: true }).click();
-    await editor.locator('.search-condition-group').first().getByRole('button', { name: 'Add group', exact: true }).click();
+    await expect(editor.locator('.condition-view')).toHaveAttribute('data-condition-depth', '1');
+    await editor.getByRole('button', { name: 'Add group', exact: true }).click();
+    await expect(editor.locator('.condition-view')).toHaveAttribute('data-condition-depth', '2');
     await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
     await expect(editor.getByRole('button', { name: 'Cancel', exact: true })).toBeInViewport();
     expect(await editor.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
@@ -259,7 +262,7 @@ test('changing result type waits for explicit apply and preserves complex type r
   await page.goto('/search?q=example&run=1');
   await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
   const before = page.url();
-  await page.getByRole('combobox', { name: 'Result type', exact: true }).selectOption('ipv4');
+  await chooseOption(page.getByRole('combobox', { name: 'Result type', exact: true }), 'ipv4');
   expect(page.url()).toBe(before);
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
   const sort = page.getByRole('combobox', { name: 'Sort', exact: true });
@@ -269,12 +272,12 @@ test('changing result type waits for explicit apply and preserves complex type r
   await expect(rows).toBeDisabled();
   await expect(next).toBeDisabled();
   await page.getByRole('button', { name: 'Cancel changes', exact: true }).click();
-  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('');
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveAttribute('data-control-value', '');
   await expect(sort).toBeEnabled();
   await expect(rows).toBeEnabled();
   await expect(next).toBeEnabled();
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
-  await page.getByRole('combobox', { name: 'Result type', exact: true }).selectOption('ipv4');
+  await chooseOption(page.getByRole('combobox', { name: 'Result type', exact: true }), 'ipv4');
   await expect(sort).toBeDisabled();
   await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
   await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(2);
@@ -285,7 +288,7 @@ test('changing result type waits for explicit apply and preserves complex type r
   const complex = { full_text_search: 'complex', simple_search_filters: [{ operator: 'OR', filters: [{ field: 'type', value: 'ipv6' }, { field: 'country_name', value: 'France' }] }, { operator: 'NOT', filters: [{ field: 'type', value: 'domain' }] }] };
   await page.goto(`/search?request=${encodeURIComponent(JSON.stringify(complex))}&run=1`);
   await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
-  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('custom');
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveAttribute('data-control-value', 'custom');
   await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
@@ -349,6 +352,7 @@ test('invalid long filter drafts focus a visible error without changing the appl
   const before = page.url();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
+  await editor.getByRole('button', { name: 'Edit all conditions, 16 conditions', exact: true }).click();
   await editor.getByLabel('Value', { exact: true }).first().clear();
   await editor.getByRole('button', { name: 'Apply conditions', exact: true }).click();
   const error = editor.getByRole('region', { name: 'Condition errors', exact: true });

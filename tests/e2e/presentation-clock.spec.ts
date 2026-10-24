@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test } from '@playwright/test';
 
 test('presentation wallet payments and submitted search history use the same browser date', async ({ page }, testInfo) => {
@@ -16,7 +17,7 @@ test('presentation wallet payments and submitted search history use the same bro
   await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
   await page.locator('.billing-token').filter({ has: page.getByRole('heading', { name: 'Starter Pack', exact: true }) }).getByRole('button', { name: 'Buy credits', exact: true }).click();
   const review = page.getByRole('dialog', { name: 'Add 25,000 credits', exact: true });
-  await review.getByLabel('Payment method', { exact: true }).selectOption('balance');
+  await chooseOption(review.getByLabel('Payment method', { exact: true }), 'balance');
   await review.getByRole('button', { name: 'Pay with balance', exact: true }).click();
   await expect(review.getByRole('heading', { name: 'Payment complete', exact: true })).toBeVisible();
   await expect(review.locator('[data-onboarding="wallet-receipt"]')).toContainText('$70');

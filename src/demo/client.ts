@@ -11,9 +11,11 @@ import {
   seedSavedQueries, seedSessions, seedTasks, seedTrackedAddresses, seedAddressTransactions,
 } from './fixtures';
 import { DEMO_FACETS, DEMO_FIELDS, facetData, fieldValues, matchingBuckets, matchingHosts } from './search';
+import { PRESENTATION_NETWORKS, presentationCryptoQuote, registerPresentationPayments, type PresentationOrder } from './presentation-payments';
+import { browserOrderStorage, PRESENTATION_ORDER_KEY, readPresentationOrders, writePresentationOrders, type OrderStorage, type StoredPresentationOrder } from './presentation-order-store';
 
 /** Testable clock and animation delay; never accepts live endpoint credentials. */
-export interface DemoApiOptions { now?: () => number; delayMs?: number }
+export interface DemoApiOptions { now?: () => number; delayMs?: number; orderStorage?: OrderStorage | null }
 type Data = Record<string, unknown>;
 type Principal = 'authenticated' | 'anonymous' | 'guest' | 'pending-2fa';
 interface Share { data: string; expires: number; remaining: number; owner: Profile }
@@ -70,13 +72,17 @@ function page(data: Data, limit = 50): { start: number; size: number } {
 }
 
 /**
- * A separate, in-memory implementation for product review. It never constructs a
- * fetch, WebSocket or external payment. State resets when this adapter is recreated.
+ * An isolated implementation for product review. It never constructs a fetch,
+ * WebSocket or external payment. A bounded, non-sensitive order ledger can survive
+ * reload in the same browser tab; all other workspace state is in memory.
  */
 export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
   const clock = options.now ?? Date.now;
   const now = () => Math.floor(clock() / 1000);
-  const seedEpoch = now();
+  const startedAt = now();
+  const orderStorage = options.orderStorage === undefined ? browserOrderStorage() : options.orderStorage;
+  const restoredOrders = readPresentationOrders(orderStorage, seedProfile(startedAt).user_id!, startedAt);
+  const seedEpoch = restoredOrders?.seedEpoch ?? startedAt;
   const delay = Math.max(0, options.delayMs ?? 18);
   let principal: Principal = 'authenticated', profile = seedProfile(seedEpoch), guestRemaining = 20, guestDay = Math.floor(seedEpoch / 86400);
   let connection: ConnectionStatus = 'idle', sequence = 10, keyVersion = 1, deletedPaymentCount = 0;
@@ -84,6 +90,11 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
   let payments = seedPayments(seedEpoch), notifications = seedNotifications(seedEpoch).notifications;
   // Account-wallet orders exist only in this isolated adapter. They never call a payment provider.
   const walletOrders = new Map<string, { owner: Profile; request: Data; amount: number; status: 'pending' | 'completed' | 'failed' | 'canceled' | 'expired' }>();
+  const purchaseOrders = new Map<string, { owner: Profile; request: Data; detail: PresentationOrder }>();
+  const settlementSequences = new Map<string, number>();
+  let nextSettlementSequence = 0;
+  const fixtureOwner = profile;
+  purchaseOrders.set('pay_001', { owner: profile, request: { subscription: 'Plus', cadence: 'monthly', network: 'Ethereum', coin: 'USDT' }, detail: { paymentId: 'pay_001', method: 'crypto', status: 'pending', product: 'Plus', kind: 'plan', cadence: 'monthly', subtotal: 50, discount: 0, total: 50, currency: 'USD', createdAt: seedEpoch, updatedAt: seedEpoch, expiresAt: seedEpoch + 3600, authorized: false, network: 'Ethereum', coin: 'USDT', reference: 'APCO-PAY-001', ...presentationCryptoQuote(50, 'USDT'), request: { subscription: 'Plus', cadence: 'monthly' } } });
   let backupCodes = [...DEMO_BACKUP_CODES], totpExpires = 0;
   let pendingProfile: { email: string; user_name: string; expires: number } | undefined;
   const pendingAccounts = new Map<string, { user_name: string; password: string }>();
@@ -272,6 +283,59 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     const amount = plan ? data.cadence === 'annually' ? plan.annually_price : plan.monthly_price : pack!.price_usd;
     return { amount, final: Math.round(amount * (text(data.promo_code).toUpperCase() === 'WELCOME' ? 0.9 : 1) * 100) / 100, plan, pack };
   }
+  function grantPurchase(owner: Profile, request: Data, paymentId: string, amount: number, settledAt: number) {
+    const { plan, pack } = purchase(request);
+    if (pack) {
+      owner.credits = (owner.credits ?? 0) + pack.tokens;
+      owner.purchased_credits = (owner.purchased_credits ?? 0) + pack.tokens;
+    } else if (plan) {
+      const days = request.cadence === 'annually' ? 365 : 30;
+      owner.subscription = { type: plan.type, start_date: settledAt, expiry_date: settledAt + days * 86400, last_payment: paymentId, credits: plan.credits, scan_credits: plan.scan_credits, search_pages: plan.search_pages, api_access: plan.api_access, price: amount, payment_required: true, duration: days * 86400 * 1e9, canceled: false };
+      owner.credits = (plan.credits ?? 0) + (owner.purchased_credits ?? 0);
+      owner.scan_credits = plan.scan_credits ?? 0;
+    }
+  }
+  function savePresentationOrders() {
+    const orders: StoredPresentationOrder[] = [];
+    for (const [paymentId, item] of purchaseOrders) {
+      if (item.owner !== fixtureOwner) continue;
+      const payment = payments.find(value => value.payment_id === paymentId), detail = item.detail;
+      orders.push({ paymentId, method: detail.method, status: payment?.status as StoredPresentationOrder['status'] ?? detail.status, request: { ...detail.request, ...(detail.method === 'crypto' ? { network: detail.network, coin: detail.coin } : {}) }, createdAt: detail.createdAt, updatedAt: payment?.updated_at ?? detail.updatedAt, expiresAt: detail.expiresAt, completedAt: payment?.completed_at ?? detail.completedAt, settlementSequence: settlementSequences.get(paymentId), authorized: detail.authorized, removed: !payment, ...(detail.method === 'crypto' ? { cryptoAmount: detail.cryptoAmount, quoteUsd: detail.quoteUsd } : {}) });
+    }
+    writePresentationOrders(orderStorage, { version: 1, owner: fixtureOwner.user_id!, seedEpoch, writtenAt: now(), orders });
+  }
+  function purchaseDetail(paymentId: string): PresentationOrder | undefined {
+    const order = purchaseOrders.get(paymentId), payment = payments.find(item => item.payment_id === paymentId);
+    if (principal !== 'authenticated' || !order || !payment || order.owner !== profile) return undefined;
+    const checkedAt = now();
+    if (payment.status === 'pending' && order.detail.expiresAt <= checkedAt) {
+      payment.status = 'expired'; payment.updated_at = checkedAt;
+      const wallet = walletOrders.get(paymentId); if (wallet?.status === 'pending') wallet.status = 'expired';
+      savePresentationOrders();
+    }
+    order.detail.status = payment.status as PresentationOrder['status'];
+    order.detail.updatedAt = payment.updated_at ?? order.detail.createdAt;
+    order.detail.completedAt = payment.completed_at;
+    return clone(order.detail);
+  }
+  function settlePresentation(paymentId: string) {
+    const settledAt = now(), order = purchaseOrders.get(paymentId), payment = payments.find(item => item.payment_id === paymentId);
+    if (!order || !payment) return { payment_id: paymentId, status: 'canceled', message: 'This order is no longer available.', timestamp: settledAt };
+    if (payment.status === 'pending') {
+      if (order.detail.expiresAt <= settledAt) payment.status = 'expired';
+      else if (order.detail.authorized) {
+        grantPurchase(order.owner, order.request, paymentId, order.detail.total, settledAt);
+        settlementSequences.set(paymentId, ++nextSettlementSequence);
+        payment.status = 'completed'; payment.completed_at = settledAt;
+      }
+      if (payment.status !== 'pending') payment.updated_at = settledAt;
+    }
+    order.detail.status = payment.status as PresentationOrder['status'];
+    order.detail.updatedAt = payment.updated_at ?? order.detail.createdAt;
+    order.detail.completedAt = payment.completed_at;
+    savePresentationOrders();
+    return { payment_id: paymentId, status: payment.status, subscription_type: order.owner.subscription?.type, expiry_date: order.owner.subscription?.expiry_date, message: payment.status === 'completed' ? 'Payment completed. Your account has been updated.' : payment.status === 'expired' ? 'This order has expired. Create a new order to continue.' : payment.status === 'canceled' ? 'This order was canceled.' : 'Your order is awaiting payment.', timestamp: settledAt };
+  }
   function settleWallet(paymentId: string) {
     const settledAt = now();
     const order = walletOrders.get(paymentId), payment = payments.find(item => item.payment_id === paymentId);
@@ -280,20 +344,15 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       if ((payment.expires_at ?? Infinity) <= settledAt) order.status = 'expired';
       else if ((order.owner.balance ?? 0) < order.amount) order.status = 'failed';
       else {
-        const { plan, pack } = purchase(order.request);
         order.owner.balance = Math.round(((order.owner.balance ?? 0) - order.amount) * 100) / 100;
-        if (pack) {
-          order.owner.credits = (order.owner.credits ?? 0) + pack.tokens;
-          order.owner.purchased_credits = (order.owner.purchased_credits ?? 0) + pack.tokens;
-        } else if (plan) {
-          const days = order.request.cadence === 'annually' ? 365 : 30;
-          order.owner.subscription = { type: plan.type, start_date: settledAt, expiry_date: settledAt + days * 86400, last_payment: paymentId, credits: plan.credits, scan_credits: plan.scan_credits, search_pages: plan.search_pages, api_access: plan.api_access, price: order.amount, payment_required: true, duration: days * 86400 * 1e9, canceled: false };
-          order.owner.credits = (plan.credits ?? 0) + (order.owner.purchased_credits ?? 0);
-          order.owner.scan_credits = plan.scan_credits ?? 0;
-        }
+        grantPurchase(order.owner, order.request, paymentId, order.amount, settledAt);
+        settlementSequences.set(paymentId, ++nextSettlementSequence);
         order.status = 'completed'; payment.completed_at = settledAt;
       }
       payment.status = order.status; payment.updated_at = settledAt;
+      const detail = purchaseOrders.get(paymentId)?.detail;
+      if (detail) { detail.status = order.status; detail.updatedAt = settledAt; detail.completedAt = payment.completed_at; }
+      savePresentationOrders();
     }
     return { payment_id: paymentId, status: order.status, subscription_type: order.owner.subscription?.type, expiry_date: order.owner.subscription?.expiry_date,
       message: order.status === 'completed' ? 'Payment completed. Your account has been updated.' : order.status === 'expired' ? 'This payment expired. Start a new purchase when you are ready.' : 'The payment could not be completed. Your wallet was not charged.', timestamp: settledAt };
@@ -428,12 +487,15 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     }
     if (type === 'init_checkout' || type === 'billing_manage') throw new ApiError('server', 'Payment service unavailable. Please try again later.', { outcome: 'not-sent' });
     if (type === 'pay_with_balance') {
+      if ([...purchaseOrders.entries()].some(([paymentId, order]) => order.owner === owner && order.detail.method !== 'balance' && order.detail.authorized && purchaseDetail(paymentId)?.status === 'pending')) throw new ApiError('server', 'Check your current payment before starting another purchase.', { outcome: 'not-sent' });
       const amount = purchase(data), issuedAt = now(), expiresAt = issuedAt + 3600;
       const reserved = [...walletOrders.entries()].reduce((total, [paymentId, order]) => total + (order.owner === owner && order.status === 'pending' && (payments.find(item => item.payment_id === paymentId)?.expires_at ?? 0) > issuedAt ? order.amount : 0), 0);
       if ((owner.balance ?? 0) - reserved < amount.final) throw new ApiError('server', reserved ? 'Part of your balance is reserved for a pending payment. Check it before starting another purchase.' : 'Insufficient balance', { outcome: 'not-sent' });
       const paymentId = id('pay');
       walletOrders.set(paymentId, { owner, request: clone(data), amount: amount.final, status: 'pending' });
       payments.unshift({ payment_id: paymentId, subscription: amount.plan?.type ?? amount.pack?.name ?? 'Search credits', amount: amount.final, amount_usd: amount.final, status: 'pending', created_at: issuedAt, updated_at: issuedAt, expires_at: expiresAt });
+      purchaseOrders.set(paymentId, { owner, request: clone(data), detail: { paymentId, method: 'balance', status: 'pending', product: amount.plan?.name ?? amount.plan?.type ?? amount.pack?.name ?? 'Search credits', kind: amount.plan ? 'plan' : 'credits', credits: amount.pack?.tokens, cadence: amount.plan ? data.cadence as 'monthly' | 'annually' : undefined, subtotal: amount.amount, discount: amount.amount - amount.final, total: amount.final, currency: 'USD', promoCode: text(data.promo_code) || undefined, createdAt: issuedAt, updatedAt: issuedAt, expiresAt, authorized: true, request: { ...(amount.plan ? { subscription: amount.plan.type, cadence: data.cadence as 'monthly' | 'annually' } : { token_pack_id: amount.pack!.id }), ...(text(data.promo_code) ? { promo_code: text(data.promo_code) } : {}) } } });
+      savePresentationOrders();
       return one({ payment_id: paymentId, amount: amount.final, amount_usd: amount.final, original_amount_usd: amount.amount, final_amount_usd: amount.final, expires_at: expiresAt, timestamp: issuedAt, message: 'Your wallet payment is ready for confirmation.' });
     }
     if (type === 'get_address') {
@@ -454,16 +516,29 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
         const pending = result({ payment_id: paymentId, status: 'pending', message: 'Confirming payment from your account wallet.', timestamp: now() });
         return { frames: [pending, pending], intervalMs: delay === 0 ? 0 : 850, beforeDelivery: (frame, index) => index === 1 ? result(settleWallet(paymentId)) : frame };
       }
+      const presented = purchaseOrders.get(paymentId);
+      if (presented) {
+        if (presented.owner !== owner) throw new ApiError('auth', 'This payment belongs to another account');
+        if (payment.status !== 'pending' || presented.detail.expiresAt <= now()) return one(settlePresentation(paymentId));
+        if (presented.detail.authorized) {
+          const pending = result({ payment_id: paymentId, status: 'pending', message: 'Confirming your payment.', timestamp: now() });
+          return { frames: [pending, pending], intervalMs: delay === 0 ? 0 : 650, beforeDelivery: (frame, index) => index === 1 ? result(settlePresentation(paymentId)) : frame };
+        }
+      }
       return { frames: [result({ payment_id: paymentId, status: 'pending', message: 'Payment is pending. Access updates after confirmation.', timestamp: now() })], persistent: true };
     }
     if (type === 'delete_payment') {
       const paymentId = requiredString(data, 'payment_id', 'Missing payment_id');
       if (!payments.some(item => item.payment_id === paymentId)) throw new ApiError('server', 'Payment not found');
-      const order = walletOrders.get(paymentId); if (order?.status === 'pending') order.status = 'canceled';
+      const order = walletOrders.get(paymentId);
+      if (order && order.owner !== owner || purchaseOrders.has(paymentId) && purchaseOrders.get(paymentId)!.owner !== owner) throw new ApiError('auth', 'This payment belongs to another account');
+      if (order?.status === 'pending') order.status = 'canceled';
+      const presented = purchaseOrders.get(paymentId); if (presented?.detail.status === 'pending') presented.detail.status = 'canceled';
       payments = payments.filter(item => item.payment_id !== paymentId); deletedPaymentCount++;
+      savePresentationOrders();
       return one({ payment_id: paymentId, status: 'moved_to_deleted', payments_count: payments.length, deleted_count: deletedPaymentCount, timestamp: now() });
     }
-    if (type === 'user_billing') return one({ user_id: profile.user_id, addresses: profile.addresses ?? [], payments, subscription: { ...profile.subscription, name: profile.subscription?.type, days_remaining: Math.max(0, Math.ceil(((profile.subscription?.expiry_date ?? now()) - now()) / 86400)), active: (profile.subscription?.expiry_date ?? Infinity) > now() }, balance: profile.balance, credits: profile.credits, scan_credits: profile.scan_credits, timestamp: now() });
+    if (type === 'user_billing') return one({ user_id: profile.user_id, addresses: profile.addresses ?? [], payments: payments.filter(item => !purchaseOrders.has(item.payment_id) || purchaseOrders.get(item.payment_id)!.owner === owner), subscription: { ...profile.subscription, name: profile.subscription?.type, days_remaining: Math.max(0, Math.ceil(((profile.subscription?.expiry_date ?? now()) - now()) / 86400)), active: (profile.subscription?.expiry_date ?? Infinity) > now() }, balance: profile.balance, credits: profile.credits, scan_credits: profile.scan_credits, timestamp: now() });
     if (type === 'get_user_addresses_info') return one({ user_id: profile.user_id, addresses: seedTrackedAddresses(seedEpoch).filter(address => profile.addresses?.some(owned => owned.address === address.address)), timestamp: now() });
     if (type === 'get_address_transactions') {
       const address = requiredString(data, 'address');
@@ -562,6 +637,35 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     return new Response(stream, { status: 200, headers: { 'Content-Type': format === 'csv' ? 'text/csv; charset=utf-8' : 'application/x-ndjson', 'Content-Disposition': `attachment; filename="apcosys-export.${format === 'csv' ? 'csv' : 'ndjson'}"`, 'X-APCOSYS': 'true' } });
   }
 
+  // Rebuild from the initial account exactly once. Never add the ledger to an
+  // already-restored profile, and never trust stored prices or entitlement sizes.
+  if (restoredOrders) {
+    try {
+      const restored = restoredOrders.orders.map(item => {
+        const amount = purchase(object(item.request));
+        if (item.method === 'crypto' && !PRESENTATION_NETWORKS.some(network => network.network === item.request.network && network.coins.some(coin => coin.coin === item.request.coin))) throw new Error('Unavailable stored network');
+        if (item.method === 'crypto') { const quote = presentationCryptoQuote(amount.final, item.request.coin!); if (quote.cryptoAmount !== item.cryptoAmount || quote.quoteUsd !== item.quoteUsd) throw new Error('Invalid stored quote'); }
+        if (item.status === 'completed' && item.completedAt! >= item.expiresAt) throw new Error('Invalid stored completion');
+        return { item, amount };
+      });
+      payments = payments.filter(payment => !purchaseOrders.has(payment.payment_id));
+      purchaseOrders.clear();
+      for (const { item, amount } of restored) {
+        const detail: PresentationOrder = { paymentId: item.paymentId, method: item.method, status: item.status, product: amount.plan?.name ?? amount.plan?.type ?? amount.pack!.name ?? 'Search credits', kind: amount.plan ? 'plan' : 'credits', credits: amount.pack?.tokens, cadence: amount.plan ? item.request.cadence : undefined, subtotal: amount.amount, discount: Math.round((amount.amount - amount.final) * 100) / 100, total: amount.final, currency: 'USD', promoCode: amount.final < amount.amount ? item.request.promo_code : undefined, createdAt: item.createdAt, updatedAt: item.updatedAt, expiresAt: item.expiresAt, completedAt: item.completedAt, authorized: item.authorized, request: { ...(amount.plan ? { subscription: amount.plan.type, cadence: item.request.cadence } : { token_pack_id: amount.pack!.id }), ...(item.request.promo_code ? { promo_code: item.request.promo_code } : {}) }, ...(item.method === 'crypto' ? { network: item.request.network, coin: item.request.coin, cryptoAmount: item.cryptoAmount, quoteUsd: item.quoteUsd, reference: item.paymentId === 'pay_001' ? 'APCO-PAY-001' : `APCO-ORDER-${item.paymentId.toUpperCase()}` } : {}) };
+        purchaseOrders.set(item.paymentId, { owner: fixtureOwner, request: clone(item.request) as Data, detail });
+        if (item.settlementSequence !== undefined) { settlementSequences.set(item.paymentId, item.settlementSequence); nextSettlementSequence = Math.max(nextSettlementSequence, item.settlementSequence); }
+        if (item.method === 'balance') walletOrders.set(item.paymentId, { owner: fixtureOwner, request: clone(item.request) as Data, amount: amount.final, status: item.status });
+        if (!item.removed) payments.push({ payment_id: item.paymentId, subscription: detail.product, amount: item.method === 'crypto' ? Number(detail.cryptoAmount) : amount.final, amount_usd: amount.final, status: item.status, created_at: item.createdAt, updated_at: item.updatedAt, expires_at: item.expiresAt, completed_at: item.completedAt, ...(item.method === 'crypto' ? { network: detail.network, coin: detail.coin } : {}) });
+        if (item.paymentId.startsWith('pay-')) sequence = Math.max(sequence, Number(item.paymentId.slice(4)));
+      }
+      for (const { item, amount } of restored.filter(value => value.item.status === 'completed').sort((a, b) => a.item.settlementSequence! - b.item.settlementSequence!)) {
+        if (item.method === 'balance') fixtureOwner.balance = Math.round(((fixtureOwner.balance ?? 0) - amount.final) * 100) / 100;
+        grantPurchase(fixtureOwner, item.request as Data, item.paymentId, amount.final, item.completedAt!);
+      }
+      payments.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+    } catch { try { orderStorage?.removeItem(PRESENTATION_ORDER_KEY); } catch { /* Invalid local history never reaches the live API. */ } }
+  }
+
   const api: ApiClient = {
     url(path) { const url = new URL(path, origin()); if (url.origin !== origin()) throw new ApiError('transport', 'External demo URLs are not allowed', { outcome: 'not-sent' }); return url.toString(); },
     async connect() { requireSession(); if (connection === 'open') return; status('connecting'); status('open'); queueMicrotask(() => { if (connection === 'open') pushNotifications(); }); },
@@ -622,6 +726,66 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       return () => stop();
     },
   };
+  registerPresentationPayments(api, {
+    networks: clone(PRESENTATION_NETWORKS),
+    async create(method, request) {
+      requireSession(true);
+      if (method !== 'card' && method !== 'crypto') throw new ApiError('server', 'Choose a payment method.');
+      if (method === 'crypto' && !PRESENTATION_NETWORKS.some(network => network.network === request.network && network.coins.some(coin => coin.coin === request.coin))) throw new ApiError('server', 'Choose an available network and coin.');
+      const input = object(request), amount = purchase(input), issuedAt = now();
+      for (const [paymentId, order] of purchaseOrders) {
+        if (order.owner !== profile) continue;
+        const existing = purchaseDetail(paymentId);
+        if (existing?.status !== 'pending') continue;
+        if (existing.method === method && canonical(order.request) === canonical(input)) return existing;
+        if (existing.authorized) throw new ApiError('server', 'Check your current payment before starting another purchase.');
+      }
+      const paymentId = id('pay'), expiresAt = issuedAt + 3600;
+      const detail: PresentationOrder = { paymentId, method, status: 'pending', product: amount.plan?.name ?? amount.plan?.type ?? amount.pack?.name ?? 'Search credits', kind: amount.plan ? 'plan' : 'credits', credits: amount.pack?.tokens, cadence: amount.plan ? request.cadence : undefined, subtotal: amount.amount, discount: Math.round((amount.amount - amount.final) * 100) / 100, total: amount.final, currency: 'USD', promoCode: amount.final < amount.amount ? text(request.promo_code) : undefined, createdAt: issuedAt, updatedAt: issuedAt, expiresAt, authorized: false,
+        ...(method === 'crypto' ? { network: request.network, coin: request.coin, ...presentationCryptoQuote(amount.final, request.coin!), reference: `APCO-ORDER-${paymentId.toUpperCase()}` } : {}),
+        request: { ...(amount.plan ? { subscription: amount.plan.type, cadence: request.cadence } : { token_pack_id: amount.pack!.id }), ...(text(request.promo_code) ? { promo_code: text(request.promo_code) } : {}) } };
+      purchaseOrders.set(paymentId, { owner: profile, request: clone(input), detail });
+      payments.unshift({ payment_id: paymentId, subscription: detail.product, amount: method === 'crypto' ? Number(detail.cryptoAmount) : amount.final, amount_usd: amount.final, status: 'pending', created_at: issuedAt, updated_at: issuedAt, expires_at: expiresAt, ...(method === 'crypto' ? { network: request.network, coin: request.coin } : {}) });
+      savePresentationOrders();
+      return clone(detail);
+    },
+    get: purchaseDetail,
+    authorize(paymentId) {
+      requireSession(true);
+      const detail = purchaseDetail(paymentId);
+      if (!detail) throw new ApiError('server', 'This order could not be found.');
+      if (detail.status !== 'pending') return detail;
+      if (detail.method === 'balance') throw new ApiError('server', 'Check this wallet payment from Payments.');
+      if ([...purchaseOrders.entries()].some(([otherId, order]) => otherId !== paymentId && order.owner === profile && order.detail.authorized && purchaseDetail(otherId)?.status === 'pending')) throw new ApiError('server', 'Check your current payment before confirming another order.');
+      purchaseOrders.get(paymentId)!.detail.authorized = true;
+      savePresentationOrders();
+      return purchaseDetail(paymentId)!;
+    },
+    cancel(paymentId) {
+      requireSession(true);
+      const detail = purchaseDetail(paymentId);
+      if (!detail) throw new ApiError('server', 'This order could not be found.');
+      if (detail.status !== 'pending') return detail;
+      if (detail.authorized) throw new ApiError('server', 'Confirmation has started. Check the payment status before continuing.');
+      const payment = payments.find(item => item.payment_id === paymentId)!;
+      payment.status = 'canceled'; payment.updated_at = now();
+      savePresentationOrders();
+      return purchaseDetail(paymentId)!;
+    },
+    addresses() {
+      requireSession(true);
+      return { user_id: profile.user_id, timestamp: now(), addresses: profile === fixtureOwner ? [
+        { network: 'Ethereum', coin: 'USDT', address: 'APCO-ACCOUNT-ETH-01', is_active: true, total_received: '150000000', total_received_readable: '150.000000', last_checked_at: seedEpoch, last_tx_timestamp: seedEpoch - 86400 * 2 },
+        { network: 'Ethereum', coin: 'ETH', address: 'APCO-ACCOUNT-ETH-02', is_active: true, total_received: '120000000000000000', total_received_readable: '0.120000000000000000', last_checked_at: seedEpoch, last_tx_timestamp: seedEpoch - 86400 * 6 },
+      ] : [] };
+    },
+    transactions(reference) {
+      requireSession(true);
+      const tether = reference === 'APCO-ACCOUNT-ETH-01', eth = reference === 'APCO-ACCOUNT-ETH-02';
+      const offset = tether ? 86400 * 2 : 86400 * 6;
+      return { address: reference, timestamp: now(), count: profile === fixtureOwner && (tether || eth) ? 1 : 0, transactions: profile === fixtureOwner && (tether || eth) ? [{ tx_hash: tether ? 'APCO-TRANSFER-ETH-001' : 'APCO-TRANSFER-ETH-002', from_address: 'APCO-EXTERNAL-ACCOUNT', amount: tether ? '150000000' : '120000000000000000', decimals: tether ? 6 : 18, block_number: tether ? '21500481' : '21483102', timestamp: seedEpoch - offset, status: 'processed', created_at: seedEpoch - offset + 8, processed_at: seedEpoch - offset + 120 }] : [] };
+    },
+  });
   return api;
 }
 

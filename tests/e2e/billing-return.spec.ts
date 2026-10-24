@@ -53,10 +53,10 @@ test('annual Plus selection survives login and opens review without starting a p
   await expect(page).toHaveURL(url => url.pathname === '/billing' && url.searchParams.get('plan') === 'Plus' && url.searchParams.get('cadence') === 'annually');
   const review = page.getByRole('dialog', { name: 'Plus · annually', exact: true });
   await expect(review).toBeVisible();
-  await expect(review.getByLabel('Billing period', { exact: true })).toHaveValue('annually');
+  await expect(review.getByLabel('Billing period', { exact: true })).toHaveAttribute('data-control-value', 'annually');
   await expect(review.locator('.billing-purchase-summary')).toContainText('Plus');
   await expect(review.locator('.billing-purchase-summary strong')).toHaveText('$480');
-  await expect(review.getByLabel('Payment method', { exact: true })).toHaveValue('card');
+  await expect(review.getByLabel('Payment method', { exact: true })).toHaveAttribute('data-control-value', 'card');
   await expect(review.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
   await expect.poll(() => frames.some(frame => frame.type === 'user_billing')).toBe(true);
   await expect(page.locator('.billing-current-plan')).toHaveText('Free');
@@ -84,7 +84,7 @@ test('credit pack selection survives login as the same one-off review without st
   await expect(review.locator('.billing-purchase-summary')).toContainText('Research Pack');
   await expect(review.locator('.billing-purchase-summary strong')).toHaveText('$150');
   await expect(review.getByLabel('Billing period', { exact: true })).toHaveCount(0);
-  await expect(review.getByLabel('Payment method', { exact: true })).toHaveValue('card');
+  await expect(review.getByLabel('Payment method', { exact: true })).toHaveAttribute('data-control-value', 'card');
   await expect(review.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
   await expect.poll(() => frames.some(frame => frame.type === 'user_billing')).toBe(true);
   await expect(page.locator('.billing-current-plan')).toHaveText('Free');
@@ -124,14 +124,14 @@ test('browser Back restores the plan review without reusing a different order ch
   await page.goBack();
   await expect(page).toHaveURL(initial);
   await expect(planReview).toBeVisible();
-  await expect(planReview.getByLabel('Billing period', { exact: true })).toHaveValue('annually');
+  await expect(planReview.getByLabel('Billing period', { exact: true })).toHaveAttribute('data-control-value', 'annually');
   await expect(planReview.locator('.billing-purchase-summary')).toContainText('Plus');
   await expect(planReview.locator('.billing-purchase-summary strong')).toHaveText('$480');
   await expect(planReview.getByRole('link', { name: 'Open secure checkout ↗', exact: true })).toHaveCount(0);
   await expect(planReview.getByLabel('Promo code (optional)', { exact: true })).toHaveValue('');
   await expect(planReview.getByLabel('Currency code (optional)', { exact: true })).toHaveValue('');
   await expect(planReview.getByLabel('Apply an eligible automatic discount', { exact: true })).not.toBeChecked();
-  await expect(planReview.getByLabel('Payment method', { exact: true })).toHaveValue('card');
+  await expect(planReview.getByLabel('Payment method', { exact: true })).toHaveAttribute('data-control-value', 'card');
   await expect(planReview.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
   await expect(page.locator('.billing-current-plan')).toHaveText('Free');
   expect(writes).toEqual([]);

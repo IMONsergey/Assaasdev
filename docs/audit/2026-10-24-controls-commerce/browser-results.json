@@ -1,0 +1,1934 @@
+[
+  {
+    "label": "chromium-full",
+    "phase": "before one scoped Firefox focus CSS fix",
+    "stats": {
+      "startTime": "2026-10-24T11:18:24.013Z",
+      "duration": 346594.355,
+      "expected": 234,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "file": "account-onboarding.spec.ts",
+        "title": "a guest exit does not complete the sign-in walkthrough",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1709
+      },
+      {
+        "file": "account-onboarding.spec.ts",
+        "title": "mobile onboarding waits for TOTP before moving to the verified profile",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2157
+      },
+      {
+        "file": "account-onboarding.spec.ts",
+        "title": "registration onboarding retains email verification and completes actual sign-in at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2105
+      },
+      {
+        "file": "account-onboarding.spec.ts",
+        "title": "recovery onboarding preserves the identifier and transitions only after reset confirmation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2162
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "HTTP 202 preserves the return context and a spaced TOTP keeps its leading zero",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 982
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "an existing pending 2FA session preserves a deep link across the challenge reload",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1675
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "pending 2FA preserves /auth/login next return context",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 873
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "pending 2FA preserves /login returnTo return context",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 897
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "pending 2FA discovered after auth navigation preserves history-state return context",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 992
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "account sign-in returns to the requested subsection and query",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1572
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "explicit guest access returns to the original local view without signing in",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 829
+      },
+      {
+        "file": "auth-return.spec.ts",
+        "title": "account tabs retain keyboard focus through arrows, Home and End",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 917
+      },
+      {
+        "file": "auth-ux.spec.ts",
+        "title": "signup mismatch focuses a visible field error at 320px without an auth write",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1033
+      },
+      {
+        "file": "auth-ux.spec.ts",
+        "title": "reset mismatch focuses a visible field error at 320px without an auth write",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 782
+      },
+      {
+        "file": "auth-ux.spec.ts",
+        "title": "auth states use complete layouts and a full-width provider action at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3127
+      },
+      {
+        "file": "auth-ux.spec.ts",
+        "title": "auth states use complete layouts and a full-width provider action at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2467
+      },
+      {
+        "file": "avatar-preferences.spec.ts",
+        "title": "an avatar is assigned once, preview is reversible, and saved selection updates the workspace",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2048
+      },
+      {
+        "file": "avatar-preferences.spec.ts",
+        "title": "the mobile avatar picker supports keyboard selection, accessible contrast and a visible footer",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1797
+      },
+      {
+        "file": "avatar-preferences.spec.ts",
+        "title": "mobile settings and avatar controls stay reachable with dark theme and larger text",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2951
+      },
+      {
+        "file": "avatar-upload.spec.ts",
+        "title": "a local photo can be previewed, cancelled, saved, replaced and removed without a profile request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3639
+      },
+      {
+        "file": "avatar-upload.spec.ts",
+        "title": "jpg photo uploads are decoded and re-encoded without their original metadata",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1149
+      },
+      {
+        "file": "avatar-upload.spec.ts",
+        "title": "webp photo uploads are decoded and re-encoded without their original metadata",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1060
+      },
+      {
+        "file": "avatar-upload.spec.ts",
+        "title": "invalid uploads leave the saved avatar intact and recover through the same file input at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2897
+      },
+      {
+        "file": "avatar-upload.spec.ts",
+        "title": "unavailable local storage is reported without claiming a permanent avatar save",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1229
+      },
+      {
+        "file": "billing-activity.spec.ts",
+        "title": "tracked crypto activity preserves exact amounts and never grants access from received transfers",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2285
+      },
+      {
+        "file": "billing-return.spec.ts",
+        "title": "annual Plus selection survives login and opens review without starting a purchase",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2069
+      },
+      {
+        "file": "billing-return.spec.ts",
+        "title": "credit pack selection survives login as the same one-off review without starting a purchase",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2120
+      },
+      {
+        "file": "billing-return.spec.ts",
+        "title": "browser Back restores the plan review without reusing a different order checkout",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2330
+      },
+      {
+        "file": "billing-ux.spec.ts",
+        "title": "annual plans are the default and switching keeps exact prices and explicit purchase intent",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3597
+      },
+      {
+        "file": "billing-ux.spec.ts",
+        "title": "plan loading displays the branded canvas only while pricing is pending",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 800
+      },
+      {
+        "file": "billing-ux.spec.ts",
+        "title": "billing sections preserve local payment filters and history without extra billing requests",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4043
+      },
+      {
+        "file": "billing-ux.spec.ts",
+        "title": "rapid payment filters compose the current URL across section changes and browser history",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1369
+      },
+      {
+        "file": "billing-ux.spec.ts",
+        "title": "payment return is explicit and an unknown check remains blocked through section navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1024
+      },
+      {
+        "file": "billing-ux.spec.ts",
+        "title": "unavailable payment networks cannot produce payable instructions or new invoices",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1514
+      },
+      {
+        "file": "client-polish.spec.ts",
+        "title": "search entry, focus and workspace filters have consistent geometry",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3734
+      },
+      {
+        "file": "client-polish.spec.ts",
+        "title": "typing suggestions never searches and selected values become explicit filter drafts",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1250
+      },
+      {
+        "file": "client-polish.spec.ts",
+        "title": "result data areas navigate and saved queries use searchable readable cards",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1940
+      },
+      {
+        "file": "client-polish.spec.ts",
+        "title": "registration guidance stays available through auth forms at desktop and mobile widths",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2598
+      },
+      {
+        "file": "client-polish.spec.ts",
+        "title": "a notification remains readable and dismissible above an open dialog",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1602
+      },
+      {
+        "file": "client-polish.spec.ts",
+        "title": "a direct filter link survives delayed session hydration without running a search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 718
+      },
+      {
+        "file": "commerce-checkout.spec.ts",
+        "title": "card and crypto checkout retain orders and receipts at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 9834
+      },
+      {
+        "file": "commerce-checkout.spec.ts",
+        "title": "card and crypto checkout retain orders and receipts at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 8963
+      },
+      {
+        "file": "commerce-checkout.spec.ts",
+        "title": "card and crypto checkout retain orders and receipts at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 9134
+      },
+      {
+        "file": "commerce-checkout.spec.ts",
+        "title": "cancellation and expiry retain complete purchase choices; pending recovery never charges on entry",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4782
+      },
+      {
+        "file": "commerce-checkout.spec.ts",
+        "title": "plans expand together on desktop, independently on mobile; packs and crypto remain aligned",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4501
+      },
+      {
+        "file": "commerce-checkout.spec.ts",
+        "title": "order history return restores filters and unknown orders have a usable recovery",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1951
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "credit balance and its dialog stay operable from 280px to 1920px with larger text",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3082
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "available, extra, unknown and zero credits remain distinct and refresh only on request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1026
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "unrestricted access at zero credits is not presented as a purchase requirement",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1317
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "mobile navigation stays isolated, reaches account actions in landscape and unlocks after a dialog",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 786
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "search keyboard shortcuts keep text input intact and focus the search field from another screen",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1151
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "working pages fit an intermediate 820px viewport with large text and dark theme",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3834
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "working pages fit an intermediate 1024px viewport with large text and dark theme",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3819
+      },
+      {
+        "file": "credits-shell.spec.ts",
+        "title": "working pages fit an intermediate 1280px viewport with large text and dark theme",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3598
+      },
+      {
+        "file": "drawer-layout.spec.ts",
+        "title": "left filter drawers keep their actions reachable with dark theme and enlarged text",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 8843
+      },
+      {
+        "file": "exploration-404.spec.ts",
+        "title": "unrecognised workspace subpaths use the same recovery page",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2307
+      },
+      {
+        "file": "exploration-404.spec.ts",
+        "title": "unknown addresses retain recovery actions and playable, responsive discovery games",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 7977
+      },
+      {
+        "file": "exploration-404.spec.ts",
+        "title": "route game can be solved with the keyboard and undo preserves its path",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1720
+      },
+      {
+        "file": "exploration-404.spec.ts",
+        "title": "memory game observes a sequence, accepts replay and cleans up when switching",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4576
+      },
+      {
+        "file": "files-ux.spec.ts",
+        "title": "primary file search and grouped filters submit explicitly and changing views stays free",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3167
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "custom selections support keyboard, pointer, outside dismissal and persist appearance",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2531
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "a select stays inside a native drawer and Escape closes only its popup",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2519
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "calendar keeps exact UTC seconds, cancels a popup draft and serializes the chosen date",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2123
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "incomplete dates do not interrupt typing, invalid dates block submit, and cancellation restores saved filters",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1836
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "field suggestions retain readable labels and accept arbitrary API fields without losing canonical values",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1742
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "calendar remains readable in dark appearance with large text and month navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3965
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "menus, calendar and checkbox are aligned and usable at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3278
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "menus, calendar and checkbox are aligned and usable at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3066
+      },
+      {
+        "file": "history-store-sync.spec.ts",
+        "title": "history reflects another tab\u2019s clear and pause when returning without a search request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1637
+      },
+      {
+        "file": "host-field-search.spec.ts",
+        "title": "host fields open exact drafts, retain response navigation and run only explicitly",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1775
+      },
+      {
+        "file": "host-field-search.spec.ts",
+        "title": "private pivots retain task scope without requesting data before confirmation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 879
+      },
+      {
+        "file": "host-ux.spec.ts",
+        "title": "overview reports scoped observations, caps domain preview and opens a filtered service catalog",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1034
+      },
+      {
+        "file": "host-ux.spec.ts",
+        "title": "service workspace preserves legacy HTTP access and bounds products, CVEs and raw data across every detail tab",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3227
+      },
+      {
+        "file": "host-ux.spec.ts",
+        "title": "mobile deep selection opens details and restores the exact filtered catalog without stacking both views",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1283
+      },
+      {
+        "file": "host-ux.spec.ts",
+        "title": "private legacy web-file links keep task scope and display false, zero and empty response distinctly",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 953
+      },
+      {
+        "file": "host-ux.spec.ts",
+        "title": "adjacent services cross catalog pages while keeping the filtered scope and selected detail view",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 999
+      },
+      {
+        "file": "host-ux.spec.ts",
+        "title": "data rows open an inspector and complete records use a bounded highlighted source canvas",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1951
+      },
+      {
+        "file": "host-workspace.spec.ts",
+        "title": "classifying and returning to a thousand-service list retains local context without another host request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1911
+      },
+      {
+        "file": "host-workspace.spec.ts",
+        "title": "rapid service filters and nested tabs compose the current URL without losing search context",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1992
+      },
+      {
+        "file": "host-workspace.spec.ts",
+        "title": "all ten thousand received rows are searchable and numerically sortable with bounded rendering and retained table settings",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1674
+      },
+      {
+        "file": "host-workspace.spec.ts",
+        "title": "service page jump and a deep selection remain reachable on a narrow screen",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1572
+      },
+      {
+        "file": "input-modality.spec.ts",
+        "title": "native avatar radios recover visible keyboard focus after a pointer selection",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1457
+      },
+      {
+        "file": "input-modality.spec.ts",
+        "title": "checkbox and select keys enter keyboard mode while ordinary text editing remains quiet",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 978
+      },
+      {
+        "file": "internal-workspaces.spec.ts",
+        "title": "file filters open independently, cancel their draft and remain dismissible while a request is pending",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1271
+      },
+      {
+        "file": "internal-workspaces.spec.ts",
+        "title": "invalid file ranges bring the error summary into view from the sticky action",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1016
+      },
+      {
+        "file": "internal-workspaces.spec.ts",
+        "title": "scanner filters all loaded tasks and preserves the list page through private results",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1996
+      },
+      {
+        "file": "internal-workspaces.spec.ts",
+        "title": "rapid scanner filters compose the current URL and preserve Back and Forward history",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1109
+      },
+      {
+        "file": "internal-workspaces.spec.ts",
+        "title": "payment history searches 5,000 records locally with bounded rendering and keeps zero amounts",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1787
+      },
+      {
+        "file": "internal-workspaces.spec.ts",
+        "title": "an omitted payment history is shown as unknown instead of an empty history",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 638
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "history guide restores a draft and waits for explicit Run at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2132
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "history guide restores a draft and waits for explicit Run at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2037
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "clear-history guide requires confirmation, observes Undo and never starts another search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2387
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "avatar guide observes a local photo save and does not complete on Cancel at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2499
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "avatar guide observes a local photo save and does not complete on Cancel at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2475
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "wallet guide waits for payment consent and confirmed receipt at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5294
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "wallet guide waits for payment consent and confirmed receipt at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4555
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "wallet guide waits for payment consent and confirmed receipt at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4671
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "mobile guide leaves the focused support field, header and footer reachable without changing the draft",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1503
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "host pivot guide keeps the new search unsubmitted until Run at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1847
+      },
+      {
+        "file": "journey-polish.spec.ts",
+        "title": "host pivot guide keeps the new search unsubmitted until Run at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1806
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "scenario directory filters real workflows and guides a host investigation without losing query context",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2478
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "a filter guide opens the mounted search editor without changing the applied request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1981
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "support request validates, previews an exact email draft and retains edits without sending",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1503
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "scenarios, legal and support fit 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2448
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "scenarios, legal and support fit 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2201
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "scenarios, legal and support fit 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2172
+      },
+      {
+        "file": "journeys-support.spec.ts",
+        "title": "new scenario and legal surfaces pass targeted accessibility checks",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4754
+      },
+      {
+        "file": "live-auth.spec.ts",
+        "title": "live API failure stays live and never silently creates a guest session",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 832
+      },
+      {
+        "file": "live-auth.spec.ts",
+        "title": "HTTP 202 requires TOTP before authenticated workspace access",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 746
+      },
+      {
+        "file": "native-shell.spec.ts",
+        "title": "navigation collapse is stable, remembered and keeps scenarios below Settings",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1162
+      },
+      {
+        "file": "native-shell.spec.ts",
+        "title": "account menu supports keyboard, dismissal and real profile navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1883
+      },
+      {
+        "file": "native-shell.spec.ts",
+        "title": "mobile and landscape account navigation stays reachable and releases the page",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1950
+      },
+      {
+        "file": "native-shell.spec.ts",
+        "title": "branded double buttons have touching segments at all product sizes",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5410
+      },
+      {
+        "file": "navigation-history.spec.ts",
+        "title": "browser Back restores the result query, page and reading position",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1182
+      },
+      {
+        "file": "navigation-history.spec.ts",
+        "title": "Back to results restores the result query, page and reading position",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1208
+      },
+      {
+        "file": "navigation-history.spec.ts",
+        "title": "host tab and service changes preserve the desktop reading position",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1604
+      },
+      {
+        "file": "notifications-ux.spec.ts",
+        "title": "notification content opens its destination without marking it read and fits enlarged text",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1317
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "onboarding follows search results and host navigation, with Back preserving observed progress",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2365
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "skipping an action records a skipped step and never claims that the workflow was completed",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1321
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "coach remains interactive in native filter dialogs at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1382
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "coach remains interactive in native filter dialogs at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1280
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "coach remains interactive in native filter dialogs at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1242
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "mobile support walkthrough opens the form from its coach and follows actual draft preparation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1759
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "scan walkthrough reaches explicit confirmation without creating a task or abandoning its draft",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2588
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Search & analytics walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 11137
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Host investigation walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 8109
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Files & exports walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5077
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Private Scanner walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5080
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Account & security walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 9682
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Billing & credits walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 22139
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Workspace walkthrough entries reach a real target at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 7414
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Search & analytics walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 10722
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Host investigation walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 7861
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Files & exports walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4738
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Private Scanner walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 6453
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Account & security walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 7793
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Billing & credits walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 21557
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "all Workspace walkthrough entries reach a real target at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 6153
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "sharing walkthrough opens the real share page and waits for explicitly created link",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2566
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "mobile evidence walkthrough opens service details and switches to the actual TLS panel",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1635
+      },
+      {
+        "file": "onboarding-native.spec.ts",
+        "title": "coach route transitions close inspected task and purchase review through their cancel handlers",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4614
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "card walkthrough reaches its receipt and order at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4805
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "crypto walkthrough reaches its receipt and order at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5206
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "card walkthrough reaches its receipt and order at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4071
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "crypto walkthrough reaches its receipt and order at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4328
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "pending-payment and receipt walkthroughs use one order through completion and download",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5914
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "cancellation and retry walkthroughs keep the cancelled order separate from the paid order",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 6363
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "invoice walkthrough prepares a reviewed request without sending at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3213
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "invoice walkthrough prepares a reviewed request without sending at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2588
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "promotion walkthrough carries the accepted discount into checkout",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2940
+      },
+      {
+        "file": "payment-journeys.spec.ts",
+        "title": "renewal walkthrough waits for both explicit confirmations",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2859
+      },
+      {
+        "file": "presentation-clock.spec.ts",
+        "title": "presentation wallet payments and submitted search history use the same browser date",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4734
+      },
+      {
+        "file": "scanner-files-journeys.spec.ts",
+        "title": "scan import keeps a headerless first target, deduplicates and reviews a 1,000-port task",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1824
+      },
+      {
+        "file": "scanner-files-journeys.spec.ts",
+        "title": "scanner task cards keep details and actions reachable on a narrow screen",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1886
+      },
+      {
+        "file": "scanner-files-journeys.spec.ts",
+        "title": "files back and forward restore the matching response without a fresh search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1431
+      },
+      {
+        "file": "scanner-files-journeys.spec.ts",
+        "title": "export locks options while the browser save picker is pending and recovers from cancellation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1548
+      },
+      {
+        "file": "scanner-ux.spec.ts",
+        "title": "creating from a filtered scanner list preserves its URL context and submits one reviewed task",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3660
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "typing is not recorded; restore and reload remain drafts; explicit run makes one request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3873
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "private scope, nested filters and scanner context survive history; pagination is one logical query",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2000
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "delete and clear support undo, filters work and local changes survive reload",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3046
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "history is isolated per account and pausing survives navigation and reload",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3117
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "limited shares and credential-shaped searches are not written to history",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1232
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "search suggestions and history layout at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2222
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "search suggestions and history layout at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2594
+      },
+      {
+        "file": "search-history.spec.ts",
+        "title": "search suggestions and history layout at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2185
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "editing result type keeps condition drafts uncommitted and Escape restores focus",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1259
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "facet selection combines alternatives once and survives results navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2009
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "an out-of-plan page preserves the query and offers an actionable recovery",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 657
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "a mobile deep service link reveals its page and supports returning to the service list",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1601
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "result and 1000-service layouts fit intermediate widths with large text",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5289
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "pagination, sorting and row count reuse analytics instead of spending another analytics request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1838
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "large exposed-data responses render bounded pages without dropping records or making another host request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 705
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "mobile analytics waits for an explicit load and then reuses its result",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 991
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "filters open from the left without moving the home search and keep actions visible",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1993
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "a slow search does not lock filter cancellation or applying a changed query",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 925
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "changing result type waits for explicit apply and preserves complex type rules",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1728
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "5000 facet values stay bounded and preserve selections across search and pages",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1481
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "malformed host rows do not crash results or prematurely end pagination",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 723
+      },
+      {
+        "file": "search-journeys.spec.ts",
+        "title": "invalid long filter drafts focus a visible error without changing the applied search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1084
+      },
+      {
+        "file": "search-marks.spec.ts",
+        "title": "observed identities receive marks without inferring technology from a port",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 713
+      },
+      {
+        "file": "search-marks.spec.ts",
+        "title": "product completion uses a matching local mark and keeps search explicit",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1049
+      },
+      {
+        "file": "search-marks.spec.ts",
+        "title": "long IPv6 results and actions remain reachable on a narrow mobile display",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 804
+      },
+      {
+        "file": "search-marks.spec.ts",
+        "title": "onboarding restores uncached conditions without spending a search until explicit confirmation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 867
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "local search views preserve drafts and analytics requires an explicit request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2326
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "switching to Analytics immediately after changing rows keeps the submitted search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 928
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "observation dates apply UTC seconds without rewriting complex rules",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1087
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "full-width filter groups preserve boolean logic, custom fields and UTC ranges through breadcrumb navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1441
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "search workspaces remain readable on desktop and mobile",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 6084
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "settings open the profile first and keep appearance below account and workspace categories",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1818
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "settings keep an unsaved profile while navigating and contain the sign-out action",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1133
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "legacy account tabs retain an unsaved profile",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 836
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "mobile settings reveal deep-linked sections and close the menu on account navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 916
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "API usage action transfers keyboard focus to the selected tab",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 912
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "settings and API sections have complete layouts at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3007
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "settings and API sections have complete layouts at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4044
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "settings and API sections have complete layouts at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4295
+      },
+      {
+        "file": "settings-ux.spec.ts",
+        "title": "settings sections and API key page remain accessible",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 14864
+      },
+      {
+        "file": "shared-controls-polish.spec.ts",
+        "title": "pointer focus is quiet while keyboard focus and modal restoration remain usable",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1003
+      },
+      {
+        "file": "shared-controls-polish.spec.ts",
+        "title": "tabs use one selection line and filter controls use the shared outlined icon",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1256
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "sidebar moves continuously, keeps icons aligned and respects reduced motion",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1311
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "compact help and toast remain readable and dismissible at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1388
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "the seamless topbar stays readable over scrolled content on desktop and mobile",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2379
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "wallet purchase requires explicit consent and displays a receipt only after matching confirmation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3764
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "insufficient wallet balance cannot submit a purchase and another method remains available",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2379
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "mismatched confirmation blocks duplicate payment until billing is reconciled",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3059
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "a confirmed failure retains the wallet balance and returns to an editable review",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2199
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "a timed out confirmation stays unresolved and never authorizes a second wallet charge",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2744
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "annual Business invoice requests open a reviewable support draft and preserve edits",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2666
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "wallet purchase completes in the presentation adapter at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5330
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "wallet purchase completes in the presentation adapter at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4729
+      },
+      {
+        "file": "wallet-payment.spec.ts",
+        "title": "wallet purchase completes in the presentation adapter at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 5155
+      },
+      {
+        "file": "wallet-recovery.spec.ts",
+        "title": "pending wallet survives SPA and live reload; a mismatched completion cannot enable another charge",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4128
+      },
+      {
+        "file": "wallet-recovery.spec.ts",
+        "title": "an unknown wallet request without an invoice ID remains blocked after SPA and reload",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2903
+      },
+      {
+        "file": "wallet-recovery.spec.ts",
+        "title": "confirmed payment stays distinct from stale account data until an explicit refresh sees the change",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2280
+      },
+      {
+        "file": "wallet-recovery.spec.ts",
+        "title": "changing accounts cannot expose or resolve the other account\u2019s pending wallet guard",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2772
+      },
+      {
+        "file": "wallet-recovery.spec.ts",
+        "title": "a late invoice after leaving Billing retains the guard without starting hidden confirmation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3390
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "workspace routes render without overflow at 1440px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 11483
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "workspace routes render without overflow at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 10535
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "workspace routes render without overflow at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 9350
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "search opens with a centered single-line title and keeps the query after cancelling filters",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1111
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "desktop navigation collapses, keeps Settings accessible and expands again",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1169
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "view preferences survive reload and leave no account data in local storage",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2379
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "mobile navigation traps focus, closes on Escape and opens the selected view",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 675
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1065
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /files",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1322
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /scanner",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1525
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /billing",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1820
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /account/security",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1398
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /notifications",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1431
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "accessibility of /settings",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1584
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "files export downloads an actual NDJSON stream",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1259
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "notifications can be marked read without exposing secret payload fields",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 945
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "direct file export writes real NDJSON bytes and confirms after close",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1343
+      },
+      {
+        "file": "workspace.spec.ts",
+        "title": "direct file export reports a failed disk commit and blocks resumption",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1296
+      }
+    ]
+  },
+  {
+    "label": "chromium-affected-final",
+    "phase": "final source",
+    "stats": {
+      "startTime": "2026-10-24T11:23:05.337Z",
+      "duration": 30166.599,
+      "expected": 18,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "file": "form-controls.spec.ts",
+        "title": "custom selections support keyboard, pointer, outside dismissal and persist appearance",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2420
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "a select stays inside a native drawer and Escape closes only its popup",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2525
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "calendar keeps exact UTC seconds, cancels a popup draft and serializes the chosen date",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2172
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "incomplete dates do not interrupt typing, invalid dates block submit, and cancellation restores saved filters",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1679
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "field suggestions retain readable labels and accept arbitrary API fields without losing canonical values",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1731
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "calendar remains readable in dark appearance with large text and month navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4208
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "menus, calendar and checkbox are aligned and usable at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3636
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "menus, calendar and checkbox are aligned and usable at 390px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3522
+      },
+      {
+        "file": "input-modality.spec.ts",
+        "title": "native avatar radios recover visible keyboard focus after a pointer selection",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2009
+      },
+      {
+        "file": "input-modality.spec.ts",
+        "title": "checkbox and select keys enter keyboard mode while ordinary text editing remains quiet",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2159
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "local search views preserve drafts and analytics requires an explicit request",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 4503
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "switching to Analytics immediately after changing rows keeps the submitted search",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1669
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "observation dates apply UTC seconds without rewriting complex rules",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2137
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "full-width filter groups preserve boolean logic, custom fields and UTC ranges through breadcrumb navigation",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 3078
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "search workspaces remain readable on desktop and mobile",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 11489
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "sidebar moves continuously, keeps icons aligned and respects reduced motion",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 1837
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "compact help and toast remain readable and dismissible at 320px",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2058
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "the seamless topbar stays readable over scrolled content on desktop and mobile",
+        "project": "chromium",
+        "status": "expected",
+        "durationMs": 2896
+      }
+    ]
+  },
+  {
+    "label": "firefox-affected-final",
+    "phase": "final source",
+    "stats": {
+      "startTime": "2026-10-24T11:23:15.903Z",
+      "duration": 37573.849,
+      "expected": 18,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "file": "form-controls.spec.ts",
+        "title": "custom selections support keyboard, pointer, outside dismissal and persist appearance",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 5018
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "a select stays inside a native drawer and Escape closes only its popup",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 5487
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "calendar keeps exact UTC seconds, cancels a popup draft and serializes the chosen date",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 3909
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "incomplete dates do not interrupt typing, invalid dates block submit, and cancellation restores saved filters",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 3248
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "field suggestions retain readable labels and accept arbitrary API fields without losing canonical values",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 3847
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "calendar remains readable in dark appearance with large text and month navigation",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 6930
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "menus, calendar and checkbox are aligned and usable at 320px",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 5140
+      },
+      {
+        "file": "form-controls.spec.ts",
+        "title": "menus, calendar and checkbox are aligned and usable at 390px",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 4246
+      },
+      {
+        "file": "input-modality.spec.ts",
+        "title": "native avatar radios recover visible keyboard focus after a pointer selection",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 2119
+      },
+      {
+        "file": "input-modality.spec.ts",
+        "title": "checkbox and select keys enter keyboard mode while ordinary text editing remains quiet",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 1823
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "local search views preserve drafts and analytics requires an explicit request",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 4495
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "switching to Analytics immediately after changing rows keeps the submitted search",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 2095
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "observation dates apply UTC seconds without rewriting complex rules",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 2068
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "full-width filter groups preserve boolean logic, custom fields and UTC ranges through breadcrumb navigation",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 2840
+      },
+      {
+        "file": "search-ux.spec.ts",
+        "title": "search workspaces remain readable on desktop and mobile",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 9685
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "sidebar moves continuously, keeps icons aligned and respects reduced motion",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 1494
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "compact help and toast remain readable and dismissible at 320px",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 1637
+      },
+      {
+        "file": "shell-polish.spec.ts",
+        "title": "the seamless topbar stays readable over scrolled content on desktop and mobile",
+        "project": "firefox",
+        "status": "expected",
+        "durationMs": 2389
+      }
+    ]
+  }
+]

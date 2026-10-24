@@ -123,7 +123,7 @@ export function FilesPage() {
   function runCurrent() { try { run(filterFromDraft(draft)); } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Check your filters.'); } }
 
   return <div className="files-page stack">
-    <PageHeader title="Files & buckets" />
+    <PageHeader title="Buckets & files" />
     <Tabs idPrefix="files" ariaLabel="File search views" items={[{ id: 'files', label: 'Files', icon: 'list' }, { id: 'hosts', label: 'Buckets', icon: 'database' }]} value={view} onChange={value => { setView(value as FilesView); setSelected(null); const next = new URLSearchParams(window.location.search); next.set('view', value); lastWritten.current = next.toString(); setParams(next); }} />
     <TabPanel idPrefix="files" value={view === 'files' ? 'hosts' : 'files'} hidden>{null}</TabPanel>
     <TabPanel idPrefix="files" value={view} className="files-workspace stack">

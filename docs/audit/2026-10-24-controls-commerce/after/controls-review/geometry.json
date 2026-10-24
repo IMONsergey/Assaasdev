@@ -1,0 +1,210 @@
+[
+  {
+    "section": "profile",
+    "width": 1440,
+    "geometry": {
+      "overflow": -15,
+      "fields": [
+        {
+          "label": "_r_8_",
+          "width": 521.40625,
+          "right": 1009.40625,
+          "left": 488
+        },
+        {
+          "label": "_r_9_",
+          "width": 521.40625,
+          "right": 1009.40625,
+          "left": 488
+        },
+        {
+          "label": "_r_a_",
+          "width": 521.40625,
+          "right": 1009.40625,
+          "left": 488
+        }
+      ]
+    }
+  },
+  {
+    "section": "security",
+    "width": 1440,
+    "geometry": {
+      "overflow": -15,
+      "fields": [
+        {
+          "label": "_r_8_",
+          "width": 560,
+          "right": 1048,
+          "left": 488
+        },
+        {
+          "label": "_r_9_",
+          "width": 560,
+          "right": 1048,
+          "left": 488
+        },
+        {
+          "label": "_r_a_",
+          "width": 560,
+          "right": 1048,
+          "left": 488
+        }
+      ]
+    }
+  },
+  {
+    "section": "sessions",
+    "width": 1440,
+    "geometry": {
+      "overflow": -15,
+      "fields": []
+    }
+  },
+  {
+    "section": "team",
+    "width": 1440,
+    "geometry": {
+      "overflow": -15,
+      "fields": [
+        {
+          "label": "_r_8_",
+          "width": 764.75,
+          "right": 1252.75,
+          "left": 488
+        }
+      ]
+    }
+  },
+  {
+    "section": "appearance",
+    "width": 1440,
+    "geometry": {
+      "overflow": -15,
+      "fields": [
+        {
+          "label": "settings-density",
+          "width": 208,
+          "right": 1393,
+          "left": 1185
+        },
+        {
+          "label": "settings-text-size",
+          "width": 208,
+          "right": 1393,
+          "left": 1185
+        },
+        {
+          "label": "settings-reduce-motion",
+          "width": 44,
+          "right": 1393,
+          "left": 1349
+        }
+      ]
+    }
+  },
+  {
+    "section": "profile",
+    "width": 320,
+    "geometry": {
+      "overflow": 0,
+      "fields": [
+        {
+          "label": "_r_8_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        },
+        {
+          "label": "_r_9_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        },
+        {
+          "label": "_r_a_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        }
+      ]
+    }
+  },
+  {
+    "section": "security",
+    "width": 320,
+    "geometry": {
+      "overflow": 0,
+      "fields": [
+        {
+          "label": "_r_8_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        },
+        {
+          "label": "_r_9_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        },
+        {
+          "label": "_r_a_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        }
+      ]
+    }
+  },
+  {
+    "section": "sessions",
+    "width": 320,
+    "geometry": {
+      "overflow": 0,
+      "fields": []
+    }
+  },
+  {
+    "section": "team",
+    "width": 320,
+    "geometry": {
+      "overflow": 0,
+      "fields": [
+        {
+          "label": "_r_8_",
+          "width": 288,
+          "right": 304,
+          "left": 16
+        }
+      ]
+    }
+  },
+  {
+    "section": "appearance",
+    "width": 320,
+    "geometry": {
+      "overflow": 0,
+      "fields": [
+        {
+          "label": "settings-density",
+          "width": 152.921875,
+          "right": 168.921875,
+          "left": 16
+        },
+        {
+          "label": "settings-text-size",
+          "width": 169.359375,
+          "right": 185.359375,
+          "left": 16
+        },
+        {
+          "label": "settings-reduce-motion",
+          "width": 44,
+          "right": 304,
+          "left": 260
+        }
+      ]
+    }
+  }
+]

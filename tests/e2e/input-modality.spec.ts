@@ -42,7 +42,7 @@ test('checkbox and select keys enter keyboard mode while ordinary text editing r
   expect(await scope.evaluate(element => getComputedStyle(element).outlineStyle)).toBe('none');
   await scope.press('ArrowDown'); await scope.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-input-modality', 'keyboard');
-  await expect(scope).toHaveValue('public');
+  await expect(scope).toHaveAttribute('data-control-value', 'public');
   await expect(scope).toBeFocused();
   expect(await scope.evaluate(element => getComputedStyle(element).outlineStyle)).toBe('solid');
   const text = page.getByRole('searchbox', { name: 'Find a search', exact: true });

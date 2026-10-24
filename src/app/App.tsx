@@ -17,6 +17,8 @@ const HostPage = lazy(() => import('../features/hosts/HostPage').then(module => 
 const AccountPage = lazy(() => import('../features/account/AccountPage').then(module => ({ default: module.AccountPage })));
 const ApiPage = lazy(() => import('../features/account/ApiPage').then(module => ({ default: module.ApiPage })));
 const BillingPage = lazy(() => import('../features/billing/BillingPage').then(module => ({ default: module.BillingPage })));
+const PaymentDetailsPage = lazy(() => import('../features/billing/PaymentDetailsPage').then(module => ({ default: module.PaymentDetailsPage })));
+const PresentationCheckoutPage = lazy(() => import('../features/billing/PresentationCheckoutPage').then(module => ({ default: module.PresentationCheckoutPage })));
 const ScannerPage = lazy(() => import('../features/scanner/ScannerPage').then(module => ({ default: module.ScannerPage })));
 const FilesPage = lazy(() => import('../features/files/FilesPage').then(module => ({ default: module.FilesPage })));
 const NotificationsPage = lazy(() => import('../features/notifications/NotificationsPage').then(module => ({ default: module.NotificationsPage })));
@@ -69,6 +71,8 @@ export function App() {
         <Route path="/files" element={<FilesPage />} />
         <Route path="/api" element={<ApiPage />} />
         {['/billing', '/billing/return'].map(path => <Route key={path} path={path} element={<BillingPage />} />)}
+        <Route path="/billing/payments/:paymentId" element={<PaymentDetailsPage />} />
+        <Route path="/billing/checkout/:paymentId" element={<PresentationCheckoutPage />} />
         {['/account', '/account/profile', '/account/security', '/account/sessions', '/account/team'].map(path => <Route key={path} path={path} element={<AccountPage />} />)}
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

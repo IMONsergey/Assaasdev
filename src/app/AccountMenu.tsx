@@ -24,7 +24,7 @@ export function AccountMenu({ collapsed, mobile, onNavigate }: { collapsed: bool
       const viewport = window.visualViewport;
       const height = viewport?.height ?? innerHeight;
       const top = viewport?.offsetTop ?? 0;
-      const width = Math.min(304, innerWidth - 24);
+      const width = Math.min(280, innerWidth - 24);
       surface.style.width = `${width}px`;
       surface.style.left = `${mobile ? Math.max(12, (innerWidth - width) / 2) : Math.min(Math.max(12, rect.left), innerWidth - width - 12)}px`;
       surface.style.bottom = `${mobile ? Math.max(12, innerHeight - top - height + 12) : Math.max(12, innerHeight - rect.top + 8)}px`;
@@ -58,11 +58,11 @@ export function AccountMenu({ collapsed, mobile, onNavigate }: { collapsed: bool
       <span className="nav-label account-nav-copy"><strong>{name}</strong><small>{plan ? `${plan} plan` : 'Profile & preferences'}</small></span>
       <Icon name="chevron-up" size={16} className="account-nav-chevron" />
     </button>
-    {createPortal(<div id={id} ref={panel} popover="auto" className="account-popover" onToggle={() => setOpen(panel.current?.matches(':popover-open') ?? false)} onKeyDown={keys}>
-      <header className="account-popover-identity"><UserAvatar principal={user?.user_id} size={44} /><div><strong>{name}</strong>{user?.email && <span>{user.email}</span>}</div></header>
+    {createPortal(<div id={id} ref={panel} popover="auto" className="account-popover account-popover--quiet" onToggle={() => setOpen(panel.current?.matches(':popover-open') ?? false)} onKeyDown={keys}>
+      <header className="account-popover-identity"><UserAvatar principal={user?.user_id} size={36} /><div><strong>{name}</strong>{user?.email && <span>{user.email}</span>}</div></header>
       <nav role="menu" aria-label="Account actions">
-        <Link role="menuitem" to="/settings?section=profile" className="account-menu-item" onClick={navigate}><Icon name="user" size={18} /><span>Profile & avatar</span><Icon name="chevron-right" size={15} /></Link>
-        <Link role="menuitem" to="/settings?section=appearance" className="account-menu-item" onClick={navigate}><Icon name="sun" size={18} /><span>Appearance</span><Icon name="chevron-right" size={15} /></Link>
+        <Link role="menuitem" to="/settings?section=profile" className="account-menu-item" onClick={navigate}><Icon name="user" size={17} /><span>Profile & avatar</span></Link>
+        <Link role="menuitem" to="/settings?section=appearance" className="account-menu-item" onClick={navigate}><Icon name="sun" size={17} /><span>Appearance</span></Link>
         <Link role="menuitem" to="/billing" className="account-menu-item account-menu-plan" onClick={navigate} aria-label="Manage plan"><Icon name="card" size={18} /><span><small>Current plan</small><strong>{plan || 'Unavailable'}</strong></span><Icon name="chevron-right" size={15} /></Link>
       </nav>
     </div>, document.body)}

@@ -1,0 +1,452 @@
+[
+  {
+    "name": "settings-profile",
+    "width": 1440,
+    "route": "/settings?section=profile",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "alex_research",
+      "Personal information",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-security",
+    "width": 1440,
+    "route": "/settings?section=security",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Password",
+      "Two-factor authentication",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-sessions",
+    "width": 1440,
+    "route": "/settings?section=sessions",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Active sessions",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-team",
+    "width": 1440,
+    "route": "/settings?section=team",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Team access",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-workspace",
+    "width": 1440,
+    "route": "/settings?section=workspace",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-appearance",
+    "width": 1440,
+    "route": "/settings?section=appearance",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-legal",
+    "width": 1440,
+    "route": "/settings?section=legal",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "api-access",
+    "width": 1440,
+    "route": "/api",
+    "title": "API access",
+    "horizontalOverflow": false,
+    "headings": [
+      "API access",
+      "Account API key",
+      "Search credits",
+      "Scan credits",
+      "Account limits"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "api-usage",
+    "width": 1440,
+    "route": "/api?section=usage",
+    "title": "API access",
+    "horizontalOverflow": false,
+    "headings": [
+      "API access",
+      "Account API key",
+      "Search credits",
+      "Scan credits",
+      "Account limits"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "files",
+    "width": 1440,
+    "route": "/files",
+    "title": "Buckets & files",
+    "horizontalOverflow": false,
+    "headings": [
+      "Buckets & files",
+      "Search indexed files"
+    ],
+    "nativeVisible": [],
+    "errors": [],
+    "rechecked": true
+  },
+  {
+    "name": "scanner",
+    "width": 1440,
+    "route": "/scanner",
+    "title": "Private Scanner",
+    "horizontalOverflow": false,
+    "headings": [
+      "Private Scanner"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "scanner-new",
+    "width": 1440,
+    "route": "/scanner/new",
+    "title": "New scan task",
+    "horizontalOverflow": false,
+    "headings": [
+      "New scan task",
+      "Targets",
+      "Ports",
+      "Schedule",
+      "Scan estimate"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "scanner-scheduled",
+    "width": 1440,
+    "route": "/scanner?tab=planned",
+    "title": "Private Scanner",
+    "horizontalOverflow": false,
+    "headings": [
+      "Private Scanner",
+      "Scheduled tasks"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "notifications",
+    "width": 1440,
+    "route": "/notifications",
+    "title": "Notifications",
+    "horizontalOverflow": false,
+    "headings": [
+      "Notifications",
+      "October 24, 2026",
+      "October 20, 2026"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "not-found",
+    "width": 1440,
+    "route": "/page-not-found-review",
+    "title": "A little off the map",
+    "horizontalOverflow": false,
+    "headings": [
+      "A little off the map",
+      "Find the hidden signal"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-profile",
+    "width": 390,
+    "route": "/settings?section=profile",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "alex_research",
+      "Personal information",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-security",
+    "width": 390,
+    "route": "/settings?section=security",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Password",
+      "Two-factor authentication",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-sessions",
+    "width": 390,
+    "route": "/settings?section=sessions",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Active sessions",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-team",
+    "width": 390,
+    "route": "/settings?section=team",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Team access",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-workspace",
+    "width": 390,
+    "route": "/settings?section=workspace",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-appearance",
+    "width": 390,
+    "route": "/settings?section=appearance",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "settings-legal",
+    "width": 390,
+    "route": "/settings?section=legal",
+    "title": "Settings",
+    "horizontalOverflow": false,
+    "headings": [
+      "Settings",
+      "Color theme",
+      "Preferences & connections",
+      "Policies & agreements"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "api-access",
+    "width": 390,
+    "route": "/api",
+    "title": "API access",
+    "horizontalOverflow": false,
+    "headings": [
+      "API access",
+      "Account API key",
+      "Search credits",
+      "Scan credits",
+      "Account limits"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "api-usage",
+    "width": 390,
+    "route": "/api?section=usage",
+    "title": "API access",
+    "horizontalOverflow": false,
+    "headings": [
+      "API access",
+      "Account API key",
+      "Search credits",
+      "Scan credits",
+      "Account limits"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "files",
+    "width": 390,
+    "route": "/files",
+    "title": "Buckets & files",
+    "horizontalOverflow": false,
+    "headings": [
+      "Buckets & files",
+      "Search indexed files"
+    ],
+    "nativeVisible": [],
+    "errors": [],
+    "rechecked": true
+  },
+  {
+    "name": "scanner",
+    "width": 390,
+    "route": "/scanner",
+    "title": "Private Scanner",
+    "horizontalOverflow": false,
+    "headings": [
+      "Private Scanner"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "scanner-new",
+    "width": 390,
+    "route": "/scanner/new",
+    "title": "New scan task",
+    "horizontalOverflow": false,
+    "headings": [
+      "New scan task",
+      "Targets",
+      "Ports",
+      "Schedule",
+      "Scan estimate"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "scanner-scheduled",
+    "width": 390,
+    "route": "/scanner?tab=planned",
+    "title": "Private Scanner",
+    "horizontalOverflow": false,
+    "headings": [
+      "Private Scanner",
+      "Scheduled tasks"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "notifications",
+    "width": 390,
+    "route": "/notifications",
+    "title": "Notifications",
+    "horizontalOverflow": false,
+    "headings": [
+      "Notifications",
+      "October 24, 2026",
+      "October 20, 2026"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  },
+  {
+    "name": "not-found",
+    "width": 390,
+    "route": "/page-not-found-review",
+    "title": "A little off the map",
+    "horizontalOverflow": false,
+    "headings": [
+      "A little off the map",
+      "Find the hidden signal"
+    ],
+    "nativeVisible": [],
+    "errors": []
+  }
+]

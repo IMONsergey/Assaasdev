@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 import type { Profile } from '../../src/api';
 import { seedPricing, seedProfile } from '../../src/demo/fixtures';
@@ -212,7 +213,7 @@ test('a late invoice after leaving Billing retains the guard without starting hi
   await nav(page).getByRole('link', { name: 'Billing', exact: true }).click();
   await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
   await starterBuy(page).click();
-  await review(page).getByLabel('Payment method', { exact: true }).selectOption('balance');
+  await chooseOption(review(page).getByLabel('Payment method', { exact: true }), 'balance');
   await review(page).getByRole('button', { name: 'Pay with balance', exact: true }).click();
   await expect.poll(() => payments(api.requests).length).toBe(1);
   await page.goBack(); await page.goBack();

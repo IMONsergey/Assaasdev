@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 import { seedPricing, seedProfile } from '../../src/demo/fixtures';
 
@@ -31,14 +32,14 @@ test('wallet purchase requires explicit consent and displays a receipt only afte
   const api = await walletApi(page);
   await page.goto('/billing?pack=token_pack_1&method=balance');
   const review = page.getByRole('dialog', { name: 'Add 25,000 credits', exact: true });
-  await expect(review.getByLabel('Payment method')).toHaveValue('balance');
+  await expect(review.getByLabel('Payment method')).toHaveAttribute('data-control-value', 'balance');
   await expect(review.getByRole('region', { name: 'Account wallet' })).toContainText('$120');
   await expect(review.locator('.wallet-review-after')).toContainText('$70');
   expect(api.frames.filter(frame => ['pay_with_balance', 'confirm_payment'].includes(frame.type))).toEqual([]);
   await review.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(api.frames.filter(frame => ['pay_with_balance', 'confirm_payment'].includes(frame.type))).toEqual([]);
   await page.locator('.billing-token').filter({ has: page.getByRole('heading', { name: 'Starter Pack', exact: true }) }).getByRole('button', { name: 'Buy credits' }).click();
-  await review.getByLabel('Payment method').selectOption('balance');
+  await chooseOption(review.getByLabel('Payment method'), 'balance');
   await review.getByRole('button', { name: 'Pay with balance' }).click();
   await expect(review.locator('[data-onboarding="wallet-checkout"]')).toHaveAttribute('data-payment-state', 'pending');
   await expect(review.locator('[data-onboarding="wallet-receipt"]')).toHaveCount(0);
@@ -62,7 +63,7 @@ test('insufficient wallet balance cannot submit a purchase and another method re
   await expect(review).toContainText('You need $360 more');
   await expect(review.getByRole('button', { name: 'Pay with balance' })).toBeDisabled();
   await review.getByRole('button', { name: 'Choose another payment method' }).click();
-  await expect(review.getByLabel('Payment method')).toHaveValue('card');
+  await expect(review.getByLabel('Payment method')).toHaveAttribute('data-control-value', 'card');
   await expect(review.getByRole('button', { name: 'Create secure checkout' })).toBeEnabled();
   expect(api.frames.filter(frame => ['pay_with_balance', 'confirm_payment', 'init_checkout', 'get_address'].includes(frame.type))).toEqual([]);
 });
@@ -122,7 +123,7 @@ test('annual Business invoice requests open a reviewable support draft and prese
   await page.goto('/billing?section=plans');
   await page.getByRole('button', { name: 'Request invoice', exact: true }).click();
   const form = page.getByRole('dialog', { name: 'Contact support', exact: true });
-  await expect(form.getByLabel('Topic', { exact: true })).toHaveValue('Billing & payments');
+  await expect(form.getByLabel('Topic', { exact: true })).toHaveAttribute('data-control-value', 'Billing & payments');
   await expect(form.getByLabel('Message', { exact: true })).toContainText('annual Business plan ($8,640 per year)');
   await form.getByLabel('Message', { exact: true }).fill('Please send an annual Business invoice to Example Research.');
   await form.getByLabel('Name', { exact: true }).fill('Alex Research');

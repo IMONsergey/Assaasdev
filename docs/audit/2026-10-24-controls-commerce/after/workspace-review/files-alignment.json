@@ -1,0 +1,36 @@
+[
+  {
+    "width": 1440,
+    "geometry": {
+      "heading": {
+        "x": 272,
+        "width": 186.921875
+      },
+      "filter": {
+        "x": 272,
+        "width": 95.328125
+      },
+      "query": {
+        "x": 272,
+        "width": 967.09375
+      }
+    }
+  },
+  {
+    "width": 390,
+    "geometry": {
+      "heading": {
+        "x": 16,
+        "width": 163.359375
+      },
+      "filter": {
+        "x": 16,
+        "width": 95.328125
+      },
+      "query": {
+        "x": 16,
+        "width": 358
+      }
+    }
+  }
+]

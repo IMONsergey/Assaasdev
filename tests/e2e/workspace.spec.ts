@@ -1,3 +1,4 @@
+import { chooseOption } from './helpers/controls';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
@@ -134,14 +135,14 @@ test('view preferences survive reload and leave no account data in local storage
   await expect(page.getByRole('button', { name: 'Light theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Dark theme', exact: true }).click();
-  await page.getByLabel('Interface density').selectOption('compact');
-  await page.getByLabel('Text size').selectOption('125');
+  await chooseOption(page.getByLabel('Interface density'), 'compact');
+  await chooseOption(page.getByLabel('Text size'), '125');
   await page.getByRole('switch', { name: 'Reduce interface motion', exact: true }).check();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Dark theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
-  await expect(page.getByLabel('Text size')).toHaveValue('125');
+  await expect(page.getByLabel('Text size')).toHaveAttribute('data-control-value', '125');
   await expect(page.getByRole('switch', { name: 'Reduce interface motion', exact: true })).toBeChecked();
   const storage = await page.evaluate(() => ({ keys: Object.keys(localStorage), values: Object.values(localStorage).join('') }));
   expect(storage.keys).toContain('apcosys.view.v1');

@@ -31,6 +31,9 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const { user, session } = useApp();
   const [state, setState] = useState<GuideState | null>(initialState);
   const [blockedReason,setBlockedReason] = useState('');
+  // A real click may navigate before its resulting surface finishes loading.
+  // Keep only that transient signal across effect restarts for the same step.
+  const observedSignal = useRef<{key:string;event:boolean;visible:boolean} | null>(null);
   const remembered = useRef<RememberedLocations>({});
   const principal = `${session.status}:${user?.user_id || user?.session_id || ''}`;
   const priorPrincipal = useRef(principal);
@@ -102,6 +105,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     const selected = findScenario(id);
     if (!selected) return;
     remembered.current = {};
+    observedSignal.current = null;
     setBlockedReason('');
     const index=session.status==='authenticated' && ['account-access','connected-sign-in'].includes(id) ? 2 : 0;
     const progress=Array.from({length:selected.steps.length},(_,item)=>item<index?'skipped' as const:null);
@@ -135,15 +139,17 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     if (!state || state.finished || state.progress?.[state.index] && state.progress[state.index] !== 'skipped' || !tourStep?.wait || tourStep.wait.kind === 'route') return;
     const signal = tourStep.wait;
     const key = `${state.id}:${state.index}`;
-    let observedEvent = false, wasVisible = false, frame = 0, timer: ReturnType<typeof setTimeout> | undefined;
+    if (observedSignal.current?.key !== key) observedSignal.current = {key,event:false,visible:false};
+    const observed = observedSignal.current;
+    let frame = 0, timer: ReturnType<typeof setTimeout> | undefined;
     function inspect() {
       frame = 0;
       const active = live.current;
       if (!active.state || `${active.state.id}:${active.state.index}` !== key || active.state.finished) return;
       let complete = false;
       if (signal.kind === 'visible') complete = !!findTourTarget(signal.selector);
-      else if (signal.kind === 'hidden') { const visible = !!findTourTarget(signal.selector); if (visible) wasVisible = true; complete = wasVisible && !visible; }
-      else complete = observedEventComplete(signal,observedEvent,selector=>!!findTourTarget(selector));
+      else if (signal.kind === 'hidden') { const visible = !!findTourTarget(signal.selector); if (visible) observed.visible = true; complete = observed.visible && !visible; }
+      else complete = observedEventComplete(signal,observed.event,selector=>!!findTourTarget(selector));
       if (complete && timer === undefined) timer = setTimeout(() => {
         const latest = live.current;
         if (!latest.state || !latest.scenario || `${latest.state.id}:${latest.state.index}` !== key) return;
@@ -154,10 +160,10 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     const schedule = () => { if (!frame) frame = requestAnimationFrame(inspect); };
     function onEvent(event: Event) {
       if (signal.kind !== 'event' || !(event.target instanceof Element) || event.target.closest('.scenario-tour-layer')) return;
-      if (event.target.closest(signal.selector)) { observedEvent = true; schedule(); }
+      if (event.target.closest(signal.selector)) { observed.event = true; schedule(); }
     }
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','open','inert','disabled','aria-expanded','aria-busy','aria-selected','data-ready','data-onboarding-state','data-export-status','data-payment-status','data-payment-state','src']});
+    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','open','inert','disabled','aria-expanded','aria-busy','aria-selected','data-ready','data-onboarding-state','data-export-status','data-payment-status','data-payment-state','data-order-status','data-state','src']});
     if (signal.kind === 'event') document.addEventListener(signal.event,onEvent,true);
     window.addEventListener('popstate',schedule);
     schedule();

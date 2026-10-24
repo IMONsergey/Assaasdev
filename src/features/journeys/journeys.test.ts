@@ -86,4 +86,15 @@ describe('interactive walkthrough contracts', () => {
     expect(observedEventComplete(signal,true,()=>false)).toBe(false);
     expect(observedEventComplete(signal,true,selector=>selector===signal.thenVisible)).toBe(true);
   });
+  it('observes checkout receipts and never invokes a payment or renewal action from the guide', async()=>{
+    const {tourFlows}=await import('./tour-flow');
+    for(const id of ['card-payment','crypto-payment','resume-payment','retry-payment']) {
+      expect(tourFlows[id].some(step=>step.wait?.kind==='visible' && step.wait.selector==='[data-onboarding="checkout-receipt"]'),id).toBe(true);
+      expect(tourFlows[id].every(step=>!step.open),id).toBe(true);
+    }
+    for(const id of ['cancel-checkout','manage-renewal','request-invoice','apply-promo']) expect(tourFlows[id].every(step=>!step.open),id).toBe(true);
+    const canceled=tourFlows['cancel-checkout'][2].wait;
+    expect(canceled).toMatchObject({kind:'event',event:'click',selector:'[data-onboarding="checkout-cancel-confirm"]',thenVisible:'[data-onboarding="checkout-order"][data-order-status="canceled"]'});
+    expect(tourFlows['manage-renewal'][2].wait).toMatchObject({kind:'event',event:'click',selector:'[data-onboarding="subscription-confirm"]',thenVisible:'[data-onboarding="subscription-renewal-status"][data-state="canceled"]'});
+  });
 });
