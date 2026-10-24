@@ -4,6 +4,7 @@ import { DataValue, Facts, NestedRecord, observationDate, RawResponse } from './
 import { ExposedData, ProductList } from './HostProducts';
 import type { ResponseTab, ServiceItem, ServiceTab, WebFileTab } from './model';
 import { ServiceViewScope } from './view-state';
+import { robotsSummary, securitySummary } from './web-files';
 
 interface ServiceDetailsProps {
   service: ServiceItem | undefined;
@@ -15,12 +16,15 @@ interface ServiceDetailsProps {
   onWebTab: (value: WebFileTab) => void;
   onCopy: (value: string) => void;
   onCve: (id: string) => void;
+  onDataServices?: () => void;
 }
 
-export function ServiceDetails({ service, tab, responseTab, webTab, onTab, onResponseTab, onWebTab, onCopy, onCve }: ServiceDetailsProps) {
+export function ServiceDetails({ service, tab, responseTab, webTab, onTab, onResponseTab, onWebTab, onCopy, onCve, onDataServices }: ServiceDetailsProps) {
   if (!service) return <EmptyState icon={<Icon name="server" />} title="Select a service" description="Choose an observation from the service list." />;
   const record = service.record;
   const products = record.detected_products;
+  const webFacts = webTab === 'security' ? securitySummary(record.security_txt) : robotsSummary(record.robots_txt);
+  const webBody = webTab === 'security' ? record.security_txt?.body : record.robots_txt?.body;
   const fingerprints: [string, unknown, string?][] = [];
   if (record.favicon_md5) fingerprints.push(["Favicon MD5", record.favicon_md5, "favicon_md5"]);
   if (record.banner_sha256) fingerprints.push(["Banner SHA-256", record.banner_sha256, "banner_sha256"]);
@@ -38,8 +42,8 @@ export function ServiceDetails({ service, tab, responseTab, webTab, onTab, onRes
       </>}
       {tab === 'tls' && <section className="host-fact-panel"><div className="host-section-heading"><h3>TLS certificate</h3><Icon name="shield" size={19} /></div>{record.tls_info && Object.keys(record.tls_info).length ? <DataValue value={record.tls_info} path="tls" /> : <p className="muted">{record.tls_info === undefined ? 'TLS data not provided.' : 'No TLS attributes returned.'}</p>}<div className="host-tls-domains"><Facts values={[["Certificate domains", record.cert_domains]]} /></div></section>}
       {tab === 'products' && <ProductList products={products} onCve={onCve} />}
-      {tab === 'exposed' && <ExposedData products={products} />}
-      {tab === 'web' && <section className="host-web-files"><Tabs idPrefix="host-web-file" ariaLabel="Web file" variant="segmented" value={webTab} onChange={value => onWebTab(value as WebFileTab)} items={[{ id: 'security', label: 'security.txt' }, { id: 'robots', label: 'robots.txt' }]} /><TabPanel idPrefix="host-web-file" value={webTab}>{webTab === 'security' ? <><section className="host-fact-panel"><Facts values={[["Recognized as security.txt", record.security_txt?.is_security_txt], ["Contacts", record.security_txt?.contacts], ["URL", record.security_txt?.url], ["Endpoint", record.security_txt?.endpoint]]} /></section><RawResponse title="security.txt" content={record.security_txt?.body} onCopy={onCopy} /></> : <><section className="host-fact-panel"><Facts values={[["HTTP status", record.robots_txt?.status_code]]} /></section><RawResponse title="robots.txt" content={record.robots_txt?.body} onCopy={onCopy} /></>}</TabPanel></section>}
+      {tab === 'exposed' && <ExposedData products={products} onFindData={onDataServices} />}
+      {tab === 'web' && <section className="host-web-files"><Tabs idPrefix="host-web-file" ariaLabel="Web file" variant="segmented" value={webTab} onChange={value => onWebTab(value as WebFileTab)} items={[{ id: 'security', label: 'security.txt' }, { id: 'robots', label: 'robots.txt' }]} /><TabPanel idPrefix="host-web-file" value={webTab}>{webFacts.length > 0 && <section className="host-fact-panel"><h3>{webTab === 'security' ? 'Security contacts & policy' : 'Crawler policy summary'}</h3><Facts values={webFacts} /></section>}{webFacts.length === 0 && webBody === undefined ? <EmptyState icon={<Icon name="files" />} title={`No ${webTab === 'security' ? 'security.txt' : 'robots.txt'} returned`} description="This observation does not include the file. Other services may have a different response." /> : <RawResponse title={webTab === 'security' ? 'security.txt' : 'robots.txt'} content={webBody} onCopy={onCopy} />}</TabPanel></section>}
     </TabPanel>
     <NestedRecord value={service.rawRecord} path="service-record" title="Complete service record" />
   </div></ServiceViewScope.Provider>;

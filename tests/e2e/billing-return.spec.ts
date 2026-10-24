@@ -102,6 +102,8 @@ test('browser Back restores the plan review without reusing a different order ch
   await expect(planReview).not.toBeVisible();
 
   // Use real SPA controls so BillingPage stays mounted across both history entries.
+  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  if (await menu.isVisible()) await menu.click();
   await page.getByRole('button', { name: /View credits and usage/ }).click();
   await page.getByRole('link', { name: 'Plans & credit packs', exact: true }).click();
   await expect(page).toHaveURL('/billing#billing-token-packs');

@@ -17,7 +17,7 @@ test('pointer focus is quiet while keyboard focus and modal restoration remain u
   expect(focus.outline !== 'none' || focus.shadow !== 'none').toBe(true);
 });
 
-test('tabs use one selection line and filter controls use the shared outlined icon', async ({ page }, info) => {
+test('tabs use one selection line and filter controls use the shared plus icon', async ({ page }, info) => {
   await page.goto('/files');
   const active = page.getByRole('tab', { name: 'Files', exact: true });
   await expect(active).toHaveAttribute('aria-selected', 'true');
@@ -25,7 +25,7 @@ test('tabs use one selection line and filter controls use the shared outlined ic
   expect(lines).toEqual({ border: '0px', indicator: '2px', opacity: '1' });
   const filter = page.getByRole('button', { name: 'Filters', exact: true });
   expect(await filter.evaluate(element => getComputedStyle(element).borderTopWidth)).toBe('1px');
-  expect(await filter.locator('.icon').evaluate(element => getComputedStyle(element).maskImage)).toContain('adjustments-horizontal.svg');
+  expect(await filter.locator('.icon').evaluate(element => getComputedStyle(element).maskImage)).toContain('plus.svg');
   await filter.click();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(await filter.evaluate(element => getComputedStyle(element).outlineStyle)).toBe('none');

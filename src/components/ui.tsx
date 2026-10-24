@@ -20,7 +20,7 @@ export function Button({ variant = 'primary', size = 'md', loading, fullWidth, c
 }
 
 export function FilterButton({ active, count, children = 'Filters', className, ...props }: Omit<ButtonProps, 'variant'> & { active?: boolean; count?: number }) {
-  return <Button variant="secondary" className={join('filter-button', active && 'is-active', className)} {...props}><Icon name="filter" size={18} /><span>{children}</span>{typeof count === 'number' && count > 0 && <span className="filter-button-count" aria-label={`${count} active filters`}>{count}</span>}</Button>;
+  return <Button variant="secondary" className={join('filter-button', active && 'is-active', className)} {...props}><Icon name="plus" size={18} /><span>{children}</span>{typeof count === 'number' && count > 0 && <span className="filter-button-count" aria-label={`${count} active filters`}>{count}</span>}</Button>;
 }
 
 type FieldMeta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; icon?: ReactNode };
@@ -59,12 +59,10 @@ export function Dialog({ open, onClose, title, children, footer, size = 'md', pl
   useLayoutEffect(() => {
     if (!open || scope !== 'workspace') return;
     const main = document.querySelector<HTMLElement>('.workspace-main');
-    const header = document.querySelector<HTMLElement>('.app-topbar');
-    const sync = () => setBounds({ left: Math.max(0, main?.getBoundingClientRect().left ?? 0), top: Math.max(0, header?.getBoundingClientRect().bottom ?? 0) });
+    const sync = () => setBounds({ left: Math.max(0, main?.getBoundingClientRect().left ?? 0), top: 0 });
     sync();
     const observer = new ResizeObserver(sync);
     if (main) observer.observe(main);
-    if (header) observer.observe(header);
     window.addEventListener('resize', sync);
     return () => { observer.disconnect(); window.removeEventListener('resize', sync); };
   }, [open, scope]);
@@ -104,7 +102,7 @@ export function Pagination({ page, pageSize, count, total, maxPage, disabled = f
   const [pageDraft, setPageDraft] = useState(String(page));
   useEffect(() => { setPageDraft(String(page)); }, [page]);
   return <nav className="pagination" aria-label="Pagination" aria-busy={disabled || undefined}>
-    <p className="muted" aria-live="polite" aria-atomic="true">{knownTotal !== undefined ? `${knownTotal.toLocaleString()} results · ` : ''}Page {page}{lastPage !== undefined ? ` of ${lastPage}` : ''}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p>
+    <p className="muted" aria-live="polite" aria-atomic="true">{knownTotal !== undefined ? `${knownTotal.toLocaleString()} ${knownTotal === 1 ? 'result' : 'results'} · ` : ''}Page {page}{lastPage !== undefined ? ` of ${lastPage}` : ''}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p>
     <div className="pagination-controls"><div className="cluster"><Button variant="secondary" size="sm" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}><Icon name="chevron-left" size={16} />Previous</Button><Button variant="secondary" size="sm" disabled={disabled || !hasNext} onClick={() => onPageChange(page + 1)}>Next<Icon name="chevron-right" size={16} /></Button></div>
       {lastPage !== undefined && lastPage > 5 && <form className="pagination-jump" onSubmit={event => { event.preventDefault(); const next = Number(pageDraft); if (!disabled && Number.isInteger(next) && next >= 1 && next <= lastPage) onPageChange(next); }}><label>Go to page<input type="number" inputMode="numeric" min={1} max={lastPage} step={1} required disabled={disabled} value={pageDraft} onChange={event => setPageDraft(event.target.value)} /></label><Button variant="secondary" size="sm" type="submit" disabled={disabled}>Go</Button></form>}
     </div>
@@ -117,13 +115,13 @@ const iconNames: Record<string, string> = {
   bell: 'bell', copy: 'copy', download: 'download', external: 'external-link', menu: 'menu-2', close: 'x',
   'chevron-left': 'chevron-left', 'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down',
   'chevrons-left': 'chevrons-left', 'chevrons-right': 'chevrons-right', plus: 'plus', arrow: 'arrow-right',
-  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'adjustments-horizontal', clock: 'clock', user: 'user',
+  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'plus', clock: 'clock', user: 'user',
   lock: 'lock', logout: 'logout', trash: 'trash', info: 'info-circle', grid: 'layout-grid', list: 'list',
   settings: 'settings', 'help-circle': 'help-circle', bookmark: 'bookmark', server: 'server', globe: 'world',
   shield: 'shield-check', package: 'package', key: 'key', desktop: 'device-desktop', users: 'users', mail: 'mail',
   adjustments: 'adjustments-horizontal', chart: 'chart-bar', alert: 'alert-circle', success: 'circle-check',
   file: 'file-text', more: 'dots', eye: 'eye', 'eye-off': 'eye-off', calendar: 'calendar', link: 'link',
-  'arrow-up-right': 'arrow-up-right', 'arrow-left': 'arrow-left', folder: 'folder', receipt: 'receipt', wallet: 'wallet',
+  'arrow-up-right': 'arrow-up-right', 'arrow-left': 'arrow-left', folder: 'folder', receipt: 'receipt', wallet: 'wallet', crypto: 'currency-token',
 };
 export function Icon({ name, size = 20, className }: { name: string; size?: number; className?: string }) {
   const path = asset(`icons/${iconNames[name] ?? 'info-circle'}.svg`);

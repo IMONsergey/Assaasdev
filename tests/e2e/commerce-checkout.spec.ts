@@ -9,6 +9,21 @@ async function withinViewport(page: Page) {
   }
 }
 
+async function readCreditLabel(page: Page, expected: string | RegExp) {
+  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  const opened = await menu.isVisible();
+  if (opened) await menu.click();
+  const credit = page.getByRole('button', { name: /^View credits and usage\./ });
+  await expect(credit).toBeVisible();
+  await expect(credit).toHaveAccessibleName(expected);
+  const label = (await credit.getAttribute('aria-label'))!;
+  if (opened) {
+    await page.getByRole('complementary', { name: 'Workspace navigation' }).getByRole('button', { name: 'Close navigation', exact: true }).click();
+    await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+  }
+  return label;
+}
+
 for (const width of [1440, 390, 320]) {
   test(`card and crypto checkout retain orders and receipts at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 1440 ? 960 : 844 });
@@ -37,13 +52,11 @@ for (const width of [1440, 390, 320]) {
     await expect(page.locator('[data-onboarding="checkout-receipt"]')).toBeVisible();
     await expect(page.locator('[data-onboarding="checkout-order"]')).toHaveAttribute('data-order-status', 'completed');
     await page.screenshot({ path: `${audit}/commerce-card-receipt-${width}.png`, fullPage: true });
-    const creditTrigger = page.getByRole('button', { name: /^View credits and usage\./ });
-    await expect(creditTrigger).toHaveAccessibleName(/1,265,500/);
-    const afterCredits = await creditTrigger.getAttribute('aria-label');
+    const afterCredits = await readCreditLabel(page, /1,265,500/);
     await page.reload();
     await expect(page.locator('[data-onboarding="checkout-receipt"]')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Pay $45', exact: true })).toHaveCount(0);
-    await expect(creditTrigger).toHaveAttribute('aria-label', afterCredits!);
+    await readCreditLabel(page, afterCredits);
     await page.getByRole('link', { name: 'View order details', exact: true }).click();
     await expect(page.locator('[data-onboarding="order-status"]')).toHaveAttribute('data-status', 'completed');
     await expect(page.locator('[data-onboarding="order-summary"]')).toContainText('$45');

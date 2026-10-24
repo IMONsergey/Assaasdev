@@ -5,6 +5,7 @@ test('search entry, focus and workspace filters have consistent geometry', async
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: width > 760 ? 960 : 800 });
     await page.goto('/search');
+    await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
     const title = page.getByRole('heading', { name: 'Search internet infrastructure', exact: true });
     await expect(title).toBeVisible();
     await expect(page.locator('.dot-cascade__canvas')).toBeVisible();
@@ -21,11 +22,12 @@ test('search entry, focus and workspace filters have consistent geometry', async
     const filters = page.getByRole('dialog', { name: 'Filters', exact: true });
     await expect(filters).toBeVisible();
     const geometry = await filters.evaluate(element => {
-      const box = element.getBoundingClientRect(), main = document.querySelector('.workspace-main')!.getBoundingClientRect(), header = document.querySelector('.app-topbar')!.getBoundingClientRect();
-      return { x: box.x, y: box.y, width: box.width, right: box.right, bottom: box.bottom, mainX: main.x, headerBottom: header.bottom, clip: getComputedStyle(element, '::backdrop').clipPath };
+      const box = element.getBoundingClientRect(), main = document.querySelector('.workspace-main')!.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, right: box.right, bottom: box.bottom, mainX: main.x, clip: getComputedStyle(element, '::backdrop').clipPath };
     });
     expect(geometry.x).toBeGreaterThanOrEqual(geometry.mainX);
-    expect(geometry.y).toBeGreaterThanOrEqual(geometry.headerBottom);
+    expect(geometry.y).toBeGreaterThanOrEqual(0);
+    await expect(page.locator('.app-topbar')).toHaveCount(0);
     expect(geometry.right).toBeLessThanOrEqual(width);
     expect(geometry.clip).not.toBe('none');
     const close = await filters.getByRole('button', { name: 'Close dialog', exact: true }).boundingBox();
@@ -69,7 +71,7 @@ test('typing suggestions never searches and selected values become explicit filt
   await expect(filters.getByRole('combobox', { name: 'Value', exact: true })).toHaveValue('Germany');
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(0);
   await filters.getByRole('button', { name: 'Apply conditions', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '1 hosts returned', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '1 host returned', exact: true })).toBeVisible();
   const searches = requests.filter(item => item.type === 'hosts');
   expect(searches).toHaveLength(1);
   expect(searches[0].data.simple_search_filters).toEqual([{ field: 'country_name', value: 'Germany' }]);

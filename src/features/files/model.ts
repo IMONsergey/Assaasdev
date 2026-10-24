@@ -92,6 +92,19 @@ export function readFileParams(params: URLSearchParams): { filter: BucketFilter;
 export function fileParams(filter: BucketFilter, view: FilesView): URLSearchParams { return new URLSearchParams({ filter: JSON.stringify(normalizeBucketFilter(filter)), view }); }
 export function bucketIdentity(host?: string, container?: string): string { return [host, container].filter(Boolean).join('/'); }
 export function fileName(file: BucketFile): string { return file.key?.split('/').filter(Boolean).at(-1) || 'Name not provided'; }
+/** Presentation only. The original key remains intact for copying, URLs and requests. */
+export function middleTruncate(value: string, maxLength = 80): string {
+  const chars = Array.from(value);
+  if (chars.length <= maxLength) return value;
+  const tailLength = Math.min(24, Math.floor((maxLength - 1) / 3));
+  return `${chars.slice(0, maxLength - tailLength - 1).join('')}…${chars.slice(-tailLength).join('')}`;
+}
+/** Keep the suffix visible while CSS ellipsizes the start at any available width. */
+export function nameParts(value: string): { start: string; end: string } {
+  const chars = Array.from(value);
+  if (chars.length <= 24) return { start: value, end: '' };
+  return { start: chars.slice(0, -18).join(''), end: chars.slice(-18).join('') };
+}
 export function fileSize(size?: number): string {
   if (size === undefined || !Number.isFinite(size)) return 'Not observed';
   if (size === 0) return '0 MB';

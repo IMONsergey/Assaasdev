@@ -8,6 +8,7 @@ import { config } from './config';
 import { ScenarioProvider } from './features/journeys/ScenarioProvider';
 import './styles.css';
 import './styles/interface-system.css';
+import './styles/review-polish.css';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false, staleTime: 60_000, gcTime: 5 * 60_000 }, mutations: { retry: false } } });
 const root = document.getElementById('root');

@@ -150,9 +150,13 @@ test('service page jump and a deep selection remain reachable on a narrow screen
   await pages.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(pages).toContainText('20 / 40');
   await expect(list.locator('.host-service-row')).toHaveCount(25);
+  await expect(list.getByRole('button', { pressed: true })).toContainText('10475');
+  await expect(page).toHaveURL(url => url.searchParams.get('service_page') === '20' && url.searchParams.get('port') === '10475');
   await pages.getByRole('spinbutton', { name: 'Go to page', exact: true }).fill('40');
   await pages.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(pages).toContainText('40 / 40');
   await expect(list.getByRole('button', { pressed: true })).toBeVisible();
+  await expect(list.getByRole('button', { pressed: true })).toContainText('10975');
+  await expect(page).toHaveURL(url => url.searchParams.get('service_page') === '40' && url.searchParams.get('port') === '10975');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });

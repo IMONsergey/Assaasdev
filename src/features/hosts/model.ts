@@ -111,10 +111,17 @@ export function serviceItems(records: PortRecord[]): ServiceItem[] {
     if (record.security_txt) {
       record.security_txt = { ...record.security_txt };
       for (const field of ['body', 'url', 'endpoint'] as const) if (record.security_txt[field] !== undefined && typeof record.security_txt[field] !== 'string') { invalidFields.push(`security_txt.${field}`); delete record.security_txt[field]; }
+      if (record.security_txt.is_security_txt !== undefined && typeof record.security_txt.is_security_txt !== 'boolean') { invalidFields.push('security_txt.is_security_txt'); delete record.security_txt.is_security_txt; }
+      if (record.security_txt.contacts !== undefined) {
+        const original = record.security_txt.contacts;
+        record.security_txt.contacts = Array.isArray(original) ? original.filter((value): value is string => typeof value === 'string') : undefined;
+        if (!Array.isArray(original) || original.length !== record.security_txt.contacts?.length) invalidFields.push('security_txt.contacts');
+      }
     }
     if (record.robots_txt) {
       record.robots_txt = { ...record.robots_txt };
       if (record.robots_txt.body !== undefined && typeof record.robots_txt.body !== 'string') { invalidFields.push('robots_txt.body'); delete record.robots_txt.body; }
+      if (record.robots_txt.status_code !== undefined && (typeof record.robots_txt.status_code !== 'number' || !Number.isFinite(record.robots_txt.status_code))) { invalidFields.push('robots_txt.status_code'); delete record.robots_txt.status_code; }
     }
     const identity = JSON.stringify([record.port ?? null, record.transport ?? null, record.protocol ?? null, serviceContext(record), record.uts ?? null]);
     const occurrence = occurrences.get(identity) || 0;
@@ -142,6 +149,14 @@ export function servicePage(items: ServiceItem[], requestedPage: number, size = 
   const page = Math.max(1, Math.min(Number.isFinite(requestedPage) ? Math.trunc(requestedPage) : 1, totalPages));
   const start = (page - 1) * size;
   return { page, totalPages, rows: items.slice(start, start + size), start: items.length ? start + 1 : 0, end: Math.min(start + size, items.length) };
+}
+
+/** The details and catalog always describe the same visible selection. */
+export function serviceSelection(items: ServiceItem[], selectedKey: string | null | undefined, requestedPage: number, size = 25) {
+  const selectedIndex = selectedKey ? items.findIndex(item => item.key === selectedKey) : -1;
+  const window = servicePage(items, selectedIndex >= 0 ? Math.floor(selectedIndex / size) + 1 : requestedPage, size);
+  const selected = selectedIndex >= 0 ? items[selectedIndex] : window.rows[0];
+  return { window, selected, selectedIndex: selected ? items.findIndex(item => item.key === selected.key) : -1 };
 }
 
 export function hostLocation(host: HostDetail): string {

@@ -7,7 +7,7 @@ import { TechnologyMark, ProtocolMark } from '../../components/TechnologyMark';
 import { ExportDialog } from '../files/ExportDialog';
 import { SearchAccessNotice } from '../search/SearchPage';
 import { decodeSearch, encodeSearch, isShared, queryLabel, searchPath, withoutShareToken, type Dataset } from '../search/model';
-import { filterServices, hostWorkspace, mappedDomains, portRange, safeBackPath, serviceContentOptions, serviceHasContent, serviceItems, servicePage, type ServiceContent, type ServiceItem, type ServiceOrder, type ServiceTab } from './model';
+import { filterServices, hostWorkspace, mappedDomains, portRange, safeBackPath, serviceContentOptions, serviceHasContent, serviceItems, serviceSelection, type ServiceContent, type ServiceItem, type ServiceOrder, type ServiceTab } from './model';
 import { useHost, type HostSection, type HostSections } from './useHost';
 import { DataValue, observationDate } from './HostData';
 import { CveDialog } from './HostProducts';
@@ -54,18 +54,16 @@ export function HostPage() {
     return [...counts].sort(([a], [b]) => a.localeCompare(b));
   }, [items]);
   const contentCounts = useMemo(() => serviceContentOptions.map(([value, label]) => ({ value, label, count: items.filter(item => serviceHasContent(item.record, value)).length })), [items]);
-  const initialRecord = items.find(item => params.has('port') && /^\d+$/.test(params.get('port') || '') && item.record.port === Number(params.get('port')) && (!params.has('protocol') || item.record.protocol === params.get('protocol'))) || filtered[0] || items[0];
-  const selected = params.get('service');
-  const service = selected ? items.find(item => item.key === selected) : initialRecord;
-  const selectedIndex = filtered.findIndex(item => item.key === service?.key);
-  const requestedPage = Number(params.get('service_page'));
-  const defaultPage = selectedIndex >= 0 ? Math.floor(selectedIndex / 25) + 1 : 1;
-  const serviceWindow = servicePage(filtered, Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : defaultPage);
-  const selectedMissing = Boolean(selected && !service);
+  const initialRecord = items.find(item => params.has('port') && /^\d+$/.test(params.get('port') || '') && item.record.port === Number(params.get('port')) && (!params.has('protocol') || item.record.protocol === params.get('protocol')));
+  const selected = params.get('service') || initialRecord?.key;
+  const { selected: service, selectedIndex, window: serviceWindow } = serviceSelection(filtered, selected, Number(params.get('service_page')) || 1);
   const back = safeBackPath(params.get('back'), `${searchPath(dataset)}${parsed.hasSearch && !parsed.error ? `?${encodeSearch(parsed.request)}` : ''}`);
   const domains = useMemo(() => mappedDomains(host.sections.domains), [host.sections.domains]);
   const address = typeof data?.ip === 'string' && data.ip ? data.ip : identifier;
   useEffect(() => { setCve(null); rowScroll.current = 0; }, [identifier, dataset]);
+  useLayoutEffect(() => {
+    if (detailRef.current && (workspaceRef.current?.clientWidth || window.innerWidth) > 760) detailRef.current.scrollTop = 0;
+  }, [service?.key, serviceTab]);
   useLayoutEffect(() => { if (rowsRef.current) rowsRef.current.scrollTop = rowScroll.current; }, [tab, detailOpen]);
   useLayoutEffect(() => {
     const rows = rowsRef.current, button = rows?.querySelector<HTMLElement>('[aria-pressed="true"]');
@@ -100,17 +98,18 @@ export function HostPage() {
     // still be rendering the previous filters or nested tab selection.
     const next = new URLSearchParams(window.location.search);
     for (const [name, value] of Object.entries(values)) { if (value) next.set(name, value); else next.delete(name); }
-    if (resetPage) next.set('service_page', '1');
+    const nextOrder = (next.get('service_order') || 'received') as ServiceOrder;
+    const nextItems = filterServices(items, next.get('service_q') || '', nextOrder, {
+      protocol: next.get('service_protocol') || '', content: (next.get('service_content') || '') as ServiceContent, port: next.get('service_port') || '',
+    });
+    // Paging selects its first row; filters/sorting retain the selected row only
+    // while it remains in the result set. There is never an off-page selection.
+    const chosen = resetPage ? serviceSelection(nextItems, next.get('service') || service?.key, 1) : serviceSelection(nextItems, null, Number(next.get('service_page')) || 1);
+    next.set('service_page', String(chosen.window.page));
+    if (chosen.selected) setSelection(next, chosen.selected);
+    else { next.delete('service'); next.delete('port'); next.delete('protocol'); }
     rowScroll.current = 0;
     if (rowsRef.current) rowsRef.current.scrollTop = 0;
-    setParams(next, { replace: true });
-  };
-  const showSelected = () => {
-    const next = new URLSearchParams(window.location.search);
-    if (selectedIndex < 0) for (const key of ['service_q', 'service_protocol', 'service_content', 'service_port']) next.delete(key);
-    next.set('service_page', String(Math.floor((selectedIndex >= 0 ? selectedIndex : filterServices(items, '', order).findIndex(item => item.key === service?.key)) / 25) + 1));
-    next.set('panel', 'list');
-    pendingFocus.current = { target: 'list', scroll: compactWorkspace() };
     setParams(next, { replace: true });
   };
   const changeTab = (value: string) => { const next = new URLSearchParams(window.location.search); const current = hostWorkspace(next); canonicalService(next); next.set('tab', value); if (!next.has('panel') && current.detailOpen) next.set('panel', 'details'); setParams(next, { replace: true }); };
@@ -126,7 +125,7 @@ export function HostPage() {
     if (selectedIndex < 0 || !item) return;
     select(item, Math.floor(nextIndex / 25) + 1);
   };
-  const openServices = (options: { protocol?: string; content?: ServiceContent; service?: ServiceItem; view?: 'response' | 'products' } = {}) => {
+  const openServices = (options: { protocol?: string; content?: ServiceContent; service?: ServiceItem; view?: ServiceTab } = {}) => {
     const next = new URLSearchParams(window.location.search); canonicalService(next);
     for (const key of ['service_q', 'service_protocol', 'service_content', 'service_port', 'service_page']) next.delete(key);
     if (options.protocol) next.set('service_protocol', options.protocol);
@@ -163,7 +162,7 @@ export function HostPage() {
             <div className="host-service-count"><h2>Service catalog</h2><span>{Array.isArray(data?.ports) ? items.length.toLocaleString() : '—'}</span></div>
             {Array.isArray(data?.ports) && data.ports.length > items.length && <p className="host-caption muted">{data.ports.length - items.length} unreadable records</p>}
             <Field label="Find a service" className="host-compact-search" placeholder="Port, product or response" icon={<Icon name="search" size={16} />} value={filter} onChange={event => updateServiceView({ service_q: event.target.value })} />
-            <details className="host-service-classify" open={Boolean(protocol || content || portFilter) || undefined}><summary><Icon name="filter" size={15} />Classify services{(protocol || content || portFilter) && <span>{[protocol, content, portFilter].filter(Boolean).length}</span>}<Icon name="chevron-down" size={16} /></summary><div className="host-service-filters"><label>Protocol<SelectControl value={protocol} onChange={event => updateServiceView({ service_protocol: event.target.value })}><option value="">All protocols</option>{protocols.map(([name, count]) => <option key={name} value={name}>{name.toUpperCase()} · {count.toLocaleString()}</option>)}{protocol && !protocols.some(([name]) => name === protocol) && <option value={protocol}>{protocol} · 0</option>}</SelectControl></label><label>Contains<SelectControl value={content} onChange={event => updateServiceView({ service_content: event.target.value })}><option value="">Any content</option>{contentCounts.map(item => <option key={item.value} value={item.value}>{item.label} · {item.count.toLocaleString()}</option>)}</SelectControl></label><Field label="Port or range" placeholder="443 or 8000–9000" value={portFilter} onChange={event => updateServiceView({ service_port: event.target.value })} error={portFilter.trim() && !portRange(portFilter) ? 'Use a port or ascending range from 0 to 65535.' : undefined} /></div></details>
+            <details className="host-service-classify" open={Boolean(protocol || content || portFilter) || undefined}><summary><Icon name="plus" size={15} />Classify services{(protocol || content || portFilter) && <span>{[protocol, content, portFilter].filter(Boolean).length}</span>}<Icon name="chevron-down" size={16} /></summary><div className="host-service-filters"><label>Protocol<SelectControl value={protocol} onChange={event => updateServiceView({ service_protocol: event.target.value })}><option value="">All protocols</option>{protocols.map(([name, count]) => <option key={name} value={name}>{name.toUpperCase()} · {count.toLocaleString()}</option>)}{protocol && !protocols.some(([name]) => name === protocol) && <option value={protocol}>{protocol} · 0</option>}</SelectControl></label><label>Contains<SelectControl value={content} onChange={event => updateServiceView({ service_content: event.target.value })}><option value="">Any content</option>{contentCounts.map(item => <option key={item.value} value={item.value}>{item.label} · {item.count.toLocaleString()}</option>)}</SelectControl></label><Field label="Port or range" placeholder="443 or 8000–9000" value={portFilter} onChange={event => updateServiceView({ service_port: event.target.value })} error={portFilter.trim() && !portRange(portFilter) ? 'Use a port or ascending range from 0 to 65535.' : undefined} /></div></details>
             <label className="host-service-sort">Order<SelectControl value={order} onChange={event => updateServiceView({ service_order: event.target.value })}><option value="received">As received</option><option value="port-asc">Port ascending</option><option value="port-desc">Port descending</option><option value="newest">Newest first</option></SelectControl></label>
             <div className="host-service-window" aria-live="polite"><span>{serviceWindow.start}–{serviceWindow.end} of {filtered.length.toLocaleString()}{hasServiceFilters ? ' matching' : ''}</span>{hasServiceFilters && <Button variant="ghost" size="sm" onClick={() => updateServiceView({ service_q: null, service_protocol: null, service_content: null, service_port: null })}>Clear filters</Button>}</div>
             <div className="host-service-rows" ref={rowsRef} onScroll={event => { rowScroll.current = event.currentTarget.scrollTop; }} role="group" aria-label="Observed services">{serviceWindow.rows.map(item => <button type="button" key={item.key} className={`host-service-row ${service?.key === item.key ? 'is-selected' : ''}`} aria-pressed={service?.key === item.key} onClick={() => select(item)}><span className="host-service-row-mark">{item.record.detected_products?.[0]?.product ? <TechnologyMark name={item.record.detected_products[0].product} size={22} /> : <ProtocolMark protocol={item.record.protocol} size={21} />}</span><span className="host-service-row-copy"><span className="host-service-row-top"><strong>{item.record.port ?? 'Unknown port'}</strong><em>{item.record.protocol?.toUpperCase() || item.record.transport?.toUpperCase() || 'Unknown'}</em></span><small title={item.context}>{item.record.detected_products?.some(product => product.product) ? item.record.detected_products.filter(product => product.product).slice(0, 2).map(product => [product.product, product.version].filter(Boolean).join(' ')).join(' · ') : item.context}</small></span><Icon name="chevron-right" size={14} className="host-service-row-arrow" /></button>)}</div>
@@ -171,10 +170,8 @@ export function HostPage() {
             {filtered.length > 25 && <nav className="host-service-pagination" aria-label="Received service pages"><Button variant="secondary" size="sm" disabled={serviceWindow.page <= 1} onClick={() => updateServiceView({ service_page: String(serviceWindow.page - 1) }, false)} aria-label="Previous service page"><Icon name="chevron-left" size={16} /></Button><span>{serviceWindow.page} / {serviceWindow.totalPages}</span><Button variant="secondary" size="sm" disabled={serviceWindow.page >= serviceWindow.totalPages} onClick={() => updateServiceView({ service_page: String(serviceWindow.page + 1) }, false)} aria-label="Next service page"><Icon name="chevron-right" size={16} /></Button>{serviceWindow.totalPages > 5 && <form className="host-service-jump" onSubmit={event => { event.preventDefault(); const input = event.currentTarget.elements.namedItem('servicePage') as HTMLInputElement; const next = Math.max(1, Math.min(serviceWindow.totalPages, Math.trunc(Number(input.value)) || 1)); updateServiceView({ service_page: String(next) }, false); }}><label>Go to page<input key={serviceWindow.page} name="servicePage" type="number" inputMode="numeric" min={1} max={serviceWindow.totalPages} step={1} defaultValue={serviceWindow.page} /></label><Button variant="secondary" size="sm" type="submit">Go</Button></form>}</nav>}
           </aside>
           <div className="host-detail-container" ref={detailRef} tabIndex={-1} role="region" aria-label="Selected service details"><Button className="host-back-to-services" aria-label="Back to service list" variant="ghost" size="sm" onClick={backToList}><Icon name="chevron-left" size={16} />Back to service list<span>{items.length.toLocaleString()}</span></Button>
-            {selectedMissing && <Alert tone="info" title="Selection unavailable">Choose a service from the current list.</Alert>}
-            {service && !serviceWindow.rows.some(item => item.key === service.key) && <Alert tone="info" actions={<Button variant="secondary" size="sm" onClick={showSelected}>Show selected service</Button>}>{selectedIndex < 0 ? 'The selected service is outside the list filters.' : 'The selected service is on another list page.'}</Alert>}
             {service && <nav className="host-observation-switcher" aria-label="Navigate matching services"><span>{selectedIndex >= 0 ? <>Service <strong>{(selectedIndex + 1).toLocaleString()}</strong> of <strong>{filtered.length.toLocaleString()}</strong>{hasServiceFilters && ' matching'} </> : 'Selected service'}</span><div><Button variant="secondary" size="sm" disabled={selectedIndex <= 0} onClick={() => adjacentService(-1)} aria-label="Previous matching service"><Icon name="chevron-left" size={16} /></Button><Button variant="secondary" size="sm" disabled={selectedIndex < 0 || selectedIndex >= filtered.length - 1} onClick={() => adjacentService(1)} aria-label="Next matching service"><Icon name="chevron-right" size={16} /></Button></div></nav>}
-            <ServiceDetails key={service?.key} service={service} tab={serviceTab} responseTab={responseTab} webTab={webTab} onTab={changeServiceTab} onResponseTab={value => changeDetailView('response', value)} onWebTab={value => changeDetailView('file', value)} onCopy={value => void copy(value)} onCve={setCve} />
+            <ServiceDetails key={service?.key} service={service} tab={serviceTab} responseTab={responseTab} webTab={webTab} onTab={changeServiceTab} onResponseTab={value => changeDetailView('response', value)} onWebTab={value => changeDetailView('file', value)} onCopy={value => void copy(value)} onCve={setCve} onDataServices={contentCounts.some(item => item.value === 'exposed' && item.count > 0) ? () => openServices({ content: 'exposed', view: 'exposed' }) : undefined} />
           </div>
         </div></SectionState>}
       </TabPanel>

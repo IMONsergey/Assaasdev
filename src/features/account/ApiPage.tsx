@@ -5,6 +5,7 @@ import { useApp } from '../../app/AppProvider';
 import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, Skeleton, Tabs, TabPanel, Icon } from '../../components/ui';
 import { copyText, formatNumber, OperationNotice, responseData, useOperation } from './operation';
 import { creditUsage } from '../../app/credit-usage';
+import { ApiDocumentation } from './ApiDocumentation';
 import './account.css';
 
 function UsageMetric({ title, icon, available, allocation }: { title: string; icon: string; available: number | undefined; allocation: number | undefined }) {
@@ -21,7 +22,7 @@ export function ApiPage() {
   const [checkError, setCheckError] = useState('');
   const operation = useOperation();
   const [params, setParams] = useSearchParams();
-  const section = params.get('section') === 'usage' ? 'usage' : 'key';
+  const section = params.get('section') === 'docs' ? 'docs' : params.get('section') === 'usage' ? 'usage' : 'key';
   const focusSection = useRef(false);
   useLayoutEffect(() => {
     if (!focusSection.current) return;
@@ -55,12 +56,12 @@ export function ApiPage() {
     if (result.ok) { setRotatedKey(result.data); setRevealed(true); await refreshSession().catch(() => undefined); }
   }
 
-  if (session.status === 'loading') return <Skeleton rows={3} label="Loading API access" />;
-  if (session.status !== 'authenticated') return <EmptyState icon={<Icon name="code" size={28} />} title="API access" description="Sign in to manage your API key and account limits." actions={<Link className="button" to="/auth/login?returnTo=%2Fapi">Sign in</Link>} />;
+  const accessPrompt = session.status === 'loading' ? <Skeleton rows={3} label="Loading API access" /> : session.status !== 'authenticated' ? <EmptyState icon={<Icon name="code" size={28} />} title="Manage your API access" description="Sign in to manage your key and account limits. Documentation is available without an account." actions={<><Link className="button" to={`/auth/login?returnTo=${encodeURIComponent(`/api?section=${section}`)}`}>Sign in</Link><Button variant="secondary" onClick={() => selectSection('docs', true)}>Read documentation</Button></>} /> : null;
   return <div className="api-page stack">
     <PageHeader title="API access" actions={<Badge tone={canAccess ? 'success' : 'neutral'}>{canAccess ? 'API enabled' : 'Plus and above'}</Badge>} />
-    <Tabs idPrefix="api" ariaLabel="API sections" items={[{ id: 'key', label: 'API key', icon: 'key' }, { id: 'usage', label: 'Usage & limits', icon: 'chart' }]} value={section} onChange={selectSection} />
+    <Tabs idPrefix="api" ariaLabel="API sections" items={[{ id: 'key', label: 'API key', icon: 'key' }, { id: 'usage', label: 'Usage & limits', icon: 'chart' }, { id: 'docs', label: 'Documentation', icon: 'file' }]} value={section} onChange={selectSection} />
     <TabPanel idPrefix="api" value="key" hidden={section !== 'key'}>
+      {accessPrompt ?? <>
       <div className="api-key-workspace">
         <Card className="api-key-card"><div className="api-card-heading"><span className="api-key-symbol"><Icon name="key" size={24} /></span><div><h2>Account API key</h2><p>One key for your integrations.</p></div></div>
           {canAccess ? <div className="stack"><OperationNotice state={operation.state} onCheck={() => void checkKey()} />{checkError && <Alert tone="error">{checkError}</Alert>}
@@ -71,14 +72,18 @@ export function ApiPage() {
         </Card>
         <aside className="api-context"><h3>Your access</h3><dl className="account-facts"><div><dt>Plan</dt><dd>{user?.subscription?.type ?? '—'}</dd></div><div><dt>Search credits</dt><dd>{formatNumber(user?.credits)}</dd></div><div><dt>Search pages</dt><dd>{formatNumber(user?.subscription?.search_pages)}</dd></div></dl><Button variant="ghost" size="sm" onClick={() => selectSection('usage', true)}>View usage & limits<Icon name="arrow" size={16} /></Button></aside>
       </div>
+      </>}
     </TabPanel>
     <TabPanel idPrefix="api" value="usage" hidden={section !== 'usage'}>
+      {accessPrompt ?? <>
       <div className="api-usage-grid">
         <UsageMetric title="Search credits" icon="search" available={user?.credits} allocation={user?.subscription?.credits} />
         <UsageMetric title="Scan credits" icon="scan" available={user?.scan_credits} allocation={user?.subscription?.scan_credits} />
       </div>
       <Card className="api-limits"><div className="api-limits-heading"><div><h2>Account limits</h2><p>Access and resources for your current account.</p></div><Link className="button button--secondary" to="/billing">Manage billing<Icon name="arrow-up-right" size={16} /></Link></div><dl className="account-facts"><div><dt><Icon name="card" size={17} />Subscription</dt><dd>{user?.subscription?.type ?? '—'}</dd></div><div><dt><Icon name="list" size={17} />Search pages per query</dt><dd>{formatNumber(user?.subscription?.search_pages)}</dd></div><div><dt><Icon name="plus" size={17} />Purchased credits</dt><dd>{formatNumber(user?.purchased_credits)}</dd></div><div><dt><Icon name="code" size={17} />API access</dt><dd><Badge tone={canAccess ? 'success' : 'neutral'}>{canAccess ? 'Enabled' : 'Unavailable'}</Badge></dd></div></dl></Card>
+      </>}
     </TabPanel>
+    <TabPanel idPrefix="api" value="docs" hidden={section !== 'docs'}>{section === 'docs' && <ApiDocumentation />}</TabPanel>
     <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={() => void rotate()} title="Replace your API key?" description="Your current key will stop working immediately. Update each integration with the new key." confirmLabel="Rotate API key" danger busy={operation.busy} />
   </div>;
 }

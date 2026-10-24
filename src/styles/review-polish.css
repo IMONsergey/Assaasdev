@@ -1,0 +1,77 @@
+/* Shared refinements from the October workspace review. */
+.app-shell { --workspace-header-height: 0px; }
+.app-shell .workspace-main { min-height: 100svh; padding-top: 36px; }
+.app-shell .workspace-main:has(> .search-page-home:not(.search-page-editing)) { padding-block: 0; }
+.app-shell .app-sidebar { border-right: 0; overflow-y: auto; scrollbar-width: thin; }
+.app-shell .sidebar-primary { flex: 1 0 auto; }
+.app-shell .sidebar-bottom { flex: none; margin-top: auto; border-top: 0; }
+.sidebar-notifications { position: relative; }
+.sidebar-unread { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: auto; padding: 0 5px; border-radius: 6px; color: var(--accent-text); background: var(--tint); font-size: .7rem; font-variant-numeric: tabular-nums; }
+.sidebar-connection { color: var(--warning); }
+.sidebar-credits { margin: 8px 2px 0; }
+.sidebar-credits .credit-trigger { width: 100%; min-width: 0; min-height: 60px; gap: 10px; padding: 12px; border-color: transparent; background: color-mix(in srgb, var(--bg) 65%, var(--nav)); }
+.sidebar-credits .credit-trigger:hover { background: var(--surface-hover); }
+.sidebar-credits .credit-trigger-label, .sidebar-credits .credit-value-full { display: inline; }
+.sidebar-credits .credit-value-compact { display: none; }
+.sidebar-credits .credit-trigger-line strong { margin-left: auto; }
+.sidebar-credits .credit-trigger--collapsed { align-items: center; min-height: 48px; padding: 8px 4px; gap: 6px; }
+.sidebar-credits .credit-trigger--collapsed .credit-trigger-line { display: none; }
+.sidebar-credits .credit-trigger--collapsed .credit-trigger-track { width: 24px; }
+.credit-collapsed-icon { color: var(--accent-text); }
+.app-shell--collapsed .sidebar-unread { position: absolute; top: 7px; right: 7px; min-width: 6px; width: 6px; height: 6px; padding: 0; font-size: 0; background: var(--accent); border-radius: 50%; }
+.mobile-workspace-menu { display: none; }
+
+/* The brief arrival belongs to entering a session, never to changing a tab. */
+.workspace-entrance { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; background: var(--bg); }
+.workspace-entrance-content { display: grid; justify-items: center; gap: 20px; padding: 32px; }
+.workspace-welcome { color: var(--text); font: 500 1.6rem/1.3 var(--font-display); letter-spacing: -.025em; text-align: center; }
+.workspace-entrance--welcome .workspace-welcome { animation: welcome-enter 460ms cubic-bezier(.22,1,.36,1) both; }
+.workspace-entrance--waiting .workspace-welcome { font-size: 1rem; color: var(--muted); }
+.workspace-entrance--leaving { animation: welcome-leave 220ms ease both; pointer-events: none; }
+.workspace-arriving { opacity: 0; }
+.workspace-arrived { animation: workspace-arrive 380ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes welcome-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes welcome-leave { to { opacity: 0; } }
+@keyframes workspace-arrive { from { opacity: 0; } to { opacity: 1; } }
+
+/* Dialog bodies scroll independently; their actions retain one baseline. */
+.dialog:not(.dialog--left)[open] { display: flex; flex-direction: column; overflow: hidden; }
+.dialog-header, .dialog-footer { flex: none; }
+.dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.dialog-footer { align-items: stretch; justify-content: flex-end; gap: 10px; }
+.dialog-footer > .button { min-height: 44px; padding: 10px 16px; font-size: .9rem; line-height: 20px; text-decoration: none; }
+.button:hover, .button:focus-visible { text-decoration: none; }
+.button > .icon { transition: transform 180ms ease; }
+@media (hover: hover) {
+  .button:hover:not(:disabled) > .icon:last-child:not(:first-child) { transform: translateX(2px); }
+  .row-action:hover:not(:disabled) { background: var(--surface-hover); }
+}
+.row-action { gap: 7px; border-radius: 8px; white-space: nowrap; }
+.row-action--danger:hover:not(:disabled) { color: var(--danger); background: color-mix(in srgb, var(--danger) 6%, var(--bg)); border-color: transparent; }
+.account-team-table th, .account-team-table td { vertical-align: middle; }
+.account-team-table th:last-child, .account-team-table td:last-child { text-align: right; }
+.settings-row-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.settings-row-control > .button { min-height: 40px; }
+.settings-panel .card:last-child { border-bottom: 0; }
+
+@media (max-width: 760px) {
+  .app-shell .workspace-main { padding-top: max(80px, calc(env(safe-area-inset-top) + 68px)); }
+  .app-shell .workspace-main:has(> .search-page-home:not(.search-page-editing)) { padding-block: 0; }
+  .mobile-workspace-menu { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; z-index: 34; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: var(--bg); box-shadow: 0 2px 8px rgb(12 28 34 / 4%); }
+  .mobile-workspace-menu:hover { background: var(--surface-hover); }
+  .app-shell--collapsed .sidebar-unread { position: static; min-width: 20px; width: auto; height: 20px; padding: 0 5px; font-size: .7rem; border-radius: 6px; background: var(--tint); }
+  .sidebar-credits .credit-trigger-label { font-size: .86rem; }
+  .dialog-footer > .button { flex: 1 1 0; min-width: 0; }
+}
+@media (max-width: 480px) {
+  .dialog-footer { flex-direction: column; }
+  .dialog-footer > .button { width: 100%; flex: none; }
+  .account-team-table th:last-child, .account-team-table td:last-child { text-align: left; }
+  .settings-row-control { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-entrance, .workspace-welcome, .workspace-arrived { animation: none !important; }
+  .button > .icon { transition: none; transform: none !important; }
+}
+:root[data-reduced-motion='true'] :is(.workspace-entrance,.workspace-welcome,.workspace-arrived) { animation: none !important; }
+:root[data-reduced-motion='true'] .button > .icon { transition: none; transform: none !important; }

@@ -40,9 +40,16 @@ test('typing is not recorded; restore and reload remain drafts; explicit run mak
   await expect(page.getByRole('heading', { name: 'Run this search', exact: true })).toBeVisible();
   await expect(page.locator('.search-result-row')).toHaveCount(0);
   expect(searches(requests)).toHaveLength(1);
-  for (const action of ['share-search', 'save-query']) {
-    await page.locator(`[data-onboarding="${action}"]`).click();
-    await page.getByRole('link', { name: 'Back to results', exact: true }).click();
+  for (const [action, title] of [['share-search', 'Share search'], ['save-query', 'Save query']]) {
+    const draftUrl = page.url(), trigger = page.locator(`[data-onboarding="${action}"]`);
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: title, exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(draftUrl);
+    await dialog.getByRole('button', { name: 'Close dialog', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(page).toHaveURL(draftUrl);
     await expect(page.getByRole('heading', { name: 'Run this search', exact: true })).toBeVisible();
     expect(new URL(page.url()).searchParams.get('draft')).toBe('1'); expect(searches(requests)).toHaveLength(1);
   }
@@ -145,7 +152,11 @@ for (const width of [1440, 390, 320]) test(`search suggestions and history layou
   const requests: Request[] = []; await setup(page, requests);
   await page.setViewportSize({ width, height: width === 1440 ? 960 : 844 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/search'); await queryInput(page).fill('cad');
+  await page.goto('/search');
+  // The entrance keeps the workspace inert until its home input receives focus.
+  await expect(queryInput(page)).toBeFocused();
+  await queryInput(page).fill('cad');
+  await expect(queryInput(page)).toHaveValue('cad');
   await expect(page.getByRole('option', { name: 'Caddy 2 Product filter', exact: true })).toBeVisible();
   await expect(page.locator('.search-suggestions kbd')).toHaveCount(0);
   await expect(page.getByText('Choose a suggestion or continue typing', { exact: true })).toHaveCount(0);

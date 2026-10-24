@@ -23,6 +23,34 @@ async function setupSearch(page: Page, requests: RecordedRequest[], deferAnalyti
   });
 }
 
+test('workspace focus keeps restored results clear and suggestions open only for query interaction', async ({ page }) => {
+  const requests: RecordedRequest[] = [];
+  await setupSearch(page, requests);
+  await page.goto('/search');
+  const input = page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true });
+  const suggestions = page.getByRole('listbox', { name: 'Search suggestions', exact: true });
+  await expect(input).toBeFocused();
+  await input.fill('network');
+  await expect(suggestions).toBeVisible();
+  await input.press('Enter');
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  await expect(page.locator('main')).toBeFocused();
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await expect(suggestions).toHaveCount(0);
+  await input.focus();
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await input.press('ArrowDown');
+  await expect(suggestions).toBeVisible();
+  await input.press('Escape');
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Load analytics', exact: true })).toBeVisible();
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(2);
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+});
+
 test('local search views preserve drafts and analytics requires an explicit request', async ({ page }) => {
   const requests: RecordedRequest[] = [];
   const analyticsReplies: (() => void)[] = [];
@@ -207,14 +235,21 @@ test('search workspaces remain readable on desktop and mobile', async ({ page },
     await page.screenshot({ path: testInfo.outputPath(`search-filter-advanced-${width}.png`), fullPage: false });
     await expect(dialog.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('link', { name: 'Save', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Saved queries', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save current query', exact: true })).toBeEnabled();
+    const beforeAction = page.url();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    const saveDialog = page.getByRole('dialog', { name: 'Save query', exact: true });
+    await expect(saveDialog).toBeVisible();
+    await expect(saveDialog.getByRole('button', { name: 'Save current query', exact: true })).toBeEnabled();
+    expect(page.url()).toBe(beforeAction);
     await page.screenshot({ path: testInfo.outputPath(`search-saved-${width}.png`), fullPage: true });
-    await page.getByRole('link', { name: 'Back to results', exact: true }).click();
-    await page.getByRole('link', { name: 'Share', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Share search', exact: true })).toBeVisible();
+    await saveDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'Share', exact: true }).click();
+    const shareDialog = page.getByRole('dialog', { name: 'Share search', exact: true });
+    await expect(shareDialog).toBeVisible();
+    expect(page.url()).toBe(beforeAction);
     await page.screenshot({ path: testInfo.outputPath(`search-share-${width}.png`), fullPage: true });
+    await shareDialog.getByRole('button', { name: 'Close', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   }
 });

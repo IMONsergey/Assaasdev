@@ -1,14 +1,6 @@
-/* The workspace has one continuous canvas; only its tools float above content. */
-.app-shell .app-topbar {
-  background: transparent;
-  border-bottom: 0;
-  box-shadow: none;
-}
-.app-shell .app-topbar[data-over-content='true'] { background: var(--bg); }
-.app-shell .notification-link { background: color-mix(in srgb, var(--bg) 94%, transparent); }
-.app-shell .notification-link:hover { background: var(--surface-hover); }
+/* One workspace canvas, with navigation and account tools in the sidebar. */
 .app-shell .app-sidebar { --shell-motion: 360ms; transition: width var(--shell-motion) cubic-bezier(.22, 1, .36, 1); }
-.app-shell .app-topbar, .app-shell .workspace-main {
+.app-shell .workspace-main {
   transition: margin-left 360ms cubic-bezier(.22, 1, .36, 1), padding-inline 360ms cubic-bezier(.22, 1, .36, 1);
 }
 .app-shell .navigation-toggle {
@@ -62,12 +54,12 @@
 @keyframes account-quiet-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 760px) {
-  .app-shell .app-topbar, .app-shell .workspace-main { transition: none; }
+  .app-shell .workspace-main { transition: none; }
   .app-shell .app-sidebar { transition: transform 320ms cubic-bezier(.22, 1, .36, 1); }
   .app-shell .mobile-nav-backdrop { transition: opacity 280ms ease, visibility 280ms; }
   .account-popover--quiet .account-menu-item { min-height: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .app-shell .app-sidebar, .app-shell .app-topbar, .app-shell .workspace-main, .app-shell .brand-link, .app-shell .nav-label, .app-shell .navigation-toggle, .app-shell .navigation-toggle-icon > path:last-child, .app-shell .nav-link, .app-shell .account-nav, .app-shell .account-nav-chevron, .account-popover.account-popover--quiet:popover-open { transition: none !important; animation: none !important; }
+  .app-shell .app-sidebar, .app-shell .workspace-main, .app-shell .brand-link, .app-shell .nav-label, .app-shell .navigation-toggle, .app-shell .navigation-toggle-icon > path:last-child, .app-shell .nav-link, .app-shell .account-nav, .app-shell .account-nav-chevron, .account-popover.account-popover--quiet:popover-open { transition: none !important; animation: none !important; }
 }
-:root[data-reduced-motion='true'] :is(.app-sidebar, .app-topbar, .workspace-main, .brand-link, .nav-label, .navigation-toggle, .navigation-toggle-icon > path:last-child, .nav-link, .account-nav, .account-nav-chevron), :root[data-reduced-motion='true'] .account-popover.account-popover--quiet:popover-open { transition: none !important; animation: none !important; }
+:root[data-reduced-motion='true'] :is(.app-sidebar, .workspace-main, .brand-link, .nav-label, .navigation-toggle, .navigation-toggle-icon > path:last-child, .nav-link, .account-nav, .account-nav-chevron), :root[data-reduced-motion='true'] .account-popover.account-popover--quiet:popover-open { transition: none !important; animation: none !important; }

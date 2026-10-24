@@ -11,7 +11,8 @@ async function start(page:Page,id:string,fresh=true) {
     if(await existing.count()) await existing.getByRole('button',{name:'Close scenario guide',exact:true}).click();
     const navigation=page.getByRole('button',{name:'Open navigation',exact:true});
     if(await navigation.isVisible()) await navigation.click();
-    await page.getByRole('link',{name:'Scenarios',exact:true}).click();
+    await page.getByRole('button',{name:'Support',exact:true}).click();
+    await page.getByRole('dialog',{name:'Help & support',exact:true}).getByRole('link',{name:'Follow a scenario Search, investigation and payments',exact:true}).click();
     await page.getByRole('button',{name:`View scenario: ${findScenario(id)!.title}`,exact:true}).click();
   }
   await page.getByRole('dialog').getByRole('button',{name:'Start scenario',exact:true}).click();

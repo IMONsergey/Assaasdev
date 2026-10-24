@@ -18,7 +18,7 @@ async function hostUxFixture(page: Page, requests: RequestLog) {
           headers: { 'content-type': ['text/html'], server: ['research-server'] },
           tls_info: index % 10 === 0 ? { server_name: `service-${index}.example.test`, subject: { common_name: '*.example.test' }, issuer: 'Research CA', valid_from: '2026-09-01', valid_to: '2026-12-01' } : undefined,
           cert_domains: ['example.test', '*.example.test'],
-          security_txt: { is_security_txt: false, body: '', url: 'https://example.test/.well-known/security.txt', contacts: [] }, robots_txt: { status_code: 0, body: 'User-agent: *\nDisallow: /private/' },
+          security_txt: index === 1 ? { body: 'Contact: mailto:security@example.test\nExpires: 2027-10-01T00:00:00Z\nPolicy: https://example.test/security' } : { is_security_txt: false, body: '', url: 'https://example.test/.well-known/security.txt', contacts: [] }, robots_txt: { status_code: 0, body: 'User-agent: *\nDisallow: /private/' },
           detected_products: index === 0 ? Array.from({ length: 120 }, (_, product) => ({
             product: product === 0 ? 'Core server' : `Service product ${product}`, version: '2.0', vendor: 'Research vendor', labels: ['web'],
             cve_list: product === 0 ? Array.from({ length: 240 }, (_, cve) => ({ cve_id: `CVE-2026-${10000 + cve}`, base_score: cve === 0 ? 0 : 7.5 })) : [],
@@ -71,6 +71,10 @@ test('service workspace preserves legacy HTTP access and bounds products, CVEs a
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/hosts/192.0.2.44?tab=http&port=443');
   const detail = page.getByRole('region', { name: 'Selected service details', exact: true });
+  const catalog = page.getByRole('complementary', { name: 'Service list', exact: true });
+  await expect(catalog.locator('.host-service-row')).toHaveCount(25);
+  const catalogSize = await catalog.evaluate(element => ({ height: element.clientHeight, rows: element.querySelector('.host-service-rows')!.clientHeight }));
+  const expectStableCatalog = async () => { await expect.poll(() => catalog.evaluate(element => ({ height: element.clientHeight, rows: element.querySelector('.host-service-rows')!.clientHeight }))).toEqual(catalogSize); };
   await expect(page.getByRole('tab', { name: 'HTTP body', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(detail.locator('.host-banner')).toContainText('<main>Received HTTP content</main>');
   await capture(page, testInfo.outputPath('host-response-desktop.png'), true);
@@ -78,10 +82,12 @@ test('service workspace preserves legacy HTTP access and bounds products, CVEs a
   await expect(detail).toContainText('content-type');
   await page.getByRole('tab', { name: 'TLS', exact: true }).click();
   await expect(detail).toContainText('Research CA');
+  await expectStableCatalog();
   await capture(page, testInfo.outputPath('host-tls-desktop.png'), true);
   await page.getByRole('tab', { name: /^Products & CVE/ }).click();
   const products = page.getByRole('region', { name: 'Detected products', exact: true });
   await expect(products.locator('.host-product')).toHaveCount(6);
+  await expectStableCatalog();
   const cves = page.getByRole('region', { name: 'CVE associations for Core server', exact: true });
   await expect(cves.locator('.host-cve-chips > button')).toHaveCount(12);
   await expect(cves.locator('.host-cve-chips .badge').first()).toHaveText('0.0');
@@ -100,15 +106,27 @@ test('service workspace preserves legacy HTTP access and bounds products, CVEs a
   await page.getByRole('tab', { name: 'Data', exact: true }).click();
   const table = page.getByRole('region', { name: 'Core server exposed data', exact: true });
   await expect(table.locator('tbody tr')).toHaveCount(50);
+  await expectStableCatalog();
   await capture(page, testInfo.outputPath('host-data-desktop.png'), false);
   await page.getByRole('textbox', { name: 'Search Core server exposed data', exact: true }).fill('entry-09999');
   await expect(table.locator('tbody tr')).toHaveCount(1);
   await expect(table).toContainText('entry-09999');
+  await expectStableCatalog();
   await page.getByRole('tab', { name: 'Web files', exact: true }).click();
   await page.getByRole('tab', { name: 'robots.txt', exact: true }).click();
   await expect(detail.locator('.host-banner')).toContainText('Disallow: /private/');
-  await expect(detail.locator('.host-facts dd')).toHaveText('0');
+  await expect(detail.locator('.host-facts > div').filter({ has: page.locator('dt', { hasText: /^HTTP status$/ }) }).locator('dd')).toHaveText('0');
+  await expect(detail.locator('.host-facts > div').filter({ has: page.locator('dt', { hasText: /^User agents$/ }) }).locator('dd')).toHaveText('*');
+  await expect(detail.locator('.host-facts > div').filter({ has: page.locator('dt', { hasText: /^Disallow rules$/ }) }).locator('dd')).toHaveText('1');
+  await expectStableCatalog();
   await capture(page, testInfo.outputPath('host-web-files-desktop.png'), true);
+  await page.getByRole('button', { name: 'Next matching service', exact: true }).click();
+  await page.getByRole('tab', { name: 'security.txt', exact: true }).click();
+  await expect(detail.locator('.host-facts > div').filter({ has: page.locator('dt', { hasText: /^Contacts$/ }) }).locator('dd')).toContainText('security@example.test');
+  await expect(detail.locator('.host-facts > div').filter({ has: page.locator('dt', { hasText: /^Policy$/ }) }).locator('dd')).toContainText('https://example.test/security');
+  await expect(detail.locator('.host-facts')).not.toContainText('Not provided');
+  await page.getByRole('button', { name: 'Previous matching service', exact: true }).click();
+  await expectStableCatalog();
   await page.getByRole('tab', { name: 'DNS & domains', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'DNS records', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'domains records', exact: true }).locator('tbody tr')).toHaveCount(50);
@@ -163,7 +181,7 @@ test('private legacy web-file links keep task scope and display false, zero and 
   await expect(page.getByText('Private data', { exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Web files', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'robots.txt', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#host-web-file-panel-robots .host-facts dd')).toHaveText('0');
+  await expect(page.locator('#host-web-file-panel-robots .host-facts > div').filter({ has: page.locator('dt', { hasText: /^HTTP status$/ }) }).locator('dd')).toHaveText('0');
   await page.getByRole('tab', { name: 'security.txt', exact: true }).click();
   await expect(page.locator('#host-web-file-panel-security .host-facts > div').first()).toContainText('No');
   await expect(page.locator('#host-web-file-panel-security .host-banner')).toHaveText('Empty response');
@@ -183,15 +201,34 @@ test('adjacent services cross catalog pages while keeping the filtered scope and
   await page.goto('/hosts/192.0.2.44?tab=services&port=10048&service_protocol=https&view=tls');
   const detail = page.getByRole('region', { name: 'Selected service details', exact: true });
   const navigation = page.getByRole('navigation', { name: 'Navigate matching services', exact: true });
+  const catalog = page.getByRole('complementary', { name: 'Service list', exact: true });
+  const pages = page.getByRole('navigation', { name: 'Received service pages', exact: true });
   await expect(navigation).toContainText('Service 25 of 500 matching');
   await navigation.getByRole('button', { name: 'Next matching service', exact: true }).click();
   await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10050');
+  await expect(catalog.getByRole('button', { pressed: true })).toContainText('10050');
   await expect(page.getByRole('navigation', { name: 'Received service pages', exact: true })).toContainText('2 / 20');
   await expect(page.getByRole('tab', { name: 'TLS', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveAttribute('data-control-value', 'https');
   await navigation.getByRole('button', { name: 'Previous matching service', exact: true }).click();
   await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10048');
   await expect(page.getByRole('navigation', { name: 'Received service pages', exact: true })).toContainText('1 / 20');
+  await pages.getByRole('button', { name: 'Next service page', exact: true }).click();
+  await expect(pages).toContainText('2 / 20');
+  await expect(catalog.getByRole('button', { pressed: true })).toContainText('10050');
+  await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10050');
+  await expect(page).toHaveURL(url => url.searchParams.get('service_page') === '2' && url.searchParams.get('port') === '10050' && url.searchParams.get('view') === 'tls');
+  await expect(detail.getByText(/The selected service is (?:on another list page|outside the list filters)/)).toHaveCount(0);
+  await catalog.getByRole('combobox', { name: 'Order', exact: true }).click();
+  // A sort after a page click must retain the new selection, even before React renders it.
+  await page.getByRole('option', { name: 'Port descending', exact: true }).evaluate(option => {
+    const nextPage = document.querySelector<HTMLButtonElement>('nav[aria-label="Received service pages"] button[aria-label="Next service page"]');
+    if (!nextPage) throw new Error('The service pagination must be available.');
+    nextPage.click(); (option as HTMLElement).click();
+  });
+  await expect(catalog.getByRole('button', { pressed: true })).toContainText('10100');
+  await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10100');
+  await expect(page).toHaveURL(url => url.searchParams.get('service_order') === 'port-desc' && url.searchParams.get('service_page') === '18' && url.searchParams.get('port') === '10100');
   expect(hostRequests(requests)).toHaveLength(1);
   await capture(page, testInfo.outputPath('host-catalog-navigation-desktop.png'));
 });

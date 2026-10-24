@@ -51,7 +51,7 @@ export function SupportDialog({ open, onClose, initialTopic, initialMessage }: {
         <span><strong>Follow a scenario</strong><small>Search, investigation and payments</small></span><Icon name="arrow" size={18} />
       </Link>
       <div className="support-resource-list support-resource-list--compact">
-        <Link to="/api" onClick={close}><span className="support-resource-icon"><Icon name="code" size={20} /></span><span><strong>API access</strong><small>Keys, usage and limits</small></span><Icon name="chevron-right" size={16} /></Link>
+        <Link to="/api?section=docs" onClick={close}><span className="support-resource-icon"><Icon name="code" size={20} /></span><span><strong>API documentation</strong><small>Requests, examples and API access</small></span><Icon name="chevron-right" size={16} /></Link>
         <Link to="/settings?section=legal" onClick={close}><span className="support-resource-icon"><Icon name="file" size={20} /></span><span><strong>Policies & agreements</strong><small>Terms, privacy and data</small></span><Icon name="chevron-right" size={16} /></Link>
       </div>
       <div className="support-contact-line"><Icon name="mail" size={15} /><a href={`mailto:${supportEmail}`}>{supportEmail}<Icon name="arrow-up-right" size={14} /></a></div>

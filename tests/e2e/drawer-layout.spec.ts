@@ -17,9 +17,9 @@ test('left filter drawers keep their actions reachable with dark theme and enlar
       }
       const box = await dialog.boundingBox();
       const workspace = await page.locator('.workspace-main').boundingBox();
-      const header = await page.locator('.app-topbar').boundingBox();
+      await expect(page.locator('.app-topbar')).toHaveCount(0);
       expect(box!.x).toBeGreaterThanOrEqual(workspace!.x);
-      expect(box!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
+      expect(box!.y).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(width);
       expect(box!.width).toBeLessThanOrEqual(width);
       await expect(dialog.getByRole('button', { name: 'Close dialog', exact: true })).toBeInViewport();

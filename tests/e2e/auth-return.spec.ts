@@ -137,9 +137,11 @@ test('explicit guest access returns to the original local view without signing i
   await page.goto(`/auth/login?returnTo=${encodeURIComponent(destination)}`);
   await page.getByRole('button', { name: 'Explore as a guest', exact: true }).click();
   await expect(page).toHaveURL(destination);
-  await expect(page.getByRole('link', { name: 'Guest session', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Appearance', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('button', { name: 'Light theme', exact: true })).toBeVisible();
+  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  if (await menu.isVisible()) await menu.click();
+  await expect(page.getByRole('link', { name: 'Guest session', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'View credits and usage. 20 daily searches available', exact: true })).toBeVisible();
   expect(writes).toEqual([{ path: '/backend/auth/guest', body: {} }]);
 });

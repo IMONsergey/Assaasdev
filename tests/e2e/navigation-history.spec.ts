@@ -59,6 +59,8 @@ test('host tab and service changes preserve the desktop reading position', async
   await expect(page.getByRole('tabpanel', { name: 'TLS', exact: true })).toBeVisible();
   const after = await page.evaluate(() => ({ y: scrollY, max: document.documentElement.scrollHeight - innerHeight, document: document.documentElement.scrollHeight, detail: document.querySelector('.host-detail-container')?.getBoundingClientRect().height }));
   await test.info().attach('tab-reading-position.json', { body: JSON.stringify({ before, after }), contentType: 'application/json' });
+  expect(after.document).toBe(before.document);
+  expect(after.detail).toBe(before.detail);
   await expect.poll(() => page.evaluate(position => Math.abs(window.scrollY - position), tabPosition)).toBeLessThan(3);
   expect(new URL(page.url()).searchParams.get('view')).toBe('tls');
   const service = services.locator('.host-service-row').nth(2);

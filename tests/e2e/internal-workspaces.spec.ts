@@ -108,6 +108,7 @@ test('scanner filters all loaded tasks and preserves the list page through priva
   await page.getByLabel('Find a task', { exact: true }).fill('planned-999');
   await expect(page.locator('.scanner-task-table--planned tbody tr')).toHaveCount(1);
   await expect(page.locator('.scanner-task-table--planned')).toContainText('plan-999');
+  await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toContainText('1 result · Page 1 of 1');
 });
 
 test('rapid scanner filters compose the current URL and preserve Back and Forward history', async ({ page }) => {

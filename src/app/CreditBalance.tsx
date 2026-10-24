@@ -17,7 +17,7 @@ function UsageMeter({ usage, label }: { usage: CreditUsage; label: string }) {
   </div>;
 }
 
-export function CreditBalance() {
+export function CreditBalance({ collapsed = false }: { collapsed?: boolean }) {
   const { user, session, metadata, refreshSession } = useApp();
   const [open, setOpen] = useState(false), [refreshing, setRefreshing] = useState(false), [error, setError] = useState('');
   const dialogId = useId();
@@ -37,13 +37,14 @@ export function CreditBalance() {
   }
 
   return <>
-    <button type="button" className={`credit-trigger${search.low && !unrestricted ? ' credit-trigger--low' : ''}`}
+    <button type="button" className={`credit-trigger${collapsed ? ' credit-trigger--collapsed' : ''}${search.low && !unrestricted ? ' credit-trigger--low' : ''}`}
       aria-label={`View credits and usage. ${available}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? dialogId : undefined}
       title={`${available} · View usage`} onClick={() => setOpen(true)}>
       <span className="credit-trigger-line"><span className="credit-trigger-label">{guest ? 'Searches' : 'Credits'}</span>
         <strong className="credit-value-full">{number(search.available ?? undefined)}</strong>
         <strong className="credit-value-compact">{compactCredits(search.available)}</strong>
       </span>
+      {collapsed && <Icon name="chart" size={19} className="credit-collapsed-icon" />}
       <span className={`credit-trigger-track${search.fraction === null ? ' credit-trigger-track--unknown' : ''}`} aria-hidden="true">
         {search.fraction !== null && <span style={{ width: `${search.fraction * 100}%` }} />}
       </span>

@@ -138,19 +138,22 @@ for(const width of [1440,320]) for(const category of scenarioCategories) {
   });
 }
 
-test('sharing walkthrough opens the real share page and waits for explicitly created link',async({page})=>{
+test('sharing walkthrough opens the share dialog and waits for explicitly created link',async({page})=>{
   await start(page,'share-search');
   const guide=guideOf(page);
   await page.locator('#main-search-query').fill('example');
   await page.getByRole('button',{name:'Run search',exact:true}).click();
   await expect(guide).toContainText('Step 2 of 4');
+  const searchUrl=page.url();
   await guide.getByRole('button',{name:'Open sharing',exact:true}).click();
-  await expect(page).toHaveURL(/\/search\/share\?/);
+  const share=page.getByRole('dialog',{name:'Share search',exact:true});
+  await expect(share).toBeVisible();
+  await expect(page).toHaveURL(searchUrl);
   await expect(guide).toContainText('Step 3 of 4');
-  await expect(page.locator('.search-created-link')).toHaveCount(0);
-  await page.getByRole('button',{name:'Create search link',exact:true}).click();
+  await expect(share.locator('.search-created-link')).toHaveCount(0);
+  await share.getByRole('button',{name:'Create search link',exact:true}).click();
   await expect(guide).toContainText('Step 4 of 4');
-  await expect(page.locator('.search-created-link input')).toBeVisible();
+  await expect(share.locator('.search-created-link input')).toBeVisible();
   await expect(guide).toHaveAttribute('data-target-found','true');
 });
 

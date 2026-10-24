@@ -18,13 +18,23 @@ async function mockAccount(page: Page, initial: Profile, fullAccess = false) {
 const creditButton = (page: Page) => page.getByRole('button', { name: /^View credits and usage\./ });
 const creditDialog = (page: Page) => page.getByRole('dialog', { name: 'Credits & usage', exact: true });
 const noOverflow = async (page: Page) => expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+async function revealCredits(page: Page) {
+  await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
+  const sidebar = page.locator('#workspace-navigation');
+  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  if (await sidebar.getAttribute('inert') !== null && await menu.isVisible()) await menu.click();
+  const trigger = creditButton(page);
+  await expect(trigger).toBeVisible();
+  await trigger.scrollIntoViewIfNeeded();
+  return trigger;
+}
 
 test('credit balance and its dialog stay operable from 280px to 1920px with larger text', async ({ page }, info) => {
   await page.addInitScript(() => localStorage.setItem('apcosys.view.v1', JSON.stringify({ appearanceVersion: 2, theme: 'light', density: 'comfortable', fontScale: 125, reducedMotion: true })));
   await page.goto('/search');
   for (const width of [280, 320, 390, 540, 768, 1024, 1440, 1920]) await test.step(`${width}px`, async () => {
     await page.setViewportSize({ width, height: 900 });
-    const trigger = creditButton(page);
+    const trigger = await revealCredits(page);
     await expect(trigger).toBeInViewport();
     expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await expect(trigger.locator('.credit-trigger-track')).toBeVisible();
@@ -40,6 +50,11 @@ test('credit balance and its dialog stay operable from 280px to 1920px with larg
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
+    if (width <= 760) {
+      // The balance dialog returns to its sidebar trigger; close navigation separately.
+      await page.locator('#workspace-navigation').getByRole('button', { name: 'Close navigation', exact: true }).click();
+      await expect(page.locator('#workspace-navigation')).toHaveAttribute('inert', '');
+    }
     expect(await page.evaluate(() => [document.body.style.overflow, document.documentElement.style.overflow])).toEqual(['', '']);
     await noOverflow(page);
   });
@@ -49,7 +64,7 @@ test('available, extra, unknown and zero credits remain distinct and refresh onl
   const profile = { ...seedProfile(), credits: 750, purchased_credits: 400, subscription: { type: 'Free', credits: 500 } } as Profile;
   const mock = await mockAccount(page, profile);
   await page.goto('/settings');
-  await creditButton(page).click();
+  await (await revealCredits(page)).click();
   const dialog = creditDialog(page), meter = dialog.getByRole('meter', { name: 'Search credits relative to included allocation', exact: true });
   await expect(meter).toHaveAttribute('aria-valuenow', '500');
   await expect(meter).toHaveAttribute('aria-valuemax', '500');
@@ -72,7 +87,7 @@ test('unrestricted access at zero credits is not presented as a purchase require
   await mockAccount(page, { ...seedProfile(), credits: 0 }, true);
   await page.goto('/notifications');
   await expect(page.getByText('0 unread', { exact: true })).toBeVisible();
-  await creditButton(page).click();
+  await (await revealCredits(page)).click();
   const dialog = creditDialog(page);
   await expect(dialog).toContainText('Unrestricted access is active.');
   await expect(dialog).not.toContainText('No search credits remain.');
@@ -84,15 +99,17 @@ test('unrestricted access at zero credits is not presented as a purchase require
 test('mobile navigation stays isolated, reaches account actions in landscape and unlocks after a dialog', async ({ page }) => {
   await page.setViewportSize({ width: 667, height: 375 });
   await page.goto('/search');
-  const menu = page.getByRole('button', { name: 'Open navigation' });
+  const menu = page.locator('button.mobile-workspace-menu');
   const sidebar = page.locator('#workspace-navigation');
+  await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
   await expect(sidebar).toHaveAttribute('inert', '');
   await menu.focus();
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => !!document.activeElement?.closest('#workspace-navigation'))).toBe(false);
   await menu.click();
   await expect(page.locator('main')).toHaveAttribute('inert', '');
-  await expect(page.locator('.app-topbar')).toHaveAttribute('inert', '');
+  await expect(page.locator('.app-topbar')).toHaveCount(0);
+  await expect(menu).toHaveAttribute('inert', '');
   const account = sidebar.getByRole('button', { name: 'Account menu', exact: true });
   const support = sidebar.getByRole('button', { name: 'Support', exact: true });
   await account.focus();

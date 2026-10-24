@@ -1,4 +1,19 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function readCreditLabel(page: Page, expected?: string) {
+  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  const opened = await menu.isVisible();
+  if (opened) await menu.click();
+  const credit = page.getByRole('button', { name: /^View credits and usage\./ });
+  await expect(credit).toBeVisible();
+  if (expected) await expect(credit).toHaveAccessibleName(expected);
+  const label = (await credit.getAttribute('aria-label'))!;
+  if (opened) {
+    await page.getByRole('complementary', { name: 'Workspace navigation' }).getByRole('button', { name: 'Close navigation', exact: true }).click();
+    await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+  }
+  return label;
+}
 
 test('scan import keeps a headerless first target, deduplicates and reviews a 1,000-port task', async ({ page }) => {
   await page.goto('/scanner/new');
@@ -94,22 +109,21 @@ test('scanner task cards keep details and actions reachable on a narrow screen',
 test('files back and forward restore the matching response without a fresh search', async ({ page }) => {
   await page.goto('/files');
   await page.getByRole('button', { name: 'Search files', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '8 file records', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '1,220 file records', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByLabel('Keywords', { exact: true }).fill('not-present-anywhere');
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(page.getByRole('heading', { name: '0 file records', exact: true })).toBeVisible();
-  const balance = page.getByRole('button', { name: /^View credits and usage\./ });
-  const creditsAfterSearch = await balance.getAttribute('aria-label');
+  const creditsAfterSearch = await readCreditLabel(page);
   await page.goBack();
-  await expect(page.getByLabel('Keywords', { exact: true })).toHaveValue('');
-  await expect(page.getByRole('heading', { name: '8 file records', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Filename or keywords', { exact: true })).toHaveValue('');
+  await expect(page.getByRole('heading', { name: '1,220 file records', exact: true })).toBeVisible();
   await expect(page.getByText('Looking for matching records…', { exact: true })).toHaveCount(0);
-  await expect(balance).toHaveAttribute('aria-label', creditsAfterSearch!);
+  await readCreditLabel(page, creditsAfterSearch);
   await page.goForward();
-  await expect(page.getByLabel('Keywords', { exact: true })).toHaveValue('not-present-anywhere');
+  await expect(page.getByLabel('Filename or keywords', { exact: true })).toHaveValue('not-present-anywhere');
   await expect(page.getByRole('heading', { name: '0 file records', exact: true })).toBeVisible();
-  await expect(balance).toHaveAttribute('aria-label', creditsAfterSearch!);
+  await readCreditLabel(page, creditsAfterSearch);
   await page.getByRole('button', { name: 'Edit filters', exact: true }).click();
   await expect(page.getByLabel('Hostname', { exact: true })).toBeFocused();
   await expect(page.getByRole('button', { name: 'Apply filters', exact: true })).toBeVisible();
