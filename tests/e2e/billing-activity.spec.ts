@@ -43,9 +43,36 @@ test('tracked crypto activity preserves exact amounts and never grants access fr
   await expect(dialog.getByText('Decimal places', { exact: true }).locator('..')).toContainText('18');
   await expect(dialog.getByRole('link')).toHaveCount(0);
   await expect.poll(() => dialog.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  const transactionRecords = dialog.getByRole('region', { name: 'Transaction records', exact: true });
+  const dialogBody = dialog.locator('.dialog-body');
+  await dialog.getByRole('button', { name: 'Close dialog', exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(transactionRecords).toBeFocused();
+  await expect.poll(() => transactionRecords.evaluate(node => {
+    const style = getComputedStyle(node);
+    return node.matches(':focus-visible') && style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 2;
+  })).toBe(true);
+  await dialogBody.evaluate(node => { node.scrollTop = 0; });
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => dialogBody.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await expect(transactionRecords).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect.poll(() => dialogBody.evaluate(node => node.scrollTop)).toBe(0);
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(accessibility.violations.map(item => ({ id: item.id, targets: item.nodes.map(node => node.target) }))).toEqual([]);
   await dialog.screenshot({ path: testInfo.outputPath('crypto-transactions-390.png') });
+  await page.setViewportSize({ width: 320, height: 844 });
+  const grid = dialog.locator('.crypto-details');
+  await expect.poll(() => grid.evaluate(node => {
+    const bounds = node.getBoundingClientRect();
+    return [...node.children].every(child => {
+      const box = child.getBoundingClientRect();
+      return Math.abs(box.left - bounds.left) <= 1 && Math.abs(box.width - bounds.width) <= 1;
+    });
+  })).toBe(true);
+  expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  expect(await dialog.locator('.crypto-exact').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true);
+  await dialog.screenshot({ path: testInfo.outputPath('crypto-transactions-320.png') });
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect(await page.locator('.billing-metric').allTextContents()).toEqual(before);

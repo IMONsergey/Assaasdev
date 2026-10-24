@@ -7,13 +7,18 @@ export function cellText(value: unknown): string {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
+/** Count every received field, including unnamed cells in uneven array rows. */
+export function arrayColumnCount(values: readonly unknown[], headers?: readonly unknown[]): number {
+  return values.reduce<number>((width, row) => Math.max(width, Array.isArray(row) ? row.length : 1), headers?.length || 0);
+}
+
 /** Keep every received cell, including uneven rows and missing column headers. */
 export function receivedTable(values: unknown[], headers?: unknown[]): ReceivedTable {
   const safeValues = Array.isArray(values) ? values : [];
   const arrays = headers !== undefined || safeValues.every(Array.isArray);
   if (arrays) {
     const cells = safeValues.map(value => Array.isArray(value) ? value : [value]);
-    const width = cells.reduce((maximum, row) => Math.max(maximum, row.length), headers?.length || 0);
+    const width = arrayColumnCount(cells, headers);
     return { columns: Array.from({ length: width }, (_, index) => cellText(headers?.[index]) || `Column ${index + 1}`), rows: cells.map((row, index) => ({ index, cells: row, searchText: row.map(cellText).join('\n').toLocaleLowerCase() })) };
   }
   const records = safeValues.length > 0 && safeValues.every(value => Boolean(value && typeof value === 'object' && !Array.isArray(value)));

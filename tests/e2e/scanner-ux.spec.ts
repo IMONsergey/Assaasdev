@@ -44,6 +44,16 @@ test('creating from a filtered scanner list preserves its URL context and submit
   await expect(page.locator('.scanner-task-table tbody tr').first().locator('.scanner-target-button')).toBeInViewport({ ratio: 1 });
   await page.screenshot({ path: testInfo.outputPath('scanner-initial-viewport-320.png'), fullPage: false });
   await page.locator('.scanner-page').screenshot({ path: testInfo.outputPath('scanner-tasks-320.png') });
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(firstTask).toContainText('host-20.example.test');
+  await expect.poll(async () => {
+    const menu = await page.getByRole('button', { name: 'Open navigation', exact: true }).boundingBox();
+    const table = await page.locator('.scanner-tasks-table-wrap').boundingBox();
+    return menu && table ? table.y - menu.y - menu.height : -1;
+  }).toBeGreaterThanOrEqual(12);
+  await page.screenshot({ path: testInfo.outputPath('scanner-pagination-offset-320.png'), fullPage: false });
+  await page.getByRole('button', { name: 'Previous', exact: true }).click();
+  await expect(firstTask).toContainText('host-10.example.test');
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.getByRole('tab', { name: /^Scheduled/ }).click();
   await expect(page.locator('.scanner-task-table--planned')).toContainText('host-scheduled.example.test');

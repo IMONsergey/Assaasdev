@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeFacetValues, analyticsRequest, decodeSearch, encodeSearch, facetUnit, parseHostRows, searchAccessIssues, selectedType, validateSearchRequest, withType, withoutShareToken, toggleFacet } from './model';
+import { activeFacetValues, analyticsCostLabel, analyticsRequest, decodeSearch, encodeSearch, FACET_NAMES, facetUnit, filterSummary, parseHostRows, searchAccessIssues, selectedType, validateSearchRequest, withType, withoutShareToken, toggleFacet } from './model';
 
 describe('search context', () => {
   it('round-trips the complete search body and separately restores a share token', () => {
@@ -67,6 +67,28 @@ describe('search context', () => {
     expect(validateSearchRequest({ min_size_mb: 0 }).min_size_mb).toBe(0);
     expect(facetUnit('country_name')).toBe('Hosts');
     expect(facetUnit('port')).toBe('Records');
+  });
+  it('estimates WebSocket analytics from known enabled categories and keeps each access mode distinct', () => {
+    const publicAccess = { dataset: 'public' as const, shared: false, guest: false };
+    const facets = FACET_NAMES.map((key, priority) => ({ key, priority, enabled: true }));
+    expect(analyticsCostLabel({ ...publicAccess, facets: facets.slice(0, 1) })).toBe('Estimated 1 search credit · 1 category');
+    expect(analyticsCostLabel({ ...publicAccess, facets: facets.slice(0, 4) })).toBe('Estimated 1 search credit · 4 categories');
+    expect(analyticsCostLabel({ ...publicAccess, facets: facets.slice(0, 5) })).toBe('Estimated 2 search credits · 5 categories');
+    expect(analyticsCostLabel({ ...publicAccess, facets })).toBe('Estimated 3 search credits · 12 categories');
+    expect(analyticsCostLabel({ ...publicAccess, facets: [facets[0], facets[0], { ...facets[1], enabled: false }] })).toBe('Estimated 1 search credit · 1 category');
+    expect(analyticsCostLabel({ ...publicAccess, facets: [] })).toBe('1 search credit per 4 categories, rounded up');
+    expect(analyticsCostLabel({ ...publicAccess, facets: facets.map(facet => ({ ...facet, enabled: false })) })).toBe('1 search credit per 4 categories, rounded up');
+    expect(analyticsCostLabel(publicAccess)).toBe('1 search credit per 4 categories, rounded up');
+    expect(analyticsCostLabel({ ...publicAccess, guest: true, facets })).toBe('Uses 1 daily request');
+    expect(analyticsCostLabel({ ...publicAccess, dataset: 'private', facets })).toBe('Estimated 1 search credit');
+    expect(analyticsCostLabel({ ...publicAccess, dataset: 'private', guest: true, shared: true, facets })).toBe('Uses one link use and the creator’s access');
+  });
+  it('labels filters consistently with the editor without changing nested logic or custom field names', () => {
+    const filter = { operator: 'AND' as const, filters: [{ field: 'country_name', value: 'Germany' }, { operator: 'NOT' as const, filters: [{ field: 'status_code', value: '404' }, { field: 'tls_info.server_name', value: 'example.com' }] }] };
+    expect(filterSummary(filter)).toBe('AND (Country: Germany, NOT (HTTP status: 404, TLS server name: example.com))');
+    expect(filter.filters[0]).toEqual({ field: 'country_name', value: 'Germany' });
+    expect(filterSummary({ field: 'custom_field', value: 'kept' })).toBe('custom_field: kept');
+    expect(filterSummary({ field: 'constructor', value: 'kept' })).toBe('constructor: kept');
   });
   it('keeps conditional type logic visibly custom and checks nested access restrictions', () => {
     const request = { simple_search_filters: [{ operator: 'NOT' as const, filters: [{ field: 'type', value: 'ipv4' }, { field: 'labels', value: 'leak' }] }], min_size_mb: 0 };

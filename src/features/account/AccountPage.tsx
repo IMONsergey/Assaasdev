@@ -134,7 +134,11 @@ export function SecurityPanel({ user }: { user: Profile }) {
     event.preventDefault();
     const formNode = event.currentTarget;
     const form = new FormData(formNode);
-    if (form.get('new_password') !== form.get('confirm_password')) { setNotice('The new passwords do not match.'); return; }
+    if (form.get('new_password') !== form.get('confirm_password')) {
+      setNotice('The new passwords do not match.');
+      formNode.querySelector<HTMLInputElement>('[name="confirm_password"]')?.focus();
+      return;
+    }
     setNotice('');
     const result = await password.run(() => api.http('/auth/password-reset', { method: 'POST', mutation: true, body: { old_password: String(form.get('old_password')), new_password: String(form.get('new_password')) } }), 'Your password has been updated.');
     if (result.ok) formNode.reset();
@@ -247,7 +251,7 @@ export function TeamPanel({ user }: { user: Profile }) {
     if (result.ok) await refreshSession().catch(() => undefined);
   }
   return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Team access</h2><p className="muted">Share your plan and credit balance with existing APCOSYS users.</p></div><Badge tone="accent">{isMember ? 'Member' : canManage ? 'Owner access' : 'Organization access'}</Badge></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
-      {user.team?.team_owner_name && <p>Owner: <strong>{user.team.team_owner_name}</strong>{user.team.team_owner_email ? ` · ${user.team.team_owner_email}` : ''}</p>}
+      {user.team?.team_owner_name && <p className="account-break">Owner: <strong>{user.team.team_owner_name}</strong>{user.team.team_owner_email ? ` · ${user.team.team_owner_email}` : ''}</p>}
       {canManage ? <><form className="account-member-form" onSubmit={(event) => void add(event)}><Field label="Member user ID" value={memberId} onChange={(event) => { setMemberId(event.target.value); setMemberError(''); }} error={memberError} disabled={operation.busy} required hint="Enter an existing APCOSYS user ID. This does not send an email invitation." /><Button type="submit" loading={operation.busy} disabled={operation.blocked || !memberId.trim()}>Add member</Button></form>{members.length ? <div className="table-wrap account-team-table-wrap"><table className="data-table account-team-table" aria-label="Organization members"><thead><tr><th>Member</th><th>Added</th><th><span className="muted">Action</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.user_id}><td><strong>{member.user_name || member.user_id}</strong><div className="muted">{member.email || 'No email'}</div></td><td data-label="Added">{formatDate(member.added_at)}</td><td><Button variant="ghost" size="sm" disabled={operation.blocked} className="row-action row-action--danger" aria-label={`Remove ${member.user_name || member.user_id}`} onClick={() => setTarget({ id: member.user_id, name: member.user_name || member.user_id })}><Icon name="trash" size={16} />Remove</Button></td></tr>)}</tbody></table></div> : <EmptyState title="No members yet" description="Add an existing user by their APCOSYS user ID." />}</> : isMember ? <><p className="muted">The owner manages membership. You can leave the organization at any time.</p><Button variant="secondary" disabled={operation.blocked} onClick={() => setTarget('leave')}>Leave organization</Button></> : <Alert tone="info" actions={<Link className="inline-link" to="/billing">View plans →</Link>}>Organization membership is managed by a Business account owner.</Alert>}
     </Card><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void remove()} title={target === 'leave' ? 'Leave this organization?' : 'Remove this member?'} description={target === 'leave' ? 'You will stop using the owner’s shared plan and credits.' : `Remove ${target && typeof target !== 'string' ? target.name : 'this member'} from the shared plan?`} confirmLabel={target === 'leave' ? 'Leave organization' : 'Remove member'} danger busy={operation.busy} /></div>;
 }

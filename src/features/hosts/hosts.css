@@ -52,7 +52,7 @@
 .host-product-mark { width:36px; height:36px; flex:0 0 36px; display:inline-flex; align-items:center; justify-content:center; color:var(--accent-text); background:var(--tint); border-radius:8px; }
 .host-technology-name { display:flex; flex-direction:column; min-width:0; gap:3px; }
 .host-technology-name>strong { font-size:.93rem; font-weight:500; overflow-wrap:anywhere; }
-.host-technology-name>small { color:var(--muted); font-size:.78rem; }
+.host-technology-name>small { color:var(--muted); font-size:.78rem; overflow-wrap:anywhere; }
 .host-technology-count { color:var(--muted); font-size:.76rem; text-align:right; margin-left:auto; flex-shrink:0; }
 .host-technology-list>button>.icon { color:var(--muted); flex-shrink:0; }
 .host-observation { padding-top:4px; }
@@ -118,7 +118,7 @@
 .host-service-detail>.tabs button { font-size:.85rem; min-height:42px; }
 .host-service-panel { display:flex; flex-direction:column; gap:20px; min-width:0; }
 .host-section-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
-.host-section-heading h2,.host-section-heading h3,.host-section-heading h4 { font:550 1.14rem/1.4 var(--font-display); letter-spacing:-.015em; margin:0; }
+.host-section-heading h2,.host-section-heading h3,.host-section-heading h4 { min-width:0; overflow-wrap:anywhere; font:550 1.14rem/1.4 var(--font-display); letter-spacing:-.015em; margin:0; }
 .host-section-heading>.cluster { gap:6px; }
 .host-section-heading .button { font-size:.78rem; min-height:32px; padding:5px 8px; }
 .host-secondary-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
@@ -173,8 +173,9 @@
 .host-product-heading>div:last-child { min-width:0; }
 .host-product-heading h3 { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:0; font:550 1.14rem/1.4 var(--font-display); overflow-wrap:anywhere; }
 .host-product-heading h3>.badge { font-family:var(--font-ui); font-size:.75rem; letter-spacing:0; }
-.host-product-heading p { margin:3px 0 0; color:var(--muted); font-size:.78rem; }
+.host-product-heading p { margin:3px 0 0; color:var(--muted); font-size:.78rem; overflow-wrap:anywhere; }
 .host-product-labels { display:flex; flex-wrap:wrap; gap:7px; margin-top:16px; }
+.host-service-title h2 .badge,.host-product-heading h3>.badge,.host-product-labels .badge { min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
 .host-product-labels>details { font-size:.78rem; color:var(--muted); min-width:0; }
 .host-product-labels>details[open] { flex-basis:100%; }
 .host-product-labels summary { cursor:pointer; }

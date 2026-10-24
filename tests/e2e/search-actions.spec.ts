@@ -127,27 +127,38 @@ test('file examples submit explicit filters and thousand-character names keep a 
   const requests: RequestFrame[] = [];
   const longName = 'reports_' + 'very-long-filename-'.repeat(70) + 'final-preview.png';
   const key = 'assets/' + longName;
+  const unicodeKey = 'assets/' + '漢字😀'.repeat(350) + '.png';
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ json: seedProfile() }));
   await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(raw => {
     const frame = JSON.parse(String(raw)) as RequestFrame; requests.push(frame);
-    const data = frame.type === 'buckets' ? { result_count: 1, result: [{ key, host: 'storage.example.test', container: 'public', extension: 'png', size_mb: 0, protocol: 'https' }] } : { unread_count: 0 };
+    const data = frame.type === 'buckets' ? { result_count: 2, result: [key, unicodeKey].map(objectKey => ({ key: objectKey, host: 'storage.example.test', container: 'public', extension: 'png', size_mb: 0, protocol: 'https' })) } : { unread_count: 0 };
     socket.send(JSON.stringify({ id: frame.id, type: frame.type, data, metadata: { subscription_type: 'Business' } }));
   }));
   await page.goto('/files');
   await expect(page.getByRole('heading', { name: 'Search indexed files', exact: true })).toBeVisible();
   expect(requests.filter(frame => frame.type === 'buckets')).toHaveLength(0);
   await page.getByRole('button', { name: /Images & assets/ }).click();
-  await expect(page.getByRole('heading', { name: '1 file record', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '2 file records', exact: true })).toBeVisible();
   expect(requests.find(frame => frame.type === 'buckets')?.data.key_words).toEqual(['assets']);
-  for (const width of [1280, 390, 320]) {
+  for (const width of [1440, 1024, 768, 390, 360, 320]) {
     await page.setViewportSize({ width, height: 820 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    const suffix = page.locator('.files-record-name .files-middle-label-end');
+    const suffix = page.locator('.files-record-name .files-middle-label-end').first();
     await expect(suffix).toBeInViewport();
     await expect(suffix).toContainText('final-preview.png');
+    // Wide Unicode glyphs must not push the suffix out or clip its extension.
+    expect(await page.locator('.files-record-name').last().evaluate(node => {
+      const label = node.getBoundingClientRect();
+      const suffix = node.querySelector('.files-middle-label-end')!.getBoundingClientRect();
+      const text = node.querySelector('.files-middle-label-end > span')!.firstChild!;
+      const range = document.createRange();
+      range.setStart(text, text.textContent!.length - 4); range.setEnd(text, text.textContent!.length);
+      const extension = range.getBoundingClientRect();
+      return suffix.left >= label.left && suffix.right <= label.right + 1 && extension.left >= suffix.left && extension.right <= suffix.right + 1;
+    })).toBe(true);
   }
-  await page.locator('.files-record-name').click();
+  await page.locator('.files-record-name').first().click();
   const details = page.getByRole('dialog');
   await expect(details.locator('.files-object-key')).toHaveText(key);
   await expect(details.getByRole('button', { name: 'Copy object key', exact: true })).toBeVisible();

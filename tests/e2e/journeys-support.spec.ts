@@ -45,6 +45,34 @@ test('scenario directory filters real workflows and guides a host investigation 
   await expect(guide).toHaveCount(0);
 });
 
+test('payment scenario cards fit their available workspace beside the sidebar and on mobile',async ({page},testInfo) => {
+  for (const width of [768,320]) {
+    await page.setViewportSize({width,height:960});
+    await page.goto('/scenarios');
+    await expect(page.locator('.app-shell')).not.toHaveAttribute('inert');
+    if (width === 768) await expect(page.getByRole('button',{name:'Collapse navigation',exact:true})).toBeVisible();
+    const cards=page.locator('.scenario-payment-method');
+    await expect(cards).toHaveCount(3);
+    const geometry=await cards.evaluateAll(nodes=>nodes.map(node=>{
+      const box=node.getBoundingClientRect(),grid=node.parentElement!.getBoundingClientRect();
+      const copy=node.querySelector('.scenario-payment-copy')!,copyBox=copy.getBoundingClientRect();
+      const textFits=[...copy.querySelectorAll('strong,small')].every(element=>{
+        const range=document.createRange();range.selectNodeContents(element);
+        return [...range.getClientRects()].every(rect=>rect.left>=copyBox.left-1&&rect.right<=copyBox.right+1);
+      });
+      return {width:box.width,gridWidth:grid.width,left:box.left,right:box.right,textFits};
+    }));
+    for (const card of geometry) {
+      expect(Math.abs(card.width-card.gridWidth)).toBeLessThanOrEqual(1);
+      expect(card.left).toBeGreaterThanOrEqual(0);
+      expect(card.right).toBeLessThanOrEqual(width);
+      expect(card.textFits).toBe(true);
+    }
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    await page.screenshot({path:testInfo.outputPath(`scenario-payments-workspace-${width}.png`),animations:'disabled'});
+  }
+});
+
 test('a filter guide opens the mounted search editor without changing the applied request',async ({page}) => {
   await page.goto('/scenarios?scenario=refine-search');
   await page.getByRole('dialog').getByRole('button',{name:'Start scenario',exact:true}).click();

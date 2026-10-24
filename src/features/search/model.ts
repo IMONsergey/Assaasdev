@@ -1,4 +1,5 @@
-import type { HostCard, RangeFilter, ResponseMetadata, SearchFilter, SearchRequest } from '../../api';
+import type { AnalyticsFacet, HostCard, RangeFilter, ResponseMetadata, SearchFilter, SearchRequest } from '../../api';
+import { fieldLabels } from './field-labels';
 
 export type Dataset = 'public' | 'private';
 export const DEFAULT_PAGE_SIZE = 20;
@@ -209,7 +210,22 @@ export function searchAccessIssues(request: SearchRequest, restrictions: Respons
 
 export function filterSummary(filter: SearchFilter): string {
   if (filter.operator) return `${filter.operator} (${(filter.filters || []).map(filterSummary).join(', ')})`;
-  return `${filter.field || 'Field'}: ${filter.value || 'value'}`;
+  const label = filter.field && Object.hasOwn(fieldLabels, filter.field) ? fieldLabels[filter.field] : filter.field || 'Field';
+  return `${label}: ${filter.value || 'value'}`;
+}
+
+/** The WebSocket estimate uses saved categories; backend metadata remains authoritative. */
+export function analyticsCostLabel({ dataset, shared, guest, facets }: { dataset: Dataset; shared: boolean; guest: boolean; facets?: readonly AnalyticsFacet[] | null }): string {
+  if (shared) return 'Uses one link use and the creator’s access';
+  if (guest) return 'Uses 1 daily request';
+  if (dataset === 'private') return 'Estimated 1 search credit';
+  if (!Array.isArray(facets)) return '1 search credit per 4 categories, rounded up';
+  const count = new Set(facets.filter(facet => facet?.enabled === true && typeof facet.key === 'string' && facet.key.trim()).map(facet => facet.key)).size;
+  // A zero selection does not establish a free request: the server can still
+  // return its default overview category for an unconstrained search.
+  if (!count) return '1 search credit per 4 categories, rounded up';
+  const credits = Math.ceil(count / 4);
+  return `Estimated ${credits} search credit${credits === 1 ? '' : 's'} · ${count} categor${count === 1 ? 'y' : 'ies'}`;
 }
 export function queryLabel(request: SearchRequest): string {
   return request.full_text_search || request.host || request.ip || request.cve_ID || (request.simple_search_filters || []).map(filterSummary).join(' · ') || (request.range_filter || []).map(range => `${({ uts: 'Observed date', cts: 'Created date' } as Record<string, string>)[range.field] || range.field} range`).join(' · ') || (request.security_body ? 'Security.txt content' : request.robots_body ? 'Robots.txt content' : request.exposed_data ? `Exposed data: ${request.exposed_data}` : request.min_size_mb !== undefined || request.max_size_mb !== undefined ? 'Data size range' : 'All accessible hosts');

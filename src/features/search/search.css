@@ -85,7 +85,7 @@
 .search-labels, .search-port-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
 .search-labels { margin-top: 9px; font-size: .714286rem; }
 .search-labels > .search-row-meta { margin-right: 4px; }
-.search-labels .badge { padding: 2px 6px; font-size: .714286rem; font-weight: 400; }
+.search-labels .badge { min-width: 0; max-width: 100%; padding: 2px 6px; font-size: .714286rem; font-weight: 400; white-space: normal; overflow-wrap: anywhere; }
 .search-port-chips { min-height: 25px; }
 .search-port-chip { min-width: 32px; min-height: 25px; padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--accent) 9%, var(--line)); border-radius: 5px; background: var(--tint); color: var(--accent-text); text-align: center; text-decoration: none; font: 500 .785714rem/1.6 var(--font-mono); transition: border-color 150ms ease; }
 .search-port-chip:hover { border-color: var(--accent); }
@@ -139,6 +139,7 @@
 .search-facet-settings > div { display: grid; grid-template-columns: 1fr 32px 32px; gap: 4px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
 .search-facet-settings .button { min-width: 0; min-height: 30px; padding: 4px; }
 .search-settings-cost { margin: 0; color: var(--muted); font-size: .928571rem; line-height: 1.6; }
+.search-settings-estimate { display: block; margin-top: 6px; color: var(--text); font-weight: 500; }
 .search-filter-dialog .dialog-body { padding: 20px; }
 .search-filter-dialog .dialog-footer { display: flex; gap: 8px; }
 .search-filter-dialog .dialog-footer .button { min-width: 0; padding-inline: 12px; font-size: .928571rem; white-space: nowrap; }
@@ -193,7 +194,7 @@
 :root:not([data-input-modality='pointer']) .search-condition-error:focus { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 .search-saved-page, .search-share-page { max-width: var(--page-max); width: 100%; }
 .search-secondary-link { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); text-decoration: none; font-size: .857143rem; font-weight: 500; }
-.search-secondary-link:hover { background: var(--surface-hover); }
+.search-secondary-link:hover { background: var(--surface-hover); text-decoration: none; }
 .search-saved-toolbar { display: grid; grid-template-columns: minmax(200px,440px) minmax(0,1fr); align-items: end; gap: 16px 28px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 .search-saved-actions { display: flex; justify-content: flex-end; align-items: end; gap: 12px; min-width: 0; flex-wrap: wrap; }
 .search-saved-actions > .button { min-height: 46px; white-space: nowrap; }
@@ -328,6 +329,8 @@
 .search-query-kinds { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 24px; }
 .search-query-kinds > span { display: inline-flex; align-items: center; gap: 7px; }
 .search-query-kinds .icon { color: var(--accent-text); opacity: .8; }
+.search-query-examples { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 8px; font-size: .857143rem; }
+.search-query-examples > .button { min-height: 32px; padding: 4px 6px; font: inherit; color: var(--accent-text); }
 .search-autocomplete { flex: 1; min-width: 0; }
 .search-suggestions { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 70; display: flex; flex-direction: column; max-height: var(--suggestions-height, 360px); min-height: 0; padding: 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); box-shadow: 0 12px 36px rgb(14 30 40 / 12%); animation: search-entry-in 150ms ease; overflow: hidden; }
 .search-suggestions.is-above { top: auto; bottom: calc(100% + 8px); }
@@ -431,6 +434,7 @@
   .search-query-bar input { font-size: max(16px, 1rem); }
   .search-home-support { margin-top: 20px; }
   .search-query-kinds { gap: 10px 18px; font-size: .857143rem; }
+  .search-query-examples > .button { min-height: 44px; }
   .search-query-controls { padding: 8px 8px 0; gap: 4px; }
   .search-editor .field input, .search-editor .field textarea, .search-editor .form-select-trigger { min-height: 44px; font-size: 16px; }
   .search-condition-leaf { grid-template-columns: minmax(0,1fr) 36px; gap: 10px; }

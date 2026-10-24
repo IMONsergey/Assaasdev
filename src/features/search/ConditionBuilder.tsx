@@ -4,14 +4,9 @@ import type { AutocompleteData, SearchFilter } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Button, ComboBoxField, Icon, SelectControl } from '../../components/ui';
 import { FIELD_NAMES } from './model';
+import { CONDITION_FIELDS, fieldLabels } from './field-labels';
 import './condition-builder.css';
 
-export const CONDITION_FIELDS = [
-  { label: 'Network', fields: [['ip', 'IP address'], ['domain', 'Domain'], ['org', 'Organization'], ['asn', 'ASN'], ['country_name', 'Country'], ['country_code', 'Country code'], ['city_name', 'City'], ['os', 'Operating system']] },
-  { label: 'Services', fields: [['port', 'Port'], ['protocol', 'Protocol'], ['transport', 'Transport'], ['status_code', 'HTTP status'], ['title', 'Page title'], ['tls_info.server_name', 'TLS server name']] },
-  { label: 'Products & signals', fields: [['products', 'Product'], ['vendors', 'Vendor'], ['cve_id', 'CVE'], ['labels', 'Label']] },
-];
-const fieldLabels = Object.fromEntries(CONDITION_FIELDS.flatMap(group => group.fields));
 const operators = [{ value: 'AND', label: 'All' }, { value: 'OR', label: 'Any' }, { value: 'NOT', label: 'Exclude' }] as const;
 const groupLabel = (filter: SearchFilter) => filter.operator === 'AND' ? 'All conditions' : filter.operator === 'NOT' ? 'Excluded conditions' : 'Any condition';
 

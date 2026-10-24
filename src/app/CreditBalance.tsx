@@ -78,7 +78,7 @@ export function CreditBalance({ collapsed = false }: { collapsed?: boolean }) {
             {purchased !== null && <div><dt>Purchased credits</dt><dd>{number(purchased)}</dd></div>}
             {!!user?.subscription?.expiry_date && <div><dt>Current period ends</dt><dd>{formatDate(user.subscription.expiry_date)}</dd></div>}
           </dl>
-          <details className="credit-help"><summary>How credits work</summary><p>Searches, analytics and exports use search credits. Private scans use a separate balance.</p><p>The bars compare your balance with your included allocation. Extra credits can take it above that allocation.</p></details>
+          <details className="credit-help"><summary>How credits work</summary><p>Search credits are the Search Tokens listed in pricing. Searches, analytics and exports use this balance. Private scans use a separate balance.</p><p>The bars compare your balance with your included allocation. Extra credits can take it above that allocation.</p></details>
         </>}
         {guest && <p className="credit-cost-note">Searches and analytics share your daily allowance. Your remaining quota updates when a request completes.</p>}
       </div>

@@ -27,7 +27,13 @@ test('annual plans are the default and switching keeps exact prices and explicit
   const annual = page.getByRole('tab', { name: 'Annually', exact: true });
   const monthly = page.getByRole('tab', { name: 'Monthly', exact: true });
   const plus = page.locator('.billing-plan').filter({ has: page.getByRole('heading', { name: 'Plus', exact: true }) });
+  const expert = page.locator('.billing-plan').filter({ has: page.getByRole('heading', { name: 'Expert', exact: true }) });
   await expect(annual).toHaveAttribute('aria-selected', 'true');
+  await expect(plus.locator('.billing-plan-description')).toContainText('Buckets & files');
+  await expect(plus.locator('.billing-plan-description')).toContainText('CVE data');
+  await expect(plus.locator('.billing-plan-description')).not.toContainText('Leak data');
+  await expect(expert.locator('.billing-plan-description')).toContainText('CVE data');
+  await expect(expert.locator('.billing-plan-description')).toContainText('Leak data');
   await expect(plus.locator('.billing-price strong')).toHaveText('$40');
   await expect(plus.locator('.billing-period')).toHaveText('$480 billed yearly');
   await page.locator('.billing-page').screenshot({ path: testInfo.outputPath('billing-annual-default.png') });

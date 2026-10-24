@@ -1,7 +1,8 @@
 import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
+import type { DetectedProduct } from '../../src/api';
 
-async function hostWorkspaceFixture(page: Page, requests: string[]) {
+async function hostWorkspaceFixture(page: Page, requests: string[], options: { products?: DetectedProduct[]; serviceCount?: number } = {}) {
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__ = {dataMode:"live", apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user_id: 'host-workspace-contract', user_name: 'host_workspace', user_type: 'USER', credits: 5000, subscription: { type: 'Business', credits: 5000 } }) }));
   await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(message => {
@@ -9,16 +10,51 @@ async function hostWorkspaceFixture(page: Page, requests: string[]) {
     requests.push(request.type);
     const send = (type: string, data: unknown) => socket.send(JSON.stringify({ type, id: request.id, data, metadata: { subscription_type: 'Business' } }));
     if (request.type === 'hostinfo') {
-      send('hostinfo', { ip: '192.0.2.44', ports: Array.from({ length: 1000 }, (_, index) => ({
+      send('hostinfo', { ip: '192.0.2.44', ports: Array.from({ length: options.serviceCount ?? 1000 }, (_, index) => ({
         port: index === 0 ? 443 : 10000 + index, protocol: index % 2 === 0 ? 'https' : 'ssh', transport: 'tcp',
         title: `Observation ${index}`, body: index === 999 ? 'needle-deep-body' : 'Received response',
         tls_info: index % 10 === 0 ? { server_name: `service-${index}.example.test` } : undefined,
-        detected_products: index === 0 ? [{ product: 'Audit records', exposed_data: { field_headers: ['Record', 'Sequence', 'Group'], field_value: Array.from({ length: 10000 }, (_, row) => [`entry-${String(row).padStart(5, '0')}`, String(row), row % 2 ? 'odd' : 'even']) } }] : [],
+        detected_products: index === 0 ? options.products ?? [{ product: 'Audit records', exposed_data: { field_headers: ['Record', 'Sequence', 'Group'], field_value: Array.from({ length: 10000 }, (_, row) => [`entry-${String(row).padStart(5, '0')}`, String(row), row % 2 ? 'odd' : 'even']) } }] : [],
       })) });
       send('dnsinfo', null); send('whois', null); send('domain_ip_map', []);
     } else send(request.type, { unread_count: 0 });
   }));
 }
+
+test('long product metadata remains readable and unnamed dataset columns are counted from the received rows', async ({ page }) => {
+  const requests: string[] = [];
+  const version = 'build-' + '20261024_'.repeat(24);
+  const vendor = 'vendor_' + 'continuous'.repeat(30);
+  const label = 'source_' + 'dataset'.repeat(45);
+  await hostWorkspaceFixture(page, requests, { serviceCount: 1, products: [
+    { product: 'Unnamed columns', version, vendor, labels: [label], exposed_data: { field_value: [['one', 'two']] } },
+    { product: 'Single column', exposed_data: { field_value: [['only']] } },
+  ] });
+  await page.goto('/hosts/192.0.2.44?tab=products');
+  const product = page.locator('.host-product').first();
+  await expect(product.locator('.host-product-heading .badge')).toHaveText(version);
+  await expect(product.locator('.host-product-heading p')).toHaveText(vendor);
+  await expect(product.locator('.host-product-labels .badge')).toHaveText(label);
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => product.evaluate(node => {
+      const card = node.getBoundingClientRect();
+      return [...node.querySelectorAll<HTMLElement>('.badge, .host-product-heading p')].every(value => {
+        const bounds = value.getBoundingClientRect();
+        return bounds.left >= card.left && bounds.right <= card.right + 1 && value.scrollWidth <= value.clientWidth + 1;
+      });
+    })).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await page.getByRole('tab', { name: 'Data', exact: true }).click();
+  await expect(page.locator('.host-dataset-content > .host-section-heading')).toContainText('1 row · 2 fields');
+  await expect(page.getByRole('region', { name: 'Unnamed columns exposed data', exact: true }).locator('thead th')).toHaveCount(2);
+  await expect(page.locator('.host-data-toolbar [role="status"]')).toHaveText('1 received row');
+  await page.getByRole('button', { name: 'Single column 1 row', exact: true }).click();
+  await expect(page.locator('.host-dataset-content > .host-section-heading')).toContainText('1 row · 1 field');
+  await expect(page.getByRole('region', { name: 'Single column exposed data', exact: true }).locator('thead th')).toHaveCount(1);
+  expect(requests.filter(type => type === 'hostinfo')).toHaveLength(1);
+});
 
 test('classifying and returning to a thousand-service list retains local context without another host request', async ({ page }) => {
   const requests: string[] = [];

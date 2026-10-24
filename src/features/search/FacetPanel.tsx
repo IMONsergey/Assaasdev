@@ -4,7 +4,7 @@ import { ApiError, isApiError } from '../../api';
 import type { AnalyticsFacet, FacetData } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Alert, Button, Checkbox, Dialog, EmptyState, Field, Icon, Skeleton } from '../../components/ui';
-import { FACET_NAMES, facetTitle, facetUnit } from './model';
+import { analyticsCostLabel, FACET_NAMES, facetTitle, facetUnit, type Dataset } from './model';
 import { CountryFlag } from '../../components/CountryFlag';
 import { ProtocolMark, TechnologyMark } from '../../components/TechnologyMark';
 
@@ -71,12 +71,16 @@ function FacetValues({ facet, selected, disabled, shared, onSelect }: { facet: F
   </section>;
 }
 
-export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled, loadDisabled, shared, onLoad, loaded, selectedValues, requestKey }: { facets: FacetData[]; pending: boolean; error: Error | null; onSelect: (field: string, value: string) => void; onRetry: () => void; disabled: boolean; loadDisabled: boolean; shared: boolean; onLoad: () => void; loaded: boolean; selectedValues: (field: string) => string[]; requestKey: string }) {
-  const { api, toast, user, refreshSession } = useApp();
+export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled, loadDisabled, shared, dataset, onLoad, loaded, selectedValues, requestKey }: { facets: FacetData[]; pending: boolean; error: Error | null; onSelect: (field: string, value: string) => void; onRetry: () => void; disabled: boolean; loadDisabled: boolean; shared: boolean; dataset: Dataset; onLoad: () => void; loaded: boolean; selectedValues: (field: string) => string[]; requestKey: string }) {
+  const { api, toast, user, session, refreshSession } = useApp();
+  const costDescriptionId = useId();
   const analyticsActions = useRef<HTMLDivElement>(null);
   const initialLoadFocus = useRef<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AnalyticsFacet[]>([]);
+  const costContext = { dataset, shared, guest: session.status === 'guest' };
+  const costLabel = analyticsCostLabel({ ...costContext, facets: user?.analytics_facets });
+  const settingsCostLabel = analyticsCostLabel({ ...costContext, facets: settings });
   useEffect(() => {
     const cancelFocus = () => { initialLoadFocus.current = null; };
     const changedFocus = (event: FocusEvent) => { if (event.target !== document.body) cancelFocus(); };
@@ -117,15 +121,15 @@ export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled
   return <aside className="search-facets" aria-label="Result analytics">
     <div className="search-facets-heading">
       <div><h2>{loaded ? 'Search breakdown' : 'Explore your results'}</h2></div>
-      <div ref={analyticsActions} className="cluster">{!shared && <Button className="search-analytics-settings" variant="ghost" size="sm" aria-label="Analytics settings" onClick={openSettings}><Icon name="settings" size={16} /><span className="search-analytics-settings-label">Settings</span></Button>}{loaded && <Button variant="secondary" size="sm" loading={pending} disabled={loadDisabled} aria-label="Reload analytics" title={loadDisabled ? 'Apply or cancel changes first' : shared ? 'Uses another link use' : 'Uses analytics credits'} onClick={onRetry}><Icon name="refresh" size={16} />Reload</Button>}</div>
+      <div ref={analyticsActions} className="cluster">{!shared && <Button className="search-analytics-settings" variant="ghost" size="sm" aria-label="Analytics settings" onClick={openSettings}><Icon name="settings" size={16} /><span className="search-analytics-settings-label">Settings</span></Button>}{loaded && <Button variant="secondary" size="sm" loading={pending} disabled={loadDisabled} aria-label="Reload analytics" title={loadDisabled ? 'Apply or cancel changes first' : costLabel} onClick={onRetry}><Icon name="refresh" size={16} />Reload</Button>}</div>
     </div>
-    {!loaded && !pending && !error && <div className="search-analytics-start"><span className="search-analytics-symbol"><Icon name="chart" size={30} /></span><h3>Understand the matching hosts</h3><p>Compare countries, networks, ports and products.</p><Button disabled={loadDisabled} onClick={event => { initialLoadFocus.current = document.activeElement === event.currentTarget ? requestKey : null; onLoad(); }} title={loadDisabled ? 'Apply or cancel changes first' : undefined}>Load analytics</Button><small>{loadDisabled ? 'Apply or cancel your changes to continue.' : shared ? 'Uses one link use and the creator’s access.' : 'Uses analytics credits.'}</small></div>}
+    {!loaded && !pending && !error && <div className="search-analytics-start"><span className="search-analytics-symbol"><Icon name="chart" size={30} /></span><h3>Understand the matching hosts</h3><p>Compare countries, networks, ports and products.</p><Button disabled={loadDisabled} aria-describedby={costDescriptionId} onClick={event => { initialLoadFocus.current = document.activeElement === event.currentTarget ? requestKey : null; onLoad(); }} title={loadDisabled ? 'Apply or cancel changes first' : costLabel}>Load analytics</Button><small id={costDescriptionId}>{loadDisabled ? 'Apply or cancel your changes to continue.' : costLabel}</small></div>}
     {pending && !facets.length && <div className="search-facet-grid" aria-label="Loading analytics">{[0, 1, 2].map(index => <Skeleton key={index} rows={6} className="search-facet-skeleton" />)}</div>}
     {error && <Alert tone="warning" title={facets.length ? 'Some analytics is unavailable' : 'Analytics is unavailable'} actions={<Button variant="secondary" size="sm" disabled={loadDisabled || pending} onClick={onRetry}>Retry analytics</Button>}>{error.message}</Alert>}
     {!pending && !error && loaded && !facets.length && <EmptyState title="No analytics returned" description="Try different conditions or choose another set of facets." />}
     {facets.length > 0 && <div className="search-facet-grid" aria-busy={pending}>{facets.map(facet => <FacetValues key={facet.facet_name} facet={facet} selected={selectedValues(facet.facet_name)} disabled={disabled} shared={shared} onSelect={onSelect} />)}</div>}
     <Dialog open={settingsOpen} onClose={() => { if (!save.isPending) setSettingsOpen(false); }} title="Analytics settings" footer={<><Button variant="ghost" disabled={save.isPending || unknownSettings} onClick={() => save.mutate(true)}>Reset</Button><Button variant="secondary" disabled={save.isPending} onClick={() => setSettingsOpen(false)}>Cancel</Button><Button loading={save.isPending} disabled={unknownSettings} onClick={() => save.mutate(false)}>Save changes</Button></>}>
-      <p className="search-settings-cost">Choose what to load next. Public analytics uses one credit per four facets, rounded up.</p>
+      <p className="search-settings-cost">Choose what to load next.{dataset === 'public' && !costContext.guest && ' Public analytics uses one search credit per four categories, rounded up.'}<strong className="search-settings-estimate">{settingsCostLabel}</strong></p>
       <div className="search-facet-settings">{settings.map((facet, index) => <div key={facet.key}><Checkbox label={facetTitle(facet.key)} checked={facet.enabled} disabled={save.isPending} onChange={event => setSettings(settings.map(item => item.key === facet.key ? { ...item, enabled: event.target.checked } : item))} /><Button variant="ghost" size="sm" aria-label={`Move ${facetTitle(facet.key)} up`} disabled={index === 0 || save.isPending} onClick={() => move(index, -1)}><Icon name="chevron-up" size={16} /></Button><Button variant="ghost" size="sm" aria-label={`Move ${facetTitle(facet.key)} down`} disabled={index === settings.length - 1 || save.isPending} onClick={() => move(index, 1)}><Icon name="chevron-down" size={16} /></Button></div>)}</div>
       {save.error && <Alert tone={unknownSettings ? 'warning' : 'error'} title={unknownSettings ? 'Change is not confirmed' : 'Settings could not be saved'} actions={unknownSettings ? <Button variant="secondary" onClick={() => void reconcile()}>Check saved settings</Button> : undefined}>{save.error.message}</Alert>}
     </Dialog>
