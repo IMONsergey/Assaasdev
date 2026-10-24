@@ -172,7 +172,21 @@ test('payment history searches 5,000 records locally with bounded rendering and 
   expect(frames.filter(frame => frame.type === 'user_billing')).toHaveLength(reads);
   expect(frames.filter(frame => ['init_checkout', 'confirm_payment', 'delete_payment'].includes(frame.type))).toEqual([]);
   await page.setViewportSize({ width: 320, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  const mobileLayout = await page.evaluate(() => {
+    const documentWidth = document.documentElement.scrollWidth, viewportWidth = innerWidth;
+    const bounds = (element: Element) => {
+      const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
+      return { tag: element.tagName, id: element.id, className: element.getAttribute('class'), x: rect.x, right: rect.right, width: rect.width, marginLeft: style.marginLeft, transition: style.transitionProperty };
+    };
+    return {
+      documentWidth, viewportWidth,
+      shell: [...document.querySelectorAll('.workspace-main,.app-topbar,.app-sidebar')].map(bounds),
+      rightOfViewport: documentWidth > viewportWidth + 1
+        ? [...document.querySelectorAll('body *')].map(bounds).filter(rect => rect.width > 0 && rect.right > viewportWidth + 1).slice(0, 16)
+        : [],
+    };
+  });
+  expect(mobileLayout.documentWidth, JSON.stringify(mobileLayout, null, 2)).toBeLessThanOrEqual(mobileLayout.viewportWidth + 1);
   await expect(history.getByRole('button', { name: 'Remove record', exact: true }).first()).toBeVisible();
 });
 
