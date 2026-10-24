@@ -72,6 +72,50 @@ test('API usage action transfers keyboard focus to the selected tab', async ({ p
   await expect(page.getByRole('tabpanel', { name: 'API key', exact: true })).toBeVisible();
 });
 
+test('API documentation is public and its examples never send a live request', async ({ page }) => {
+  const apiCalls: string[] = [];
+  await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__ = {dataMode:"live", apiBaseUrl:"/backend"};' }));
+  await page.route('**/backend/**', route => route.fulfill({ status: 401, json: { error: 'unauthorized' } }));
+  await page.route('https://api.apcosys.net/**', route => { apiCalls.push(route.request().url()); return route.abort(); });
+  await page.goto('/api?section=docs#get-host');
+  await expect(page.getByRole('tab', { name: 'Documentation', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Get a host', exact: true })).toBeVisible();
+  await expect(page.locator('.api-docs-endpoint-path')).toContainText('/api/v1/search/hosts/:ip');
+  await page.getByRole('tab', { name: 'Python', exact: true }).click();
+  await expect(page.locator('.api-docs-example .code-canvas-source')).toContainText('os.environ["APCOSYS_API_KEY"]');
+  await page.getByRole('tab', { name: 'API key', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Manage your API access', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Read documentation', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Getting started', exact: true })).toBeVisible();
+  expect(apiCalls).toEqual([]);
+});
+
+for (const width of [1440, 390]) test(`API reference finds nested fields and keeps example tabs stable at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto('/api?section=docs#search-hosts');
+  const example = page.locator('.api-docs-example');
+  await expect(example).toBeVisible();
+  const heights: number[] = [];
+  for (const language of ['cURL', 'JavaScript', 'Python']) {
+    await example.getByRole('tab', { name: language, exact: true }).click();
+    const source = example.locator('.code-canvas-source');
+    await expect(source).toBeVisible();
+    heights.push((await source.boundingBox())!.height);
+  }
+  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
+  const search = page.getByRole('searchbox', { name: 'Search API documentation', exact: true });
+  await search.fill('tls_info ja4s');
+  await expect(page.locator('#api-docs-navigation')).toBeVisible();
+  await search.press('Enter');
+  await expect(page).toHaveURL(/section=docs#get-host$/);
+  await expect(page.getByRole('heading', { name: 'Get a host', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Response', exact: true }).click();
+  const tls = page.locator('.api-docs-details').filter({ hasText: 'ports[].tls_info' });
+  await tls.locator('summary').click();
+  await expect(tls.getByRole('rowheader').filter({ hasText: /^ja4s/ })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 for (const width of [1440, 390, 320]) {
   test(`settings and API sections have complete layouts at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: width > 760 ? 960 : 844 });
@@ -92,7 +136,7 @@ for (const width of [1440, 390, 320]) {
         const members = page.getByRole('table', { name: 'Organization members' });
         await expect(members).toBeVisible();
         expect(await members.evaluate(table => table.scrollWidth <= table.clientWidth + 1)).toBe(true);
-        for (const remove of await members.getByRole('button', { name: 'Remove', exact: true }).all()) {
+        for (const remove of await members.getByRole('button', { name: /^Remove / }).all()) {
           const bounds = await remove.boundingBox();
           expect(bounds!.x).toBeGreaterThanOrEqual(0);
           expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
@@ -102,17 +146,17 @@ for (const width of [1440, 390, 320]) {
       await page.screenshot({ path: testInfo.outputPath(`settings-${name.toLowerCase()}-${width}.png`), fullPage: true });
     }
     await page.goto('/api');
-    for (const name of ['API key', 'Usage & limits']) {
+    for (const name of ['API key', 'Usage & limits', 'Documentation']) {
       await page.getByRole('tab', { name, exact: true }).click();
       await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true');
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-      await page.screenshot({ path: testInfo.outputPath(`api-${name === 'API key' ? 'key' : 'usage'}-${width}.png`), fullPage: true });
+      await page.screenshot({ path: testInfo.outputPath(`api-${name === 'API key' ? 'key' : name === 'Documentation' ? 'docs' : 'usage'}-${width}.png`), fullPage: true });
     }
   });
 }
 
 test('settings sections and API key page remain accessible', async ({ page }) => {
-  for (const route of ['/settings', '/settings?section=security', '/settings?section=sessions', '/settings?section=team', '/settings?section=workspace', '/settings?section=appearance', '/settings?section=legal', '/api']) {
+  for (const route of ['/settings', '/settings?section=security', '/settings?section=sessions', '/settings?section=team', '/settings?section=workspace', '/settings?section=appearance', '/settings?section=legal', '/api', '/api?section=docs']) {
     await page.goto(route);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('.skeleton')).toHaveCount(0);

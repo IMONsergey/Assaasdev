@@ -4,6 +4,7 @@ import { ApiError } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { asset } from '../../config';
 import { Alert, Button, Field, Icon, Spinner } from '../../components/ui';
+import { DotCascade } from '../../components/brand';
 import { authReducer, authStepForPath, initialAuthState, normalizeOneTimeCode, safeReturnPath, type AuthStep } from './auth-state';
 import './auth.css';
 
@@ -186,7 +187,8 @@ export function AuthPage() {
 
   return <main className="auth-page">
     <section className="auth-story" aria-label="APCOSYS">
-      <img className="auth-art" src={asset('figma/login/auth-art.png')} width="624" height="912" alt="APCOSYS" />
+      <DotCascade overlay interactive={false} color="#ffffff" startOpacity={0.24} endOpacity={0.08} spacing={24} dotRadius={1} />
+      <img className="auth-brand-logo" src={asset('figma/home/imgApcosysLogo.svg')} width="320" height="64" alt="APCOSYS" />
     </section>
     <section className="auth-form-region" aria-labelledby="auth-title">
       <div className="auth-topline"><Link to="/search" className="auth-mobile-brand" aria-label="APCOSYS home"><img src={asset('figma/home/imgApcosysLogo.svg')} width="150" height="29" alt="APCOSYS" /></Link><Link to="/search" className="auth-back inline-link"><Icon name="chevron-left" size={16} />Back to search</Link><div className="auth-top-actions">{state.step === 'login' && <Button variant="ghost" size="sm" loading={guestBusy} onClick={() => void continueAsGuest()}>Explore as a guest<Icon name="arrow" size={16} /></Button>}</div></div>

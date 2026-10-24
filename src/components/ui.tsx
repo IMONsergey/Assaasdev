@@ -20,7 +20,7 @@ export function Button({ variant = 'primary', size = 'md', loading, fullWidth, c
 }
 
 export function FilterButton({ active, count, children = 'Filters', className, ...props }: Omit<ButtonProps, 'variant'> & { active?: boolean; count?: number }) {
-  return <Button variant="secondary" className={join('filter-button', active && 'is-active', className)} {...props}><Icon name="filter" size={18} /><span>{children}</span>{typeof count === 'number' && count > 0 && <span className="filter-button-count" aria-label={`${count} active filters`}>{count}</span>}</Button>;
+  return <Button variant="secondary" className={join('filter-button', active && 'is-active', className)} {...props}><Icon name="plus" size={18} /><span>{children}</span>{typeof count === 'number' && count > 0 && <span className="filter-button-count" aria-label={`${count} active filters`}>{count}</span>}</Button>;
 }
 
 type FieldMeta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; icon?: ReactNode };
@@ -59,12 +59,10 @@ export function Dialog({ open, onClose, title, children, footer, size = 'md', pl
   useLayoutEffect(() => {
     if (!open || scope !== 'workspace') return;
     const main = document.querySelector<HTMLElement>('.workspace-main');
-    const header = document.querySelector<HTMLElement>('.app-topbar');
-    const sync = () => setBounds({ left: Math.max(0, main?.getBoundingClientRect().left ?? 0), top: Math.max(0, header?.getBoundingClientRect().bottom ?? 0) });
+    const sync = () => setBounds({ left: Math.max(0, main?.getBoundingClientRect().left ?? 0), top: 0 });
     sync();
     const observer = new ResizeObserver(sync);
     if (main) observer.observe(main);
-    if (header) observer.observe(header);
     window.addEventListener('resize', sync);
     return () => { observer.disconnect(); window.removeEventListener('resize', sync); };
   }, [open, scope]);
@@ -117,7 +115,7 @@ const iconNames: Record<string, string> = {
   bell: 'bell', copy: 'copy', download: 'download', external: 'external-link', menu: 'menu-2', close: 'x',
   'chevron-left': 'chevron-left', 'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down',
   'chevrons-left': 'chevrons-left', 'chevrons-right': 'chevrons-right', plus: 'plus', arrow: 'arrow-right',
-  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'adjustments-horizontal', clock: 'clock', user: 'user',
+  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'plus', clock: 'clock', user: 'user',
   lock: 'lock', logout: 'logout', trash: 'trash', info: 'info-circle', grid: 'layout-grid', list: 'list',
   settings: 'settings', 'help-circle': 'help-circle', bookmark: 'bookmark', server: 'server', globe: 'world',
   shield: 'shield-check', package: 'package', key: 'key', desktop: 'device-desktop', users: 'users', mail: 'mail',

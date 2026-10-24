@@ -8,6 +8,8 @@ import { ExportDialog } from '../files/ExportDialog';
 import { ConditionsEditor } from './ConditionsEditor';
 import { FacetPanel } from './FacetPanel';
 import { SearchAutocomplete } from './SearchAutocomplete';
+import { SaveQueryDialog } from './SaveQueryDialog';
+import { ShareSearchDialog } from './ShareSearchDialog';
 import { DotCascade, DoubleButton, OrbCubeLoader } from '../../components/brand';
 import { CountryFlag } from '../../components/CountryFlag';
 import { ProtocolMark, TechnologyMark } from '../../components/TechnologyMark';
@@ -83,6 +85,8 @@ export function SearchPage() {
   const [editorOpen, setEditorOpen] = useState(params.get('conditions') === '1');
   const [inputError, setInputError] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
+  const [searchAction, setSearchAction] = useState<'save' | 'share' | null>(null);
+  useEffect(() => { setSearchAction(null); }, [appliedKey, dataset, user?.user_id, session.status]);
   useEffect(() => {
     setDraft(applied); setInputError('');
     if (previousAppliedKey.current !== appliedKey) { beforeEditor.current = applied; setEditorOpen(false); previousAppliedKey.current = appliedKey; }
@@ -123,14 +127,6 @@ export function SearchPage() {
     if (dataset === 'private' && scannerBack !== '/scanner') next.set('scanner_back', scannerBack);
     if (nextView === 'analytics') next.set('view', 'analytics');
     return `${searchPath(dataset)}?${next}`;
-  }
-  function relatedHref(path: string) {
-    const next = new URLSearchParams(encodeSearch(applied));
-    if (previewOnly) next.set('draft', '1');
-    if (dataset === 'private') next.set('dataset', 'private');
-    if (dataset === 'private' && scannerBack !== '/scanner') next.set('scanner_back', scannerBack);
-    if (view === 'analytics') next.set('return_view', 'analytics');
-    return `${path}?${next}`;
   }
   function changeView(nextView: string) {
     const next = new URLSearchParams(window.location.search);
@@ -202,10 +198,10 @@ export function SearchPage() {
     {canRequest && <>
       <div className="search-workspace-heading">
         <Tabs idPrefix="search-view" ariaLabel="Search views" items={[{ id: 'results', label: 'Results', icon: 'list' }, { id: 'analytics', label: 'Analytics', icon: 'chart' }]} value={view} onChange={changeView} />
-        <div className="search-result-actions"><Link className="search-action-link" data-onboarding="save-query" to={relatedHref('/search/saved')}><Icon name="bookmark" size={17} /><span>Save</span></Link><Link className="search-action-link" data-onboarding="share-search" to={relatedHref('/search/share')}><Icon name="link" size={17} /><span>Share</span></Link><Button variant="ghost" size="sm" data-onboarding="export-search" disabled={shared || previewOnly || results.isFetching || !displayResults?.hosts.length} onClick={() => setExportOpen(true)}><Icon name="download" size={17} /><span>Export</span></Button></div>
+        <div className="search-result-actions"><Button variant="ghost" size="sm" className="search-action-link" data-onboarding="save-query" aria-haspopup="dialog" disabled={shared} onClick={() => setSearchAction('save')}><Icon name="bookmark" size={17} /><span>Save</span></Button><Button variant="ghost" size="sm" className="search-action-link" data-onboarding="share-search" aria-haspopup="dialog" disabled={shared} onClick={() => setSearchAction('share')}><Icon name="link" size={17} /><span>Share</span></Button><Button variant="ghost" size="sm" data-onboarding="export-search" disabled={shared || previewOnly || results.isFetching || !displayResults?.hosts.length} onClick={() => setExportOpen(true)}><Icon name="download" size={17} /><span>Export</span></Button></div>
       </div>
       <TabPanel idPrefix="search-view" value="results" hidden={view !== 'results'} className="search-results-panel">
-        <div className="search-result-toolbar"><div className="search-result-count"><h1>{displayResults ? `${displayResults.hosts.length.toLocaleString()} hosts returned` : previewOnly ? 'Search results' : results.isPending ? 'Searching hosts' : 'Search results'}</h1><span>{results.isFetching && displayResults ? <Spinner label="Updating results" /> : `Page ${page}`}</span></div><div className="search-result-controls">
+        <div className="search-result-toolbar"><div className="search-result-count"><h1>{displayResults ? `${displayResults.hosts.length.toLocaleString()} ${displayResults.hosts.length === 1 ? 'host' : 'hosts'} returned` : previewOnly ? 'Search results' : results.isPending ? 'Searching hosts' : 'Search results'}</h1><span>{results.isFetching && displayResults ? <Spinner label="Updating results" /> : `Page ${page}`}</span></div><div className="search-result-controls">
           <div className="search-result-select"><span>Sort</span><SelectControl aria-label="Sort" value={sortValue} disabled={shared || previewOnly || results.isFetching || queryDirty} title={queryDirty ? 'Apply or cancel changes first' : undefined} onChange={event => { const [sort_field, sort_direction] = event.target.value.split(':'); run({ ...applied, sort_field, sort_direction, page: 1 }, true); }}><option value="uts:desc">Newest observation</option><option value="uts:asc">Oldest observation</option><option value="ip:asc">Address ascending</option><option value="ip:desc">Address descending</option>{!['uts:desc', 'uts:asc', 'ip:asc', 'ip:desc'].includes(sortValue) && <option value={sortValue}>{applied.sort_field} · {applied.sort_direction || 'desc'}</option>}</SelectControl></div>
           <div className="search-result-select"><span>Rows</span><SelectControl aria-label="Rows" value={pageSize} disabled={shared || previewOnly || results.isFetching || queryDirty} title={queryDirty ? 'Apply or cancel changes first' : undefined} onChange={event => run({ ...applied, docs_per_page: Number(event.target.value), page: 1 }, true)}>{[10, 20, 25, 50].map(size => <option key={size} value={size}>{size}</option>)}{![10, 20, 25, 50].includes(pageSize) && <option value={pageSize}>{pageSize}</option>}</SelectControl></div>
         </div></div>
@@ -224,5 +220,7 @@ export function SearchPage() {
       <TabPanel idPrefix="search-view" value="analytics" hidden={view !== 'analytics'} className="search-analytics-panel"><FacetPanel requestKey={JSON.stringify([principal, dataset, facetRequest])} selectedValues={field => activeFacetValues(draft, field)} facets={analytics.facets} pending={analytics.isFetching} error={analytics.error} onSelect={(field, value) => setDraft(current => toggleFacet(current, field, value))} onRetry={loadAnalytics} disabled={shared || editorOpen} loadDisabled={queryDirty} shared={shared} loaded={analytics.data !== undefined || analytics.facets.length > 0} onLoad={loadAnalytics} /></TabPanel>
     </>}
     <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} query={applied} privateSearch={dataset === 'private'} taskIds={applied.task_ids} shareToken={applied.st || applied.share_token} />
+    {searchAction === 'save' && <SaveQueryDialog request={applied} dataset={dataset} onClose={() => setSearchAction(null)} />}
+    {searchAction === 'share' && <ShareSearchDialog request={applied} dataset={dataset} onClose={() => setSearchAction(null)} />}
   </div>;
 }

@@ -217,9 +217,10 @@ test('filters open from the left without moving the home search and keep actions
     expect(Math.abs(before!.x - during!.x)).toBeLessThan(1);
     expect(Math.abs(before!.y - during!.y)).toBeLessThan(1);
     expect(Math.abs(before!.width - during!.width)).toBeLessThan(1);
-    const box = (await editor.boundingBox())!, main = (await page.locator('.workspace-main').boundingBox())!, header = (await page.locator('.app-topbar').boundingBox())!;
+    const box = (await editor.boundingBox())!, main = (await page.locator('.workspace-main').boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(main.x);
-    expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    await expect(page.locator('.app-topbar')).toHaveCount(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
     await editor.getByRole('button', { name: 'Add group', exact: true }).click();
     await expect(editor.locator('.condition-view')).toHaveAttribute('data-condition-depth', '1');

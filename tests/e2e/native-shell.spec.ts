@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-test('navigation collapse is stable, remembered and keeps scenarios below Settings', async ({ page }, info) => {
+test('navigation collapse is stable, remembered and keeps Notifications below Settings', async ({ page }, info) => {
   await page.goto('/search');
   const sidebar = page.getByRole('complementary', { name: 'Workspace navigation' });
   const collapse = sidebar.getByRole('button', { name: 'Collapse navigation', exact: true });
@@ -24,8 +24,13 @@ test('navigation collapse is stable, remembered and keeps scenarios below Settin
   await expand.click();
   await expect(collapse).toBeVisible();
   const links = await sidebar.locator('.sidebar-bottom > a').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
-  expect(links.indexOf('/scenarios')).toBe(links.indexOf('/settings') + 1);
-  await expect(sidebar.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Scenarios' })).toHaveCount(0);
+  expect(links.indexOf('/settings')).toBeGreaterThanOrEqual(0);
+  expect(links.indexOf('/notifications')).toBe(links.indexOf('/settings') + 1);
+  await expect(sidebar.getByRole('link', { name: /^Notifications/ })).toBeVisible();
+  await expect(sidebar.locator('a[href="/scenarios"]')).toHaveCount(0);
+  await sidebar.getByRole('button', { name: 'Support', exact: true }).click();
+  const support = page.getByRole('dialog', { name: 'Help & support', exact: true });
+  await expect(support.getByRole('link', { name: /^Follow a scenario/ })).toHaveAttribute('href', '/scenarios');
 });
 
 test('account menu supports keyboard, dismissal and real profile navigation', async ({ page }, info) => {
@@ -77,7 +82,8 @@ test('mobile and landscape account navigation stays reachable and releases the p
     await page.screenshot({ path: info.outputPath(`account-menu-${viewport.width}.png`) });
     await page.keyboard.press('Escape');
     await expect(surface).not.toBeVisible();
-    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    // The opening control is inert while the mobile drawer owns focus.
+    await expect(page.locator('.mobile-workspace-menu')).toHaveAttribute('aria-expanded', 'true');
     await expect(account).toBeFocused();
     await account.click();
     await page.getByRole('menuitem', { name: 'Profile & avatar', exact: true }).click();

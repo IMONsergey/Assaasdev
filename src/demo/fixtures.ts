@@ -1,5 +1,5 @@
 import type {
-  BillingPayment, BucketFile, HostCard, HostDetail, NotificationsData, PlanningTask,
+  BillingPayment, BucketFile, DetectedProduct, HostCard, HostDetail, NotificationsData, PlanningTask,
   PortRecord, PricingData, PrivateTask, Profile, SavedQuery, SessionData,
   TrackedAddress, AddressTransaction,
 } from '../api';
@@ -15,6 +15,20 @@ export const DEMO_PAYMENT_ADDRESS = 'DEMO_ONLY_NOT_A_PAYMENT_ADDRESS';
 export interface DemoHost { card: HostCard; detail: HostDetail; taskId: string; host: string }
 export interface DemoBucket extends BucketFile { product_name: string }
 
+function demonstrationData(index: number): NonNullable<DetectedProduct['exposed_data']> {
+  const paths = ['/docs/getting-started', '/reports/availability', '/assets/architecture.svg', '/status', '/docs/api'];
+  return {
+    field_headers: ['Resource', 'Content type', 'Size (bytes)', 'Region', 'Last updated'],
+    field_value: Array.from({ length: 72 }, (_, row) => [
+      `${paths[row % paths.length]}?sample=${String(row + 1).padStart(3, '0')}`,
+      row % paths.length === 2 ? 'image/svg+xml' : 'text/html',
+      String(row === 0 ? 0 : 2048 + (row + index) * 137),
+      ['eu-central', 'us-east', 'eu-west'][row % 3],
+      new Date((DEMO_TIMESTAMP - row * 600) * 1000).toISOString(),
+    ]),
+  };
+}
+
 export function seedHosts(): DemoHost[] {
   const addresses = ['192.0.2.10', '198.51.100.24', '203.0.113.42', '192.0.2.18', '198.51.100.58', '203.0.113.78', '192.0.2.144', '198.51.100.202', '2001:db8::10', '2001:db8::24', 'edge.example.com', 'research.example.org'];
   const countries = [['Germany', 'DE', 'Berlin'], ['United States', 'US', 'Boston'], ['Netherlands', 'NL', 'Amsterdam'], ['United Kingdom', 'GB', 'London']];
@@ -27,6 +41,33 @@ export function seedHosts(): DemoHost[] {
       const port = position === 0 ? 443 : position === 1 ? 80 : position === 2 ? 22 : 10_000 + position;
       const protocol = port === 22 ? 'ssh' : port === 80 ? 'http' : 'https';
       const product = protocol === 'ssh' ? 'OpenSSH' : index % 3 === 0 ? 'nginx' : index % 3 === 1 ? 'Apache httpd' : 'Caddy';
+      const dataExample = index % 3 === 0 && position === 0;
+      const securityBody = [
+        '# Synthetic demonstration record. All addresses use example domains.',
+        'Contact: mailto:security@example.com',
+        'Contact: https://example.com/security/report',
+        'Expires: 2027-10-01T00:00:00Z',
+        'Preferred-Languages: en, de',
+        'Policy: https://example.com/security/policy',
+        `Canonical: ${protocol}://${host}/.well-known/security.txt`,
+        'Acknowledgments: https://example.com/security/thanks',
+      ].join('\n');
+      const detectedProducts: DetectedProduct[] = [{
+        product, version: protocol === 'ssh' ? '9.6' : '1.0',
+        vendor: protocol === 'ssh' ? 'OpenBSD' : index % 3 === 0 ? 'nginx' : 'Example vendor',
+        labels: [protocol === 'ssh' ? 'remote access' : 'web', ...(dataExample ? ['demo', 'exposed data'] : [])],
+        cve_list: [], exposed_data: dataExample ? demonstrationData(index) : undefined,
+      }];
+      if (dataExample) detectedProducts.push({
+        product: 'PostgreSQL', version: '16.4', vendor: 'PostgreSQL', labels: ['database', 'demo'], cve_list: [],
+        exposed_data: {
+          field_headers: ['Record ID', 'Dataset', 'Environment', 'Status', 'Records'],
+          field_value: Array.from({ length: 2048 }, (_, row) => [
+            `DEMO-${String(row + 1).padStart(5, '0')}`, ['Public asset inventory', 'Service availability', 'Documentation index'][row % 3],
+            ['Research', 'Staging', 'Archive'][row % 3], row % 7 === 0 ? 'Pending review' : 'Indexed', String(row * 125),
+          ]),
+        },
+      });
       return {
         port, protocol, transport: 'tcp', status: 'open', uts: DEMO_TIMESTAMP - index * 3600 - position,
         title: `${protocol === 'ssh' ? 'Secure shell' : position === 0 ? 'Research portal' : 'Documentation service'} · ${host}`,
@@ -37,9 +78,11 @@ export function seedHosts(): DemoHost[] {
         cert_domains: protocol === 'https' ? [host] : undefined, header_domains: protocol === 'ssh' ? undefined : ['assets.example.com'], redirects: protocol !== 'ssh' && position % 5 === 0 ? ['https://example.com/docs'] : [],
         link: protocol === 'ssh' ? undefined : `${protocol}://${host}/`,
         tls_info: protocol !== 'https' ? undefined : { server_name: host, tls_version: 'TLS 1.3', cipher_suite: 'TLS_AES_128_GCM_SHA256', issuer: 'CN=Example Certificate Authority', subject: `CN=${host}`, is_ca: false, not_before: '2026-10-01T00:00:00Z', not_after: '2027-01-01T00:00:00Z', dns_names: [host], ext_key_usage: [1] },
-        security_txt: protocol === 'ssh' ? undefined : { is_security_txt: true, body: 'Contact: mailto:security@example.com', contacts: ['mailto:security@example.com'], url: `${protocol}://${host}/.well-known/security.txt`, endpoint: '/.well-known/security.txt' },
-        robots_txt: protocol === 'ssh' ? undefined : { status_code: 200, body: 'User-agent: *\nDisallow: /internal/' },
-        detected_products: [{ product, version: protocol === 'ssh' ? '9.6' : '1.0', vendor: protocol === 'ssh' ? 'OpenBSD' : index % 3 === 0 ? 'nginx' : 'Example vendor', labels: [protocol === 'ssh' ? 'remote access' : 'web'], cve_list: [], exposed_data: index === 0 && position === 0 ? { field_headers: ['email'], field_value: [['research@example.com']] } : undefined }],
+        // The first service deliberately provides body only, like a partial response.
+        // Its summary must remain useful without invented server metadata.
+        security_txt: protocol === 'ssh' ? undefined : position === 0 ? { body: securityBody } : { is_security_txt: true, body: securityBody, contacts: ['mailto:security@example.com', 'https://example.com/security/report'], url: `${protocol}://${host}/.well-known/security.txt`, endpoint: '/.well-known/security.txt' },
+        robots_txt: protocol === 'ssh' ? undefined : { status_code: 200, body: `# Synthetic crawler policy for this documentation host\nUser-agent: *\nAllow: /docs/\nAllow: /assets/\nDisallow: /internal/\nDisallow: /preview/\n\nUser-agent: ExampleBot\nDisallow: /archive/\n\nSitemap: ${protocol}://${host}/sitemap.xml` },
+        detected_products: detectedProducts,
       };
     });
     const card: HostCard = {
@@ -80,12 +123,26 @@ export function seedPlanning(): PlanningTask[] {
   return [{ id: 'schedule_001', workers: 500, user_name: 'alex_research', schedule: '0 0 3 * * *', host_list: ['203.0.113.42', '203.0.113.78'], cidr_list: [], port_list: DEFAULT_SCAN_PORTS }];
 }
 export function seedBuckets(): DemoBucket[] {
-  const names = ['reports/2026/summary.csv', 'docs/readme.txt', 'assets/architecture.json', 'exports/hosts.ndjson', 'archive/backup.sql', 'images/diagram.svg', 'logs/empty.log', 'research/findings.csv'];
-  return names.map((key, index) => ({
+  const examples: Array<[string, number]> = [
+    ['reports/2026/summary.csv', 1.2], ['docs/readme.txt', 0.01], ['assets/architecture.json', 2.5],
+    ['exports/hosts.ndjson', 15.8], ['archive/backup.sql', 48.3], ['images/diagram.svg', 0.12],
+    ['logs/empty.log', 0], ['research/findings.csv', 3.7],
+    ['documents/product-brochure.pdf', 4.8], ['documents/research-brochure.pdf', 1.35], ['documents/platform-brochure.pdf', 12.6],
+    ['assets/brand/logo.svg', 0.008], ['assets/screenshots/search-workspace.png', 2.7],
+    [`assets/brand/${'presentation-'.repeat(76)}final-preview.png`, 8.4],
+    ['assets/illustrations/network-overview.png', 1.9], ['assets/catalog/empty-manifest.json', 0],
+    ['reports/2026/availability-report.pdf', 5.2], ['reports/2026/region-summary.json', 0.24],
+    ['archive/documentation-snapshot.zip', 8192], ['reports/2026/empty-report.csv', 0],
+  ];
+  const reports: Array<[string, number]> = Array.from({ length: 1200 }, (_, index) => [
+    `reports/2026/${['availability', 'inventory', 'research'][index % 3]}/report-${String(index + 1).padStart(4, '0')}.${index % 7 === 0 ? 'pdf' : 'csv'}`,
+    Number((0.015 + (index % 121) * 0.37).toFixed(3)),
+  ]);
+  return [...examples, ...reports].map(([key, size_mb], index) => ({
     host: index % 3 === 0 ? 'storage.example.com' : index % 3 === 1 ? 'files.example.org' : 'data.example.net',
     container: index % 3 === 0 ? 'public' : undefined, protocol: 'https', key, extension: key.split('.').at(-1),
-    alphabets: ['latin'], alias_hosts: [], cts: DEMO_TIMESTAMP - 86400 * (index + 1), uts: DEMO_TIMESTAMP - 3600 * index,
-    size_mb: [1.2, 0.01, 2.5, 15.8, 48.3, 0.12, 0, 3.7][index], product_name: index % 3 === 0 ? 'azureblobstorage' : index % 3 === 1 ? 'amazons3' : 'googlecloudstorage',
+    alphabets: ['latin'], alias_hosts: [], cts: DEMO_TIMESTAMP - 86400 * (index % 90 + 1), uts: DEMO_TIMESTAMP - 3600 * index,
+    size_mb, product_name: index % 3 === 0 ? 'azureblobstorage' : index % 3 === 1 ? 'amazons3' : 'googlecloudstorage',
   }));
 }
 export function seedSavedQueries(epoch = DEMO_TIMESTAMP): SavedQuery[] {

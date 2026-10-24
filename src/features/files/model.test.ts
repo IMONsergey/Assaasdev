@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILE_DRAFT, draftFromFilter, fileParams, fileSize, filterChips, filterFromDraft, normalizeBucketFilter, observedFileUrl, readFileParams, utcInput, utcSeconds } from './model';
+import { DEFAULT_FILE_DRAFT, draftFromFilter, fileParams, fileSize, filterChips, filterFromDraft, middleTruncate, nameParts, normalizeBucketFilter, observedFileUrl, readFileParams, utcInput, utcSeconds } from './model';
 
 describe('file search contract and view model', () => {
   it('round-trips every applied bucket parameter without dropping zero or exclusions', () => {
@@ -51,5 +51,22 @@ describe('file search contract and view model', () => {
     expect(observedFileUrl({ protocol: 'https', host: 'attacker@example.com', key: 'x' })).toBeNull();
     expect(observedFileUrl({ protocol: 'https', host: 'example.com', key: '../private' })).toBeNull();
     expect(observedFileUrl({ host: 'example.com', key: 'x' })).toBeNull();
+  });
+
+  it('bounds long display names while preserving Unicode, suffixes and the original key', () => {
+    const key = 'assets/' + 'Обзор🛰️_'.repeat(200) + 'final-preview.png';
+    const shortened = middleTruncate(key);
+    expect(Array.from(shortened)).toHaveLength(80);
+    expect(shortened).toContain('…');
+    expect(shortened.endsWith('final-preview.png')).toBe(true);
+    expect(shortened).not.toContain('\uFFFD');
+    const parts = nameParts(key);
+    expect(parts.start + parts.end).toBe(key);
+    expect(parts.end.endsWith('.png')).toBe(true);
+    expect(middleTruncate('empty.txt')).toBe('empty.txt');
+    expect(nameParts('empty.txt')).toEqual({ start: 'empty.txt', end: '' });
+    const file = { protocol: 'https', host: 'storage.example.com', key };
+    expect(decodeURIComponent(new URL(observedFileUrl(file)!).pathname)).toBe('/' + key);
+    expect(file.key).toBe(key);
   });
 });

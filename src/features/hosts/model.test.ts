@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PortRecord } from '../../api';
-import { displayValue, filterServices, hostWorkspace, mappedDomains, portRange, safeBackPath, serviceItems, servicePage, serviceSummary } from './model';
+import { displayValue, filterServices, hostWorkspace, mappedDomains, portRange, safeBackPath, serviceItems, servicePage, serviceSelection, serviceSummary } from './model';
 
 describe('received host records', () => {
   it('keeps same-port transport and server contexts separate', () => {
@@ -15,6 +15,23 @@ describe('received host records', () => {
     expect([second.start, second.end, second.rows.length, second.totalPages]).toEqual([26, 50, 25, 40]);
     expect(servicePage(filterServices(items, '1000', 'port-asc'), 40)).toMatchObject({ page: 1, start: 1, end: 1, totalPages: 1 });
     expect(servicePage([], 1)).toMatchObject({ start: 0, end: 0, rows: [] });
+  });
+  it('keeps selection visible across page boundaries, sorting and filtering', () => {
+    const items = serviceItems(Array.from({ length: 1000 }, (_, index) => ({ port: index + 1 })));
+    const linked = serviceSelection(items, items[78].key, 1);
+    expect(linked.window.page).toBe(4);
+    expect(linked.window.rows).toContain(linked.selected);
+    const nextPage = serviceSelection(items, null, 5);
+    expect(nextPage.selected?.record.port).toBe(101);
+    expect(nextPage.selectedIndex).toBe(100);
+    const descending = filterServices(items, '', 'port-desc');
+    const reordered = serviceSelection(descending, items[78].key, 4);
+    expect(reordered.selected?.record.port).toBe(79);
+    expect(reordered.window.rows).toContain(reordered.selected);
+    const filtered = serviceSelection(filterServices(items, '', 'received', { port: '500-510' }), items[78].key, 4);
+    expect(filtered.selected?.record.port).toBe(500);
+    expect(filtered.window.page).toBe(1);
+    expect(serviceSelection([], items[78].key, 4)).toMatchObject({ selected: undefined, selectedIndex: -1, window: { page: 1, rows: [] } });
   });
   it('preserves zero and false and recognizes absent data', () => {
     expect(displayValue(0)).toBe('0');

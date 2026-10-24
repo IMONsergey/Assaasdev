@@ -48,19 +48,20 @@ export function ProductList({ products, onCve }: { products: DetectedProduct[] |
   </section>;
 }
 
-export function ExposedData({ products }: { products: DetectedProduct[] | undefined }) {
+export function ExposedData({ products, onFindData }: { products: DetectedProduct[] | undefined; onFindData?: () => void }) {
   const entries = useMemo(() => (products || []).flatMap((product, index) => product.exposed_data ? [{ product, index, title: productName(product, index) }] : []), [products]);
   const [view, update] = useHostViewState('exposed-datasets', { query: '', page: 1, selected: null as number | null });
   const matches = entries.filter(entry => `${entry.title} ${entry.product.vendor || ''}`.toLowerCase().includes(view.query.trim().toLowerCase()));
   const page = Math.min(view.page, Math.max(1, Math.ceil(matches.length / 6)));
   const selected = entries.find(entry => entry.index === view.selected) || entries[0];
-  if (!selected) return <EmptyState icon={<Icon name="database" />} title="No exposed-data record returned" />;
+  if (!selected) return <EmptyState icon={<Icon name="database" />} title="No data returned for this service" description={onFindData ? 'Other services on this host include data you can explore.' : 'This observation does not contain an exposed dataset.'} actions={onFindData && <Button variant="secondary" size="sm" onClick={onFindData}>View services with data<Icon name="arrow" size={15} /></Button>} />;
   const data = selected.product.exposed_data;
   const rows = Array.isArray(data?.field_value) ? data.field_value : [];
   const headers = Array.isArray(data?.field_headers) ? data.field_headers : [];
   return <div className="host-datasets">
+    {selected.product.labels?.includes('demo') && <p className="host-demo-caption"><Badge>Demo data</Badge>Synthetic records for exploring tables, filters and pagination.</p>}
     {entries.length > 1 && <section className="host-dataset-picker" aria-label="Exposed datasets"><div className="host-product-toolbar"><span>{entries.length.toLocaleString()} datasets</span><Field className="host-compact-search" label="Find a dataset" value={view.query} placeholder="Product or vendor" icon={<Icon name="search" size={16} />} onChange={event => update({ query: event.target.value, page: 1 })} /></div><div className="host-dataset-options">{matches.slice((page - 1) * 6, page * 6).map(entry => <button key={entry.index} type="button" aria-pressed={selected.index === entry.index} onClick={() => update({ selected: entry.index })}><Icon name="database" size={16} /><span>{entry.title}</span><small>{Array.isArray(entry.product.exposed_data?.field_value) ? `${entry.product.exposed_data.field_value.length.toLocaleString()} rows` : 'Rows unavailable'}</small></button>)}</div>{!matches.length && <p className="muted host-caption">No matching datasets</p>}{matches.length > 6 && <Pagination page={page} pageSize={6} count={Math.min(6, matches.length - (page - 1) * 6)} total={matches.length} onPageChange={next => update({ page: next })} />}</section>}
-    <section className="host-dataset-content"><div className="host-section-heading"><h3>{selected.title}</h3></div>{Array.isArray(data?.field_value) ? <DataExplorer key={selected.index} values={rows} headers={headers} label={`${selected.title} exposed data`} stateId={`exposed-${selected.index}`} renderValue={(value, row, column) => <DataValue value={value} path={`exposed-${selected.index}.${row}.${column}`} />} /> : <div className="host-unavailable-inline">Rows were not provided for this dataset.</div>}</section>
+    <section className="host-dataset-content"><div className="host-section-heading"><h3>{selected.title}</h3><span className="host-caption muted">{rows.length.toLocaleString()} rows · {headers.length} fields</span></div>{Array.isArray(data?.field_value) ? <DataExplorer key={selected.index} values={rows} headers={headers} label={`${selected.title} exposed data`} stateId={`exposed-${selected.index}`} renderValue={(value, row, column) => <DataValue value={value} path={`exposed-${selected.index}.${row}.${column}`} />} /> : <div className="host-unavailable-inline">Rows were not provided for this dataset.</div>}</section>
   </div>;
 }
 

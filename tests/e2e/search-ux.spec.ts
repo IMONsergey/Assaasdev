@@ -207,14 +207,21 @@ test('search workspaces remain readable on desktop and mobile', async ({ page },
     await page.screenshot({ path: testInfo.outputPath(`search-filter-advanced-${width}.png`), fullPage: false });
     await expect(dialog.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('link', { name: 'Save', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Saved queries', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save current query', exact: true })).toBeEnabled();
+    const beforeAction = page.url();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    const saveDialog = page.getByRole('dialog', { name: 'Save query', exact: true });
+    await expect(saveDialog).toBeVisible();
+    await expect(saveDialog.getByRole('button', { name: 'Save current query', exact: true })).toBeEnabled();
+    expect(page.url()).toBe(beforeAction);
     await page.screenshot({ path: testInfo.outputPath(`search-saved-${width}.png`), fullPage: true });
-    await page.getByRole('link', { name: 'Back to results', exact: true }).click();
-    await page.getByRole('link', { name: 'Share', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Share search', exact: true })).toBeVisible();
+    await saveDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'Share', exact: true }).click();
+    const shareDialog = page.getByRole('dialog', { name: 'Share search', exact: true });
+    await expect(shareDialog).toBeVisible();
+    expect(page.url()).toBe(beforeAction);
     await page.screenshot({ path: testInfo.outputPath(`search-share-${width}.png`), fullPage: true });
+    await shareDialog.getByRole('button', { name: 'Close', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   }
 });

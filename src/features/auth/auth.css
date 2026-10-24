@@ -1,6 +1,10 @@
 .auth-page{min-height:100dvh;display:grid;grid-template-columns:minmax(0,min(44vw,624px)) minmax(0,1fr);gap:8px;padding:24px;background:var(--bg);color:var(--text)}
-.auth-story{position:relative;overflow:hidden;min-height:calc(100dvh - 48px);border-radius:16px;background:#03879f}
-.auth-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.auth-story{position:relative;isolation:isolate;display:grid;place-items:center;overflow:hidden;min-height:calc(100dvh - 48px);border-radius:16px;background:#03879f}
+.auth-story::before{content:'';position:absolute;inset:-35%;z-index:-1;background:linear-gradient(130deg,#064c5b 5%,#07879b 40%,#55c7d1 72%,#1692a4 100%);animation:auth-gradient-drift 20s ease-in-out infinite alternate;will-change:transform}
+.auth-story>.dot-cascade{z-index:0}
+.auth-brand-logo{position:relative;z-index:1;width:65%;max-width:360px;height:auto;filter:brightness(0) invert(1);animation:auth-brand-enter .7s cubic-bezier(.22,1,.36,1) both}
+@keyframes auth-gradient-drift{from{transform:translate(-5%,-4%) rotate(-5deg) scale(1)}to{transform:translate(5%,6%) rotate(6deg) scale(1.08)}}
+@keyframes auth-brand-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .auth-form-region{padding:0 24px;display:flex;flex-direction:column;min-width:0}
 .auth-topline{display:flex;justify-content:space-between;gap:16px;align-items:center;min-height:36px;font-size:12px}
 .auth-top-actions{display:flex;align-items:center;gap:14px;margin-left:auto}.auth-top-actions .button{font-size:12px;padding:7px 0}
@@ -12,6 +16,7 @@
 .auth-demo-label{font:10px var(--font-mono);color:var(--warning)}.auth-mobile-brand{display:none}
 .auth-form-wrap{width:100%;max-width:456px;margin:auto;display:flex;flex-direction:column;gap:20px;padding:56px 0}
 .auth-form-wrap h1{margin:0;font:500 calc(36px * var(--font-scale,1))/1.13 var(--font-display);letter-spacing:-.02em}
+.auth-form-wrap h1,.auth-description{animation:auth-brand-enter .5s cubic-bezier(.22,1,.36,1) both}
 .auth-description{margin:-3px 0 0;color:var(--muted);font-size:calc(16px * var(--font-scale,1));line-height:1.45}
 .auth-step-label{font:600 11px var(--font-mono);letter-spacing:.1em;color:var(--muted)}
 .auth-form{display:flex;flex-direction:column;gap:20px}.auth-form .field label{font-size:calc(14px * var(--font-scale,1));line-height:20px}
@@ -31,6 +36,7 @@
 @media(max-width:800px){.auth-page{display:block;padding:0}.auth-story{display:none}.auth-form-region{min-height:100dvh;padding:24px}.auth-mobile-brand{display:inline-flex;flex-shrink:0;align-items:center}.auth-mobile-brand img{width:128px;height:auto}.auth-back{display:none}.auth-form-wrap{padding:56px 0;max-width:456px}.auth-form-wrap h1{font-size:calc(36px * var(--font-scale,1))}.auth-security-note{padding:0 0 4px}.auth-top-actions .button{font-size:11px;max-width:132px;line-height:1.5}}
 @media(max-width:360px){.auth-form-region{padding:20px}.auth-form-wrap h1{font-size:calc(32px * var(--font-scale,1))}.auth-topline{gap:10px}.auth-mobile-brand img{width:112px}.auth-password-toggle{font-size:11px}.auth-social{gap:8px}}
 :root[data-theme='dark'] .auth-mobile-brand{padding:8px;background:white;border-radius:8px}
-@media(prefers-reduced-motion:reduce){.auth-page *{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){.auth-page *{scroll-behavior:auto}.auth-story::before,.auth-brand-logo,.auth-form-wrap h1,.auth-description{animation:none;will-change:auto}}
+:root[data-reduced-motion='true'] .auth-story::before,:root[data-reduced-motion='true'] :is(.auth-brand-logo,.auth-form-wrap h1,.auth-description){animation:none;will-change:auto}
 @media(max-width:1100px){.auth-scenario-shell>.scenario-guide .scenario-guide-body{grid-template-columns:1fr;gap:16px}.auth-scenario-shell>.scenario-guide .scenario-guide-actions{justify-content:flex-start}}
 @media(max-width:800px){.auth-scenario-shell:has(>.scenario-guide){padding-top:16px}.auth-scenario-shell>.scenario-guide{width:calc(100% - 32px)}.auth-scenario-shell:has(>.scenario-guide) .auth-form-region{min-height:0}.auth-scenario-shell:has(>.scenario-guide) .auth-form-wrap{margin:0 auto;padding-block:40px}}

@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('sidebar moves continuously, keeps icons aligned and respects reduced motion', async ({page}) => {
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto('/search');
+  await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
   await expect(page.getByRole('button',{name:'Collapse navigation',exact:true})).toBeVisible();
   const samples = await page.evaluate(async()=>{
     const sidebar=document.querySelector<HTMLElement>('.app-sidebar')!;
@@ -26,8 +27,7 @@ test('sidebar moves continuously, keeps icons aligned and respects reduced motio
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.getByRole('button',{name:'Expand navigation',exact:true}).click();
   expect(await page.locator('.app-sidebar').evaluate(element=>getComputedStyle(element).transitionDuration)).toBe('0s');
-  const header=await page.locator('.app-topbar').evaluate(element=>({background:getComputedStyle(element).backgroundColor,border:getComputedStyle(element).borderBottomWidth}));
-  expect(header).toEqual({background:'rgba(0, 0, 0, 0)',border:'0px'});
+  await expect(page.locator('.app-topbar')).toHaveCount(0);
 });
 
 test('compact help and toast remain readable and dismissible at 320px', async ({page,context,browserName},info) => {
@@ -55,19 +55,29 @@ test('compact help and toast remain readable and dismissible at 320px', async ({
   await expect(toast).toHaveCount(0);
 });
 
-test('the seamless topbar stays readable over scrolled content on desktop and mobile', async ({page}) => {
+test('the workspace has no topbar and navigation remains reachable after scrolling', async ({page}) => {
   for (const width of [1440,390]) {
     await page.setViewportSize({width,height:844});
     await page.goto('/billing?section=credits');
     await expect(page.locator('.billing-token').first()).toBeVisible();
-    const header=page.locator('.app-topbar');
-    expect(await header.evaluate(element=>getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
+    await expect(page.locator('.app-topbar')).toHaveCount(0);
     await page.evaluate(()=>window.scrollTo(0,450));
-    await expect(header).toHaveAttribute('data-over-content','true');
-    expect(await header.evaluate(element=>getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-    expect(await header.evaluate(element=>getComputedStyle(element).borderBottomWidth)).toBe('0px');
-    await page.evaluate(()=>window.scrollTo(0,0));
-    await expect(header).toHaveAttribute('data-over-content','false');
-    expect(await header.evaluate(element=>getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    const sidebar=page.locator('#workspace-navigation');
+    if(width<=760) {
+      const menu=page.getByRole('button',{name:'Open navigation',exact:true});
+      await expect(menu).toBeInViewport();
+      await menu.click();
+      await expect(sidebar).not.toHaveAttribute('inert','');
+    }
+    await expect(sidebar.getByRole('link',{name:'API & docs',exact:true})).toBeVisible();
+    await expect(sidebar.getByRole('link',{name:/^Notifications/})).toBeVisible();
+    await expect(sidebar.getByRole('link',{name:'Scenarios',exact:true})).toHaveCount(0);
+    const credits=sidebar.getByRole('button',{name:/^View credits and usage\./});
+    await credits.scrollIntoViewIfNeeded();
+    await expect(credits).toBeInViewport();
+    await expect(sidebar.getByRole('button',{name:'Account menu',exact:true})).toBeVisible();
+    if(width<=760) await sidebar.getByRole('button',{name:'Close navigation',exact:true}).click();
+    await expect(page.locator('.app-topbar')).toHaveCount(0);
   }
 });
