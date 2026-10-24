@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, createApiClient, type ApiClient, type ConnectionStatus, type Profile, type ResponseMetadata } from '../api';
 import { config } from '../config';
 import { createDemoApi } from '../demo';
-import { Icon } from '../components/ui';
+import { ToastMessage } from '../components/ToastMessage';
+import { ToastRegion } from '../components/ToastRegion';
 
 export type SessionStatus = 'loading' | 'anonymous' | 'guest' | 'authenticated' | 'pending-2fa' | 'error';
 export interface Session { status: SessionStatus; user: Profile | null; error?: string }
@@ -42,9 +43,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setPreferences = useCallback((partial: Partial<Preferences>) => updatePreferences(previous => ({ ...previous, ...partial })), []);
   const toast = useCallback((message: string, tone: Toast['tone'] = 'info') => {
     const id = crypto.randomUUID();
-    const limit = window.matchMedia('(max-width: 760px)').matches ? 2 : 4;
+    const limit = window.matchMedia('(max-width: 760px)').matches ? 2 : 3;
     setToasts(previous => [...previous.filter(item => item.message !== message).slice(-(limit - 1)), { id, message, tone }]);
-    window.setTimeout(() => setToasts(previous => previous.filter(item => item.id !== id)), tone === 'error' ? 10000 : 6000);
   }, []);
   const adopt = useCallback((user: Profile | null, status: SessionStatus) => {
     currentSessionStatus.current = status;
@@ -120,6 +120,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     apply(); media.addEventListener('change', apply); return () => media.removeEventListener('change', apply);
   }, [preferences]);
   const value = useMemo<AppContextValue>(() => ({ api, session, user: session.user, refreshSession, setPending2fa, logout, startGuest, toast, preferences, setPreferences, mode: config.dataMode, connectionStatus, metadata, unreadCount, highLoad }), [session, refreshSession, setPending2fa, logout, startGuest, toast, preferences, setPreferences, connectionStatus, metadata, unreadCount, highLoad]);
-  return <AppContext.Provider value={value}>{children}<div className="toast-region" role="region" aria-label="Notifications" aria-live="polite" aria-relevant="additions">{toasts.map(item => <div key={item.id} className={`toast toast--${item.tone}`} role={item.tone === 'error' ? 'alert' : 'status'}><Icon name={item.tone === 'success' ? 'success' : item.tone === 'error' ? 'alert' : 'info'} size={20} /><span>{item.message}</span><button aria-label="Dismiss notification" onClick={() => setToasts(previous => previous.filter(t => t.id !== item.id))}><Icon name="close" size={16} /></button></div>)}</div></AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}<ToastRegion visible={toasts.length > 0}>{toasts.map(item => <ToastMessage key={item.id} message={item.message} tone={item.tone} onDismiss={() => setToasts(previous => previous.filter(t => t.id !== item.id))} />)}</ToastRegion></AppContext.Provider>;
 }
 export function useApp() { const context = useContext(AppContext); if (!context) throw new Error('useApp must be inside AppProvider'); return context; }

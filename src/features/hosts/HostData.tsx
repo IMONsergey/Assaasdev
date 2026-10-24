@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Dialog, Icon } from '../../components/ui';
+import { CodeCanvas } from '../../components/CodeCanvas';
 import { dateLabel, safeExternalUrl } from '../search/model';
 import { DataExplorer } from './DataExplorer';
 import { displayValue } from './model';
@@ -33,19 +34,16 @@ export function Facts({ values }: { values: [string, unknown][] }) {
 
 export function NestedRecord({ value, path, title }: { value: unknown; path: string; title: string }) {
   const [open, setOpen] = useState(false);
-  return <details className="host-disclosure" onToggle={event => setOpen(event.currentTarget.open)}><summary>{title}</summary>{open && <DataValue value={value} path={path} />}</details>;
+  const raw = path === 'host-record' || path === 'service-record';
+  return <details className="host-disclosure" onToggle={event => setOpen(event.currentTarget.open)}><summary><span>{title}</span><Icon name="chevron-down" size={16} /></summary>{open && (raw ? <CodeCanvas content={JSON.stringify(value, null, 2) ?? 'null'} language="json" title={title} /> : <DataValue value={value} path={path} />)}</details>;
 }
 
 export function RawResponse({ title, content, onCopy }: { title: string; content: string | undefined; onCopy: (value: string) => void }) {
-  const [expanded, setExpanded] = useState(false), [fullOpen, setFullOpen] = useState(false);
-  useEffect(() => { setExpanded(false); setFullOpen(false); }, [content]);
-  const long = (content?.length || 0) > 4000;
+  const [fullOpen, setFullOpen] = useState(false);
+  useEffect(() => { setFullOpen(false); }, [content]);
   return <section className="host-raw-response">
-    <div className="host-section-heading"><h3>{title}</h3><div className="cluster"><Button variant="secondary" size="sm" disabled={content === undefined} onClick={() => { if (content !== undefined) onCopy(content); }}><Icon name="copy" size={15} />Copy</Button><Button variant="ghost" size="sm" disabled={content === undefined} onClick={() => setFullOpen(true)} aria-label={`Open full ${title}`}><Icon name="external" size={16} />Full response</Button></div></div>
-    {content === undefined ? <div className="host-unavailable-inline">No {title.toLowerCase()} returned.</div> : <>
-      <pre className="host-banner"><code>{content === '' ? 'Empty response' : long && !expanded ? content.slice(0, 4000) : content}</code></pre>
-      {long && <div className="host-truncation"><span>{expanded ? `${content.length.toLocaleString()} characters` : `4,000 of ${content.length.toLocaleString()} characters`}</span><Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>{expanded ? 'Collapse' : 'Show all text'}</Button></div>}
-    </>}
-    <Dialog open={fullOpen} onClose={() => setFullOpen(false)} title={title} size="lg" footer={<Button variant="secondary" onClick={() => { if (content !== undefined) onCopy(content); }}>Copy full text</Button>}><pre className="host-banner host-banner-full"><code>{content === '' ? 'Empty response' : content}</code></pre></Dialog>
+    <div className="host-section-heading"><h3>{title}</h3><Button variant="ghost" size="sm" disabled={content === undefined} onClick={() => setFullOpen(true)} aria-label={`Open full ${title}`}><Icon name="external" size={16} />Full response</Button></div>
+    {content === undefined ? <div className="host-unavailable-inline">No {title.toLowerCase()} returned.</div> : <CodeCanvas content={content} title={title} onCopy={onCopy} codeClassName="host-banner" emptyLabel="Empty response" />}
+    <Dialog open={fullOpen} onClose={() => setFullOpen(false)} title={title} size="lg" footer={<Button variant="secondary" onClick={() => { if (content !== undefined) onCopy(content); }}>Copy full text</Button>}>{fullOpen && <CodeCanvas content={content ?? ''} title={title} onCopy={onCopy} codeClassName="host-banner host-banner-full" emptyLabel="Empty response" />}</Dialog>
   </section>;
 }

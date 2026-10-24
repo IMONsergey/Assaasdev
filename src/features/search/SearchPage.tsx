@@ -7,6 +7,9 @@ import { Alert, Badge, Button, Dialog, EmptyState, Icon, Pagination, Skeleton, S
 import { ExportDialog } from '../files/ExportDialog';
 import { ConditionsEditor } from './ConditionsEditor';
 import { FacetPanel } from './FacetPanel';
+import { SearchAutocomplete } from './SearchAutocomplete';
+import { DotCascade, DoubleButton, OrbCubeLoader } from '../../components/brand';
+import { CountryFlag } from '../../components/CountryFlag';
 import { useFacets } from './useFacets';
 import { activeFacetValues, analyticsRequest, dateLabel, decodeSearch, encodeSearch, filterSummary, isShared, PAGE_CAPS, parseHostRows, searchPath, selectedType, searchAccessIssues, validateSearchRequest, withoutShareToken, withType, toggleFacet } from './model';
 import type { Dataset } from './model';
@@ -28,17 +31,19 @@ export function SearchAccessNotice() {
 }
 
 function ResultRow({ host, request, dataset, backTo }: { host: HostCard; request: SearchRequest; dataset: Dataset; backTo: string }) {
+  const navigate = useNavigate();
   const shared = isShared(request);
   const params = new URLSearchParams(encodeSearch(withoutShareToken(request)));
   params.set('back', backTo);
   if (shared) params.set('own_access', '1');
   const path = `${dataset === 'private' ? '/private' : ''}/hosts/${encodeURIComponent(host.ip)}`;
+  const href = `${path}?${params}`;
   const portHref = (port: number, protocol?: string) => { const next = new URLSearchParams(params); next.set('port', String(port)); if (protocol) next.set('protocol', protocol); return `${path}?${next}`; };
   const ports = host.open_ports;
   const observed = typeof host.uts === 'number' && Number.isFinite(host.uts) && !Number.isNaN(new Date(host.uts * 1000).getTime());
-  return <article className="search-result-row">
+  return <article className="search-result-row" onClick={event => { if (event.defaultPrevented || (event.target as HTMLElement).closest('a,button,input,select,summary') || window.getSelection()?.toString()) return; if (event.metaKey || event.ctrlKey) window.open(href, '_blank', 'noopener'); else navigate(href); }}>
     <div className="search-result-address">
-      <Link className="search-result-ip" to={`${path}?${params}`}>{host.ip}<Icon name="arrow-up-right" size={14} /></Link>
+      <Link className="search-result-ip" to={href}>{host.ip}<Icon name="arrow-up-right" size={15} /></Link>
       <p>{host.org || <span className="muted" title="Organization not provided">—</span>}</p>
       {(host.os || host.labels_list?.length) ? <div className="search-labels">{host.os && <span className="search-row-meta">{host.os}</span>}{host.labels_list?.slice(0, 2).map(label => <Badge key={label}>{label}</Badge>)}{host.labels_list && host.labels_list.length > 2 && <span className="muted" title={host.labels_list.slice(2).join(', ')}>+{host.labels_list.length - 2}</span>}</div> : null}
     </div>
@@ -46,7 +51,7 @@ function ResultRow({ host, request, dataset, backTo }: { host: HostCard; request
       <div className="search-port-chips">{ports?.slice(0, 6).map((port, index) => <Link className="search-port-chip" key={`${port.port}-${port.protocol}-${index}`} to={portHref(port.port, port.protocol)} title={`View ${port.port}${port.protocol ? ` / ${port.protocol}` : ''}${shared ? ' using your own access' : ''}`}>{port.port}</Link>)}{ports && ports.length > 6 && <Link className="search-port-overflow" to={`${path}?${params}`}>+{ports.length - 6}</Link>}</div>
       <p className="search-row-meta" title={ports === undefined ? 'Service list not provided' : undefined}>{ports === undefined ? '—' : ports.length === 0 ? '0 observed ports' : [...new Set(ports.map(port => port.protocol).filter(Boolean))].join(' · ') || `${ports.length} observed ports`}</p>
     </div>
-    <div className="search-result-location"><p title={!host.country_code ? 'Location not provided' : undefined}>{countryName(host.country_code)}</p>{(host.city_name || host.region) && <p className="search-row-meta">{[host.city_name, host.region].filter((value, index, list) => value && list.indexOf(value) === index).join(' · ')}</p>}</div>
+    <div className="search-result-location"><p title={!host.country_code ? 'Location not provided' : undefined}><CountryFlag code={host.country_code} />{countryName(host.country_code)}</p>{(host.city_name || host.region) && <p className="search-row-meta">{[host.city_name, host.region].filter((value, index, list) => value && list.indexOf(value) === index).join(' · ')}</p>}</div>
     <div className="search-result-observation"><time className="search-row-meta" dateTime={observed ? new Date(host.uts! * 1000).toISOString() : undefined} title={observed ? undefined : 'Observation time not provided'}>{observed ? dateLabel(host.uts) : '—'}</time></div>
   </article>;
 }
@@ -71,6 +76,16 @@ export function SearchPage() {
     setDraft(applied); setInputError('');
     if (previousAppliedKey.current !== appliedKey) { beforeEditor.current = applied; setEditorOpen(false); previousAppliedKey.current = appliedKey; }
   }, [appliedKey]);
+  const requestedEditor = params.get('conditions') === '1';
+  useEffect(() => {
+    if (!requestedEditor || shared || session.status === 'loading') return;
+    beforeEditor.current = applied; setDraft(applied); setInputError(''); setEditorOpen(true);
+    const next = new URLSearchParams(window.location.search);
+    if (next.get('conditions') === '1') {
+      next.delete('conditions');
+      navigate(`${location.pathname}${next.size ? `?${next}` : ''}`, { replace: true, state: { ...location.state, preserveTabFocus: true } });
+    }
+  }, [requestedEditor, appliedKey, shared, location.pathname, session.status]);
   const principal = user?.user_id || user?.session_id || session.status;
   const accessIssues = searchAccessIssues(applied, metadata?.search_restrictions);
   const plan = metadata?.subscription_type || user?.subscription?.type || (session.status === 'guest' ? 'Guest' : 'Free');
@@ -125,6 +140,7 @@ export function SearchPage() {
   }
   function loadAnalytics() { if (canRequest && !queryDirty && !analytics.isFetching) void analytics.refetch(); }
   function openEditor() { beforeEditor.current = draft; setInputError(''); setEditorOpen(true); }
+  function addSuggestedFilter(field: string, value: string) { beforeEditor.current = draft; setDraft(current => ({ ...current, full_text_search: '', simple_search_filters: [...(current.simple_search_filters || []), { field, value }] })); setInputError(''); setEditorOpen(true); }
   function cancelEditor() { setDraft(beforeEditor.current); setInputError(''); setEditorOpen(false); requestAnimationFrame(() => document.getElementById('search-filter-toggle')?.focus({ preventScroll: true })); }
   function clearConditions() { setInputError(''); setDraft(current => ({ ...current, simple_search_filters: [], range_filter: [], security_body: '', robots_body: '', exposed_data: '', min_size_mb: undefined, max_size_mb: undefined })); }
   const type = selectedType(draft);
@@ -135,23 +151,25 @@ export function SearchPage() {
   const restriction = results.data?.metadata?.result_restrictions;
 
   return <div className={`search-page ${parsed.hasSearch ? 'search-page-results' : 'search-page-home'}${needsWorkspaceLayout ? ' search-page-editing' : ''}`}>
+    {!parsed.hasSearch && <DotCascade overlay className="search-dots" startOpacity={.19} endOpacity={.035} spacing={26} hoverRadius={130} displacement={3} />}
     <div className="search-entry">
       {!parsed.hasSearch && <section className="search-home-hero" aria-labelledby="search-home-title"><div className="search-home-copy"><h1 id="search-home-title">Search internet infrastructure</h1><p>Explore hosts, services and networks.</p></div></section>}
       {dataset === 'private' && <div className="search-private-context"><Badge tone="accent">Private results</Badge><span title={applied.task_ids?.join(', ')}>{applied.task_ids?.length ? `${applied.task_ids.length} scan ${applied.task_ids.length === 1 ? 'task' : 'tasks'}` : 'All scan tasks'}</span><Link to={scannerBack} state={{ restoreScroll: true }}><Icon name="chevron-left" size={15} />Back to scanner</Link></div>}
       <div className="search-composer">
-        <form className="search-query-bar" onSubmit={event => { event.preventDefault(); run({ ...draft, page: 1 }); }}>
-          <Icon name="search" size={20} /><label className="search-sr-only" htmlFor="main-search-query">Search internet infrastructure</label><input id="main-search-query" aria-invalid={Boolean(inputError) || undefined} aria-describedby={inputError ? 'search-input-error' : undefined} value={draft.full_text_search || ''} onChange={event => setDraft({ ...draft, full_text_search: event.target.value })} placeholder="Search an IP, domain or service" readOnly={shared} spellCheck={false} autoComplete="off" />
-          <button type="submit" className="search-submit" disabled={shared || (results.isFetching && !queryDirty)} aria-label="Run search" title={parsed.hasSearch && !queryDirty ? 'Run this search again' : 'Run search'}>{results.isFetching && !queryDirty ? <Spinner label="Searching" /> : <Icon name="arrow" size={19} />}</button>
-        </form>
         <div className="search-query-controls"><div className="search-toolbar-tools">
           <Button id="search-filter-toggle" aria-label="Filters" variant="ghost" size="sm" disabled={shared} aria-controls={editorOpen ? 'search-conditions' : undefined} onClick={openEditor} aria-expanded={editorOpen}><Icon name="filter" size={17} />Filters{filterCount > 0 && <span className="search-filter-count">{filterCount}</span>}</Button>
           <label className="search-type-select"><span className="search-sr-only">Result type</span><select value={type} disabled={shared || type === 'custom'} title={type === 'custom' ? 'Edit combined or excluded types in Filters' : undefined} onChange={event => setDraft(current => withType(current, event.target.value))}><option value="">All types</option><option value="ipv4">IPv4</option><option value="ipv6">IPv6</option><option value="domain">Domain</option>{type === 'custom' && <option value="custom" disabled>Custom type logic</option>}{type && !['ipv4', 'ipv6', 'domain', 'custom'].includes(type) && <option value={type}>{type}</option>}</select><Icon name="chevron-down" size={14} /></label>
         </div>{!parsed.hasSearch && <Link className="search-saved-shortcut" to="/search/saved"><Icon name="bookmark" size={16} />Saved queries</Link>}</div>
+        <form className="search-query-bar" onSubmit={event => { event.preventDefault(); run({ ...draft, page: 1 }); }}>
+          <Icon name="search" size={22} /><SearchAutocomplete value={draft.full_text_search || ''} onChange={full_text_search => setDraft(current => ({ ...current, full_text_search }))} onSearch={full_text_search => run({ ...draft, full_text_search, page: 1 })} onFilter={addSuggestedFilter} invalid={Boolean(inputError)} describedBy={inputError ? 'search-input-error' : undefined} readOnly={shared} />
+          <DoubleButton type="submit" compact className="search-submit-button" disabled={shared || (results.isFetching && !queryDirty)} aria-label="Run search" aria-busy={results.isFetching && !queryDirty || undefined} title={parsed.hasSearch && !queryDirty ? 'Run this search again' : 'Run search'}>{results.isFetching && !queryDirty ? <OrbCubeLoader size={20} decorative color="currentColor" /> : <span>Search</span>}</DoubleButton>
+        </form>
       </div>
+      {!parsed.hasSearch && <div className="search-home-support"><p className="search-query-kinds"><span><Icon name="search" size={15} />Text query</span><span><Icon name="globe" size={15} />Domain</span><span><Icon name="server" size={15} />IP / CIDR</span><span><Icon name="package" size={15} />Technology</span></p><p>Use filters for a specific field or range.</p></div>}
     </div>
 
     {queryDirty && !editorOpen && <div className="search-query-draft"><span role="status"><span className="search-draft-dot" />Changes not applied</span><div className="cluster"><Button size="sm" onClick={() => run({ ...draft, page: 1 })}>Apply changes</Button><Button size="sm" variant="ghost" onClick={() => { setDraft(applied); setInputError(''); }}>Cancel changes</Button></div></div>}
-    <Dialog open={editorOpen && !shared} onClose={cancelEditor} title="Filters" placement="left" className="search-filter-dialog" footer={<><Button variant="ghost" onClick={clearConditions}>Reset</Button><Button variant="secondary" onClick={cancelEditor}>Cancel</Button><Button type="submit" form="search-conditions-form">Apply conditions</Button></>}>
+    <Dialog open={editorOpen && !shared} onClose={cancelEditor} title="Filters" placement="left" scope="workspace" className="search-filter-dialog" footer={<><Button variant="ghost" onClick={clearConditions}>Reset</Button><Button variant="secondary" onClick={cancelEditor}>Cancel</Button><Button type="submit" form="search-conditions-form">Apply conditions</Button></>}>
       {editorOpen && <>{inputError && <Alert tone="error" title="Check your search">{inputError}</Alert>}<ConditionsEditor request={draft} onChange={setDraft} onApply={request => run({ ...request, page: 1 })} /></>}
     </Dialog>
     {parsed.error && <Alert tone="error" title="This search link could not be restored" actions={<Button variant="secondary" onClick={() => navigate(searchPath(dataset))}>Start a new search</Button>}>{parsed.error}</Alert>}

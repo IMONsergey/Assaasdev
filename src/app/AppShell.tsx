@@ -6,17 +6,16 @@ import { asset } from '../config';
 import { errorMessage } from '../lib/format';
 import { lockPageScroll } from '../lib/scroll-lock';
 import { CreditBalance } from './CreditBalance';
+import { SupportDialog } from '../features/support/SupportDialog';
+import { ScenarioGuide } from '../features/journeys/ScenarioGuide';
 
 const navigation = [
-  { group: 'Explore', items: [
     { to: '/search', icon: 'search', label: 'Search' },
     { to: '/files', icon: 'database', label: 'Buckets & files' },
     { to: '/search/saved', icon: 'bookmark', label: 'Saved queries' },
-  ] },
-  { group: 'Workspace', items: [
     { to: '/scanner', icon: 'scan', label: 'Private Scanner' },
     { to: '/api', icon: 'code', label: 'API access' },
-  ] },
+    { to: '/scenarios', icon: 'grid', label: 'Scenarios' },
 ];
 
 function workspaceContext(path: string) {
@@ -30,6 +29,7 @@ function workspaceContext(path: string) {
   if (path.startsWith('/billing')) return { label: 'Billing', icon: 'card' };
   if (path.startsWith('/account') || path.startsWith('/settings')) return { label: 'Settings', icon: 'settings' };
   if (path.startsWith('/notifications')) return { label: 'Notifications', icon: 'bell' };
+  if (path.startsWith('/scenarios')) return { label: 'Scenarios', icon: 'grid' };
   return { label: 'Search', icon: 'search' };
 }
 
@@ -123,7 +123,7 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
         <Button variant="ghost" className="mobile-nav-close" aria-label="Close navigation" onClick={() => setMenu(false)}><Icon name="close" /></Button>
       </div>
       <nav className="sidebar-primary" aria-label="Main navigation">
-        {navigation.map(group => <div className="nav-group" key={group.group}><span className="nav-group-label">{group.group}</span>{group.items.map(item => <NavLink key={item.to} to={item.to} end={item.to === '/search'} aria-label={item.label} title={collapsed ? item.label : undefined} className={({ isActive }) => `nav-link${(item.to === '/search' ? isSearch : item.to === '/scanner' ? isPrivate : isActive) ? ' active' : ''}`}><Icon name={item.icon} size={19} /><span className="nav-label">{item.label}</span>{item.to === '/search' && <kbd className="nav-shortcut">⌘ K</kbd>}</NavLink>)}</div>)}
+        {navigation.map(item => <NavLink key={item.to} to={item.to} end={item.to === '/search'} aria-label={item.label} title={collapsed ? item.label : undefined} className={({ isActive }) => `nav-link${(item.to === '/search' ? isSearch : item.to === '/scanner' ? isPrivate : isActive) ? ' active' : ''}`}><Icon name={item.icon} size={19} /><span className="nav-label">{item.label}</span>{item.to === '/search' && <kbd className="nav-shortcut">⌘ K</kbd>}</NavLink>)}
       </nav>
       <div className="sidebar-bottom">
         <NavLink to="/billing" className="nav-link" aria-label="Billing" title={collapsed ? 'Billing' : undefined}><Icon name="card" size={19} /><span className="nav-label">Billing</span></NavLink>
@@ -150,16 +150,11 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
       </div>
     </header>
     <main ref={main} id="main-content" className="workspace-main" tabIndex={-1} inert={menu}>
+      <ScenarioGuide />
       <Outlet key={user?.user_id || session.status} />
 
     </main>
-    <Dialog open={supportOpen} onClose={() => { setSupportOpen(false); if (mobile) requestAnimationFrame(() => menuButton.current?.focus()); }} title="Help & support" size="sm">
-      <div className="support-content stack">
-        <section><h3>Start a search</h3><p>Enter a domain, IP address or technical attribute. Use Filters to combine conditions and narrow your results. Press <kbd>/</kbd> or <kbd>⌘ / Ctrl K</kbd> to jump to search.</p></section>
-        <section><h3>Explore the API</h3><p>Find connection details, request examples and your API key in <Link to="/api" onClick={() => setSupportOpen(false)}>API access</Link>.</p></section>
-        <section><h3>Manage your workspace</h3><p>Appearance, account access and connection information are together in <Link to="/settings" onClick={() => setSupportOpen(false)}>Settings</Link>.</p></section>
-      </div>
-    </Dialog>
+    <SupportDialog open={supportOpen} onClose={() => { setSupportOpen(false); if (mobile) requestAnimationFrame(() => menuButton.current?.focus()); }} />
     <Dialog open={connectionOpen} onClose={() => setConnectionOpen(false)} title="Connection" size="sm" footer={<><Button variant="secondary" onClick={() => setConnectionOpen(false)}>Close</Button><Button loading={checkingConnection} onClick={async () => { setCheckingConnection(true); try { await refreshSession(); toast('Connection checked.', 'success'); setConnectionOpen(false); } catch (error) { toast(errorMessage(error), 'error'); } finally { setCheckingConnection(false); } }}>Try again</Button></>}><p>{session.error || 'The workspace is offline. Reconnect to continue.'}</p>{session.status === 'anonymous' && <Link className="inline-link" to="/auth/login" onClick={() => setConnectionOpen(false)}>Sign in</Link>}</Dialog>
   </div>;
 }

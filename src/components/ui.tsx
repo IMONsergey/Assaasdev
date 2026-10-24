@@ -1,13 +1,14 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { asset } from '../config';
 import { lockPageScroll } from '../lib/scroll-lock';
 import { useTabOverflow } from '../lib/tab-overflow';
+import { OrbCubeLoader } from './brand';
 
 const join = (...names: (string | undefined | false)[]) => names.filter(Boolean).join(' ');
 
 export function Button({ variant = 'primary', size = 'md', loading, fullWidth, className, children, disabled, type = 'button', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost'; size?: 'sm' | 'md'; loading?: boolean; fullWidth?: boolean }) {
-  return <button type={type} className={join('button', `button--${variant}`, `button--${size}`, fullWidth && 'button--full', className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>{loading && <span className="spinner spinner--small" aria-hidden="true" />}{children}</button>;
+  return <button type={type} className={join('button', `button--${variant}`, `button--${size}`, fullWidth && 'button--full', className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>{loading && <OrbCubeLoader size={20} decorative color="currentColor" />}{children}</button>;
 }
 
 type FieldMeta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; icon?: ReactNode };
@@ -35,12 +36,25 @@ export function Alert({ tone = 'info', title, children, actions }: { tone?: 'err
   return <div className={`alert alert--${tone}`} role={tone === 'error' ? 'alert' : 'status'}><div>{title && <strong className="alert-title">{title}</strong>}<div>{children}</div></div>{actions && <div className="alert-actions">{actions}</div>}</div>;
 }
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'error'; children: ReactNode }) { return <span className={`badge badge--${tone}`}>{children}</span>; }
-export function Spinner({ label = 'Loading…' }: { label?: string }) { return <span className="loading-state" role="status"><span className="spinner" aria-hidden="true" />{label}</span>; }
+export function Spinner({ label = 'Loading…' }: { label?: string }) { return <span className="loading-state" role="status"><OrbCubeLoader size={32} decorative />{label}</span>; }
 export function Skeleton({ rows = 4, className, label = 'Loading…' }: { rows?: number; className?: string; label?: string }) {
-  return <div className={join('skeleton', className)} role="status" aria-label={label} aria-busy="true"><span className="sr-only">{label}</span><div className="skeleton-heading" aria-hidden="true" /><div className="skeleton-subheading" aria-hidden="true" />{Array.from({ length: rows }, (_, index) => <div className="skeleton-row" key={index} aria-hidden="true"><i /><span><i /><i /></span><i /></div>)}</div>;
+  return <div className={join('skeleton', className)} role="status" aria-label={label} aria-busy="true"><div className="skeleton-status"><OrbCubeLoader size={44} decorative /><span>{label}</span></div><div className="skeleton-heading" aria-hidden="true" /><div className="skeleton-subheading" aria-hidden="true" />{Array.from({ length: rows }, (_, index) => <div className="skeleton-row" key={index} aria-hidden="true"><i /><span><i /><i /></span><i /></div>)}</div>;
 }
-export function Dialog({ open, onClose, title, children, footer, size = 'md', placement = 'center', className }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; size?: 'sm' | 'md' | 'lg'; placement?: 'center' | 'left'; className?: string }) {
+export function Dialog({ open, onClose, title, children, footer, size = 'md', placement = 'center', scope = 'screen', className }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; size?: 'sm' | 'md' | 'lg'; placement?: 'center' | 'left'; scope?: 'screen' | 'workspace'; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null), titleId = useId();
+  const [bounds, setBounds] = useState({ left: 0, top: 0 });
+  useLayoutEffect(() => {
+    if (!open || scope !== 'workspace') return;
+    const main = document.querySelector<HTMLElement>('.workspace-main');
+    const header = document.querySelector<HTMLElement>('.app-topbar');
+    const sync = () => setBounds({ left: Math.max(0, main?.getBoundingClientRect().left ?? 0), top: Math.max(0, header?.getBoundingClientRect().bottom ?? 0) });
+    sync();
+    const observer = new ResizeObserver(sync);
+    if (main) observer.observe(main);
+    if (header) observer.observe(header);
+    window.addEventListener('resize', sync);
+    return () => { observer.disconnect(); window.removeEventListener('resize', sync); };
+  }, [open, scope]);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -48,13 +62,15 @@ export function Dialog({ open, onClose, title, children, footer, size = 'md', pl
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const unlock = lockPageScroll();
     if (!dialog.open) dialog.showModal();
+    dialog.focus({ preventScroll: true });
     return () => {
       if (dialog.open) dialog.close();
       unlock();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, [open]);
-  return createPortal(<dialog ref={ref} className={join('dialog', `dialog--${size}`, placement === 'left' && 'dialog--left', className)} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const rect = e.currentTarget.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}><header className="dialog-header"><h2 id={titleId}>{title}</h2><Button variant="ghost" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></header><div className="dialog-body">{children}</div>{footer && <footer className="dialog-footer">{footer}</footer>}</dialog>, document.body);
+  const workspaceStyle = scope === 'workspace' ? { '--dialog-workspace-left': `${bounds.left}px`, '--dialog-workspace-top': `${bounds.top}px` } as CSSProperties : undefined;
+  return createPortal(<dialog ref={ref} tabIndex={-1} style={workspaceStyle} className={join('dialog', `dialog--${size}`, placement === 'left' && 'dialog--left', scope === 'workspace' && 'dialog--workspace', className)} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const rect = e.currentTarget.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}><header className="dialog-header"><h2 id={titleId}>{title}</h2><Button variant="ghost" className="dialog-close icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></header><div className="dialog-body">{children}</div>{footer && <footer className="dialog-footer">{footer}</footer>}</dialog>, document.body);
 }
 export function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLabel = 'Confirm', danger, busy, confirmDisabled }: { open: boolean; onClose: () => void; onConfirm: () => void | Promise<void>; title: ReactNode; description: ReactNode; confirmLabel?: string; danger?: boolean; busy?: boolean; confirmDisabled?: boolean }) {
   return <Dialog open={open} onClose={() => { if (!busy) onClose(); }} title={title} size="sm" footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button variant={danger ? 'danger' : 'primary'} loading={busy} disabled={confirmDisabled} onClick={() => void onConfirm()}>{confirmLabel}</Button></>}><div className="confirm-description">{description}</div></Dialog>;

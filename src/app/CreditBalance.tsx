@@ -48,11 +48,12 @@ export function CreditBalance() {
         {search.fraction !== null && <span style={{ width: `${search.fraction * 100}%` }} />}
       </span>
     </button>
-    <Dialog open={open} onClose={() => setOpen(false)} title={guest ? 'Your daily searches' : 'Credits & usage'} size="sm"
+    <Dialog open={open} onClose={() => setOpen(false)} title={guest ? 'Your daily searches' : 'Credits & usage'} className="credit-dialog"
       footer={<>{!guest && <Button variant="secondary" loading={refreshing} onClick={() => void refresh()}><Icon name="refresh" size={16} />Refresh balance</Button>}<Link className="button button--primary" to={guest ? '/auth/signup' : '/billing#billing-token-packs'} onClick={() => setOpen(false)}>{guest ? 'Create an account' : 'Plans & credit packs'}<Icon name="arrow" size={16} /></Link></>}>
       <div id={dialogId} className="credit-details stack">
         {error && <Alert tone="error" title="Balance could not be refreshed">{error}</Alert>}
         {teamMember && <p className="credit-context">Your team shares the owner’s credit balance.</p>}
+        <div className={`credit-balance-grid${guest ? ' credit-balance-grid--guest' : ''}`}>
         <section className="credit-detail">
           <div className="credit-detail-heading"><h3>{guest ? 'Daily searches' : 'Search credits'}</h3><span className="credit-plan">{guest ? 'Guest' : user?.subscription?.type ?? 'Your plan'}</span></div>
           <p className="credit-detail-value">{number(search.available ?? undefined)}<span>{search.available === null ? 'Balance unavailable' : 'available'}</span></p>
@@ -62,20 +63,23 @@ export function CreditBalance() {
           {!unrestricted && search.available === 0 && <p className="credit-warning">{guest ? 'Your daily allowance is used. Sign in to continue searching.' : 'No search credits remain. View plans and credit packs to continue.'}</p>}
           {!unrestricted && search.available !== null && search.available > 0 && search.low && <p className="credit-warning">You’re running low on {guest ? 'daily searches' : 'search credits'}.</p>}
         </section>
-        {!guest && <>
+        {!guest &&
           <section className="credit-detail">
             <div className="credit-detail-heading"><h3>Private scan credits</h3><Icon name="scan" size={18} /></div>
             <p className="credit-detail-value">{number(scan.available ?? undefined)}<span>{scan.available === null ? 'Balance unavailable' : 'available'}</span></p>
             <UsageMeter usage={scan} label="Scan credits relative to included allocation" />
             <p className="credit-allocation">{scan.allocation === null ? 'Allocation is currently unavailable.' : `Included plan allocation: ${number(scan.allocation)}`}</p>
           </section>
+        }
+        </div>
+        {!guest && <>
           <dl className="credit-facts">
             {purchased !== null && <div><dt>Purchased credits</dt><dd>{number(purchased)}</dd></div>}
             {!!user?.subscription?.expiry_date && <div><dt>Current period ends</dt><dd>{formatDate(user.subscription.expiry_date)}</dd></div>}
           </dl>
-          <p className="credit-context">The bars compare your available balance with the credits included in your plan. Extra credits can take the balance above that allocation.</p>
+          <details className="credit-help"><summary>How credits work</summary><p>Searches, analytics and exports use search credits. Private scans use a separate balance.</p><p>The bars compare your balance with your included allocation. Extra credits can take it above that allocation.</p></details>
         </>}
-        <p className="credit-cost-note">{guest ? 'Searches and analytics share your daily allowance. Your remaining quota updates when a request completes.' : 'Searches, analytics and exports use search credits. Private scans use a separate balance.'}</p>
+        {guest && <p className="credit-cost-note">Searches and analytics share your daily allowance. Your remaining quota updates when a request completes.</p>}
       </div>
     </Dialog>
   </>;

@@ -7,6 +7,11 @@ import { copyText, formatNumber, OperationNotice, responseData, useOperation } f
 import { creditUsage } from '../../app/credit-usage';
 import './account.css';
 
+function UsageMetric({ title, icon, available, allocation }: { title: string; icon: string; available: number | undefined; allocation: number | undefined }) {
+  const usage = creditUsage(available, allocation);
+  return <Card className="api-usage-card"><div className="api-usage-label"><span><Icon name={icon} size={20} /></span><h2>{title}</h2></div><div className="api-usage-value">{formatNumber(available)}<span>available</span></div><div className="api-usage-chart">{usage.fraction !== null ? <div className="api-usage-meter" role="meter" aria-label={`Available ${title.toLowerCase()}`} aria-valuemin={0} aria-valuemax={usage.allocation ?? undefined} aria-valuenow={Math.min(usage.available ?? 0,usage.allocation ?? 0)} aria-valuetext={`${formatNumber(available)} available; ${formatNumber(allocation)} included in plan`}><span style={{width:`${usage.fraction*100}%`}} /></div> : <div className="api-usage-no-meter" aria-hidden="true" />}<p className="muted">{allocation === undefined ? 'Plan allocation not provided' : `${formatNumber(allocation)} included in your plan`}</p></div></Card>;
+}
+
 export function ApiPage() {
   const { api, session, user, refreshSession, toast } = useApp();
   const [revealed, setRevealed] = useState(false);
@@ -27,7 +32,6 @@ export function ApiPage() {
     focusSection.current = moveFocus;
     setParams(next === 'key' ? {} : { section: next }, { state: { preserveTabFocus: true } });
   }
-  const usage = creditUsage(user?.credits, user?.subscription?.credits);
   const key = rotatedKey ?? user?.api_key;
   const canAccess = ['Plus', 'Expert', 'Business'].includes(user?.subscription?.type ?? '');
 
@@ -70,10 +74,10 @@ export function ApiPage() {
     </TabPanel>
     <TabPanel idPrefix="api" value="usage" hidden={section !== 'usage'}>
       <div className="api-usage-grid">
-        <Card><div className="api-usage-label"><Icon name="search" size={20} /><h2>Search credits</h2></div><div className="api-usage-value">{formatNumber(user?.credits)}<span>available</span></div>{usage.fraction !== null && <div className="api-usage-meter" role="meter" aria-label="Available search credits" aria-valuemin={0} aria-valuemax={usage.allocation ?? undefined} aria-valuenow={Math.min(usage.available ?? 0, usage.allocation ?? 0)}><span style={{ width: `${usage.fraction * 100}%` }} /></div>}<p className="muted">{formatNumber(user?.subscription?.credits)} included in your plan</p></Card>
-        <Card><div className="api-usage-label"><Icon name="scan" size={20} /><h2>Scan credits</h2></div><div className="api-usage-value">{formatNumber(user?.scan_credits)}<span>available</span></div><p className="muted">For private scans</p></Card>
+        <UsageMetric title="Search credits" icon="search" available={user?.credits} allocation={user?.subscription?.credits} />
+        <UsageMetric title="Scan credits" icon="scan" available={user?.scan_credits} allocation={user?.subscription?.scan_credits} />
       </div>
-      <Card className="api-limits"><h2>Account limits</h2><dl className="account-facts"><div><dt>Subscription</dt><dd>{user?.subscription?.type ?? '—'}</dd></div><div><dt>Search pages per query</dt><dd>{formatNumber(user?.subscription?.search_pages)}</dd></div><div><dt>Purchased credits</dt><dd>{formatNumber(user?.purchased_credits)}</dd></div><div><dt>API access</dt><dd>{canAccess ? 'Enabled' : 'Unavailable'}</dd></div></dl><Link className="button button--secondary" to="/billing">Manage billing<Icon name="arrow-up-right" size={16} /></Link></Card>
+      <Card className="api-limits"><div className="api-limits-heading"><div><h2>Account limits</h2><p>Access and resources for your current account.</p></div><Link className="button button--secondary" to="/billing">Manage billing<Icon name="arrow-up-right" size={16} /></Link></div><dl className="account-facts"><div><dt><Icon name="card" size={17} />Subscription</dt><dd>{user?.subscription?.type ?? '—'}</dd></div><div><dt><Icon name="list" size={17} />Search pages per query</dt><dd>{formatNumber(user?.subscription?.search_pages)}</dd></div><div><dt><Icon name="plus" size={17} />Purchased credits</dt><dd>{formatNumber(user?.purchased_credits)}</dd></div><div><dt><Icon name="code" size={17} />API access</dt><dd><Badge tone={canAccess ? 'success' : 'neutral'}>{canAccess ? 'Enabled' : 'Unavailable'}</Badge></dd></div></dl></Card>
     </TabPanel>
     <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={() => void rotate()} title="Replace your API key?" description="Your current key will stop working immediately. Update each integration with the new key." confirmLabel="Rotate API key" danger busy={operation.busy} />
   </div>;

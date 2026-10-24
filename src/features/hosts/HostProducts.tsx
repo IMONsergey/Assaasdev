@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { DetectedProduct } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Alert, Badge, Button, Dialog, EmptyState, Field, Icon, Pagination, Spinner } from '../../components/ui';
+import { TechnologyMark } from '../../components/TechnologyMark';
 import { DataExplorer } from './DataExplorer';
 import { DataValue, Facts } from './HostData';
 import { displayValue } from './model';
@@ -37,7 +38,7 @@ export function ProductList({ products, onCve }: { products: DetectedProduct[] |
   return <section className="host-product-workspace" aria-label="Detected products">
     <div className="host-product-toolbar"><span>{matches.length.toLocaleString()} {query ? `matching of ${products.length.toLocaleString()} products` : `product${products.length === 1 ? '' : 's'}`}</span><Field label="Find a product or CVE" className="host-compact-search" value={view.query} placeholder="Product, vendor or CVE" icon={<Icon name="search" size={16} />} onChange={event => update({ query: event.target.value, page: 1 })} /></div>
     <div className="host-products">{matches.slice((page - 1) * 6, page * 6).map(({ product, index }) => <article className="host-product" key={index}>
-      <div className="host-product-heading"><div className="host-product-mark"><Icon name="package" size={19} /></div><div><h3>{productName(product, index)}{product.version && <Badge>{product.version}</Badge>}</h3><p>{product.vendor === undefined ? 'Vendor not provided' : displayValue(product.vendor)}</p></div></div>
+      <div className="host-product-heading"><div className="host-product-mark"><TechnologyMark name={product.product} size={24} /></div><div><h3>{productName(product, index)}{product.version && <Badge>{product.version}</Badge>}</h3><p>{product.vendor === undefined ? 'Vendor not provided' : displayValue(product.vendor)}</p></div></div>
       {(product.cve_product !== undefined || product.cve_vendor !== undefined || product.cve_identifier !== undefined) && <Facts values={[["CVE product", product.cve_product], ["CVE vendor", product.cve_vendor], ["Identifier", product.cve_identifier]]} />}
       {product.labels?.length ? <div className="host-product-labels">{product.labels.slice(0, 4).map((label, labelIndex) => <Badge key={labelIndex}>{label}</Badge>)}{product.labels.length > 4 && <details><summary>+{product.labels.length - 4} labels</summary><DataValue value={product.labels} path={`product-${index}-labels`} /></details>}</div> : null}
       <CveList product={product} index={index} onCve={onCve} />

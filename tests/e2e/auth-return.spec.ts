@@ -135,7 +135,7 @@ test('explicit guest access returns to the original local view without signing i
   const { writes } = await mockAuth(page);
   const destination = '/settings?section=appearance#settings-panel-appearance';
   await page.goto(`/auth/login?returnTo=${encodeURIComponent(destination)}`);
-  await page.getByRole('button', { name: 'Explore as a guest →', exact: true }).click();
+  await page.getByRole('button', { name: 'Explore as a guest', exact: true }).click();
   await expect(page).toHaveURL(destination);
   await expect(page.getByRole('link', { name: 'Guest session', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Appearance', exact: true })).toHaveAttribute('aria-selected', 'true');

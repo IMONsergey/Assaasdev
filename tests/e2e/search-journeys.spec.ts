@@ -65,7 +65,7 @@ test('facet selection combines alternatives once and survives results navigation
 test('an out-of-plan page preserves the query and offers an actionable recovery', async ({ page }) => {
   await page.goto('/search?q=nginx&run=1&page=301');
   await expect(page.getByText('This page is outside your plan', { exact: true })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('nginx');
+  await expect(page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('nginx');
   await expect(page.getByRole('heading', { name: /hosts returned/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Return to first page', exact: true }).click();
   await expect(page.getByRole('heading', { name: '4 hosts returned', exact: true })).toBeVisible();
@@ -216,7 +216,10 @@ test('filters open from the left without moving the home search and keep actions
     expect(Math.abs(before!.x - during!.x)).toBeLessThan(1);
     expect(Math.abs(before!.y - during!.y)).toBeLessThan(1);
     expect(Math.abs(before!.width - during!.width)).toBeLessThan(1);
-    expect((await editor.boundingBox())!.x).toBe(0);
+    const box = (await editor.boundingBox())!, main = (await page.locator('.workspace-main').boundingBox())!, header = (await page.locator('.app-topbar').boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(main.x);
+    expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
     await editor.getByRole('button', { name: 'Add group', exact: true }).click();
     await editor.locator('.search-condition-group').first().getByRole('button', { name: 'Add group', exact: true }).click();
     await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
@@ -238,7 +241,7 @@ test('a slow search does not lock filter cancellation or applying a changed quer
   await editor.getByRole('textbox', { name: 'Search text', exact: true }).fill('discard this');
   await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeEnabled();
   await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('example');
+  await expect(page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('example');
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await editor.getByRole('textbox', { name: 'Search text', exact: true }).fill('refined');

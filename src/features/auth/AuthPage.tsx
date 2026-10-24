@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { ApiError } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { asset } from '../../config';
-import { Alert, Button, Field, Spinner } from '../../components/ui';
+import { Alert, Button, Field, Icon, Spinner } from '../../components/ui';
 import { authReducer, authStepForPath, initialAuthState, normalizeOneTimeCode, safeReturnPath, type AuthStep } from './auth-state';
 import './auth.css';
 
@@ -189,7 +189,7 @@ export function AuthPage() {
       <img className="auth-art" src={asset('figma/login/auth-art.png')} width="624" height="912" alt="APCOSYS" />
     </section>
     <section className="auth-form-region" aria-labelledby="auth-title">
-      <div className="auth-topline"><Link to="/search" className="auth-mobile-brand" aria-label="APCOSYS home"><img src={asset('figma/home/imgApcosysLogo.svg')} width="150" height="29" alt="APCOSYS" /></Link><Link to="/search" className="auth-back inline-link">← Back to search</Link><div className="auth-top-actions">{state.step === 'login' && <Button variant="ghost" size="sm" loading={guestBusy} onClick={() => void continueAsGuest()}>Explore as a guest →</Button>}</div></div>
+      <div className="auth-topline"><Link to="/search" className="auth-mobile-brand" aria-label="APCOSYS home"><img src={asset('figma/home/imgApcosysLogo.svg')} width="150" height="29" alt="APCOSYS" /></Link><Link to="/search" className="auth-back inline-link"><Icon name="chevron-left" size={16} />Back to search</Link><div className="auth-top-actions">{state.step === 'login' && <Button variant="ghost" size="sm" loading={guestBusy} onClick={() => void continueAsGuest()}>Explore as a guest<Icon name="arrow" size={16} /></Button>}</div></div>
       <div className="auth-form-wrap">
         {state.step === 'two-factor' && <span className="auth-step-label">ACCOUNT SECURITY</span>}
         <h1 id="auth-title">{copy[state.step].title}</h1><p className="auth-description">{copy[state.step].description}</p>

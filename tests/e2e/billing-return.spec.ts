@@ -70,7 +70,7 @@ test('credit pack selection survives login as the same one-off review without st
   await page.getByRole('tab', { name: 'Annually', exact: true }).click();
   await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
   const pack = page.locator('.billing-token').filter({ has: page.getByText('Research Pack', { exact: true }) });
-  await pack.getByRole('button', { name: '$180', exact: true }).click();
+  await pack.getByRole('button', { name: 'Buy credits', exact: true }).click();
   await expect(page).toHaveURL(url => {
     const intent = new URL(url.searchParams.get('returnTo') ?? '/', url.origin);
     return url.pathname === '/auth/login' && intent.pathname === '/billing' && intent.searchParams.get('pack') === 'token_pack_2';
@@ -106,7 +106,7 @@ test('browser Back restores the plan review without reusing a different order ch
   await page.getByRole('link', { name: 'Plans & credit packs', exact: true }).click();
   await expect(page).toHaveURL('/billing#billing-token-packs');
   const pack = page.locator('.billing-token').filter({ has: page.getByText('Research Pack', { exact: true }) });
-  await pack.getByRole('button', { name: '$180', exact: true }).click();
+  await pack.getByRole('button', { name: 'Buy credits', exact: true }).click();
   const packReview = page.getByRole('dialog', { name: 'Add 100,000 credits', exact: true });
   await expect(packReview).toBeVisible();
   await packReview.getByLabel('Promo code (optional)', { exact: true }).fill('HISTORY-CODE');

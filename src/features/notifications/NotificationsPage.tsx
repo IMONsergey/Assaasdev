@@ -65,7 +65,7 @@ export function NotificationsPage() {
 
   return <div className="notifications-page">
     <PageHeader title="Notifications" actions={account && <>
-      <Button variant="secondary" disabled={query.isFetching} onClick={() => void query.refetch()}><Icon name="refresh" size={17} />Refresh</Button>
+      <Button variant="secondary" loading={query.isFetching} onClick={() => void query.refetch()}><Icon name="refresh" size={17} />Refresh</Button>
       <Button variant="secondary" loading={busy === 'all'} disabled={!shown?.unread_count || query.isFetching || !!busy || !!unknown} onClick={() => void mark()}><Icon name="check" size={17} />Mark all as read</Button>
     </>} />
     {session.status === 'loading' ? <Skeleton rows={3} label="Loading account" /> : !account ?
@@ -83,7 +83,9 @@ export function NotificationsPage() {
               const team = item.notification_type.startsWith('team');
               const billing = item.notification_type.includes('payment') || item.notification_type.startsWith('subscription') || item.notification_type === 'token_pack_purchased';
               const time = notificationTime(item.created_at);
-              return <li key={item.id} className={item.is_read === false ? 'notification--unread' : ''}>
+              const destination = billing ? '/billing' : team ? '/settings?section=team' : undefined;
+              const actionLabel = billing ? 'View billing' : 'View team';
+              const content = <>
                 <div className="notification-symbol"><Icon name={team ? 'user' : billing ? 'card' : 'bell'} size={21} /></div>
                 <div className="notification-content">
                   <div className="cluster"><h3>{notificationTitle(item.notification_type)}</h3>{item.is_read === false && <span className="unread-dot" role="img" aria-label="Unread" />}</div>
@@ -92,10 +94,10 @@ export function NotificationsPage() {
                   {item.is_read === undefined && <p className="notification-note">Read status unavailable.</p>}
                   {time.iso ? <time dateTime={time.iso}>{time.label}</time> : <span className="notification-time">{time.label}</span>}
                 </div>
-                <div className="notification-actions">
-                  {billing ? <Link className="inline-link" to="/billing">View billing</Link> : team ? <Link className="inline-link" to="/settings?section=team">View team</Link> : null}
-                  {item.is_read === false && <Button variant="ghost" size="sm" loading={busy === item.id} disabled={query.isFetching || !!busy || !!unknown} onClick={() => void mark(item.id)}>Mark as read</Button>}
-                </div>
+              </>;
+              return <li key={item.id} className={item.is_read === false ? 'notification--unread' : ''}>
+                {destination ? <Link className="notification-open" to={destination} aria-label={`${actionLabel}: ${notificationTitle(item.notification_type)}`}>{content}<span className="notification-destination">{actionLabel}<Icon name="arrow" size={15} /></span></Link> : <div className="notification-open">{content}</div>}
+                {item.is_read === false && <div className="notification-actions"><Button variant="ghost" size="sm" loading={busy === item.id} disabled={query.isFetching || !!busy || !!unknown} onClick={() => void mark(item.id)}><Icon name="check" size={15} />Mark as read</Button></div>}
               </li>;
             })}</ol></section>)}
           </div> : shown.skippedCount > 0 ?

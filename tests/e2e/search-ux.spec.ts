@@ -64,7 +64,7 @@ test('local search views preserve drafts and analytics requires an explicit requ
   await expect(page.getByRole('button', { name: 'Reload analytics', exact: true })).toBeEnabled();
 
   // A later explicit load must not take focus back after the user leaves Analytics.
-  await page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true }).fill('different network');
+  await page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true }).fill('different network');
   await page.getByRole('button', { name: 'Run search', exact: true }).click();
   await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(3);
   await page.getByRole('tab', { name: 'Analytics', exact: true }).click();

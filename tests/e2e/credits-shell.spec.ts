@@ -114,7 +114,7 @@ test('search keyboard shortcuts keep text input intact and focus the search fiel
   await expect(page.locator('h1')).toBeVisible();
   await page.keyboard.press('Control+k');
   await expect(page).toHaveURL(/\/search$/);
-  const query = page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true });
+  const query = page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true });
   await expect(query).toBeFocused();
   await query.fill('example.com');
   await page.keyboard.type('/path');

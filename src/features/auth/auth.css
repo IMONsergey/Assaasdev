@@ -4,6 +4,11 @@
 .auth-form-region{padding:0 24px;display:flex;flex-direction:column;min-width:0}
 .auth-topline{display:flex;justify-content:space-between;gap:16px;align-items:center;min-height:36px;font-size:12px}
 .auth-top-actions{display:flex;align-items:center;gap:14px;margin-left:auto}.auth-top-actions .button{font-size:12px;padding:7px 0}
+.auth-back{display:inline-flex;align-items:center;gap:7px}
+.auth-scenario-shell:has(>.scenario-guide){min-height:100dvh;display:flex;flex-direction:column;padding-top:24px;background:var(--bg)}
+.auth-scenario-shell>.scenario-guide{width:calc(100% - 48px);margin-bottom:0}
+.auth-scenario-shell:has(>.scenario-guide) .auth-page{flex:1;min-height:0}
+.auth-scenario-shell:has(>.scenario-guide) .auth-story{min-height:min(660px,calc(100dvh - 300px))}
 .auth-demo-label{font:10px var(--font-mono);color:var(--warning)}.auth-mobile-brand{display:none}
 .auth-form-wrap{width:100%;max-width:456px;margin:auto;display:flex;flex-direction:column;gap:20px;padding:56px 0}
 .auth-form-wrap h1{margin:0;font:500 calc(36px * var(--font-scale,1))/1.13 var(--font-display);letter-spacing:-.02em}
@@ -27,3 +32,5 @@
 @media(max-width:360px){.auth-form-region{padding:20px}.auth-form-wrap h1{font-size:calc(32px * var(--font-scale,1))}.auth-topline{gap:10px}.auth-mobile-brand img{width:112px}.auth-password-toggle{font-size:11px}.auth-social{gap:8px}}
 :root[data-theme='dark'] .auth-mobile-brand{padding:8px;background:white;border-radius:8px}
 @media(prefers-reduced-motion:reduce){.auth-page *{scroll-behavior:auto}}
+@media(max-width:1100px){.auth-scenario-shell>.scenario-guide .scenario-guide-body{grid-template-columns:1fr;gap:16px}.auth-scenario-shell>.scenario-guide .scenario-guide-actions{justify-content:flex-start}}
+@media(max-width:800px){.auth-scenario-shell:has(>.scenario-guide){padding-top:16px}.auth-scenario-shell>.scenario-guide{width:calc(100% - 32px)}.auth-scenario-shell:has(>.scenario-guide) .auth-form-region{min-height:0}.auth-scenario-shell:has(>.scenario-guide) .auth-form-wrap{margin:0 auto;padding-block:40px}}

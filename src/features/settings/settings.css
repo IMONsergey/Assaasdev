@@ -1,4 +1,4 @@
-.settings-page { width:100%; max-width:1160px; margin:0 auto; padding-bottom:40px; }
+.settings-page { width:100%; max-width:var(--page-max,1440px); margin:0 auto; padding-bottom:40px; }
 .settings-heading { margin-bottom:30px; }
 .settings-heading h1 { font-size:2.4rem; line-height:1.2; letter-spacing:-.045em; }
 .settings-heading p { margin-top:10px; color:var(--muted); font-size:1.05rem; }
@@ -120,12 +120,12 @@
 :root[data-reduced-motion='true'] .settings-page *, :root[data-reduced-motion='true'] .settings-page *::before, :root[data-reduced-motion='true'] .settings-page *::after { animation:none!important; transition:none!important; }
 
 .settings-page>.page-heading { margin-bottom:28px; }
-.settings-workspace { display:grid; grid-template-columns:180px minmax(0,1fr); gap:36px; align-items:start; }
+.settings-workspace { display:grid; grid-template-columns:192px minmax(0,1fr); gap:var(--page-gap,24px); align-items:start; }
 .settings-navigation { display:flex; flex-direction:column; gap:4px; position:sticky; top:24px; padding:4px 0; }
 .settings-navigation button { display:flex; align-items:center; gap:10px; text-align:left; border:0; border-radius:8px; padding:11px 12px; background:none; color:var(--muted); min-height:42px; font-size:.93rem; }
 .settings-navigation button:hover { background:var(--surface); color:var(--text); }
 .settings-navigation button[aria-selected='true'] { background:var(--tint); color:var(--accent-text); font-weight:500; }
-.settings-content { min-width:0; max-width:820px; }
+.settings-content { min-width:0; width:100%; }
 .settings-group-heading h2 { font-size:1.12rem; }
 .settings-panel .account-page { max-width:none; }
 .settings-panel .account-columns { grid-template-columns:1fr; gap:22px; }
@@ -150,5 +150,16 @@
 .settings-signout p { color:var(--muted); font-size:.9rem; margin-top:6px; }
 .settings-signout .button { color:var(--danger); flex:none; white-space:nowrap; }
 .settings-footer { padding-bottom:8px; }
+.settings-legal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.settings-legal-card { display:flex; align-items:flex-start; gap:14px; padding:22px; border:1px solid var(--line); border-radius:12px; color:var(--text); text-decoration:none; transition:background-color .18s,border-color .18s; }
+.settings-legal-card:hover { background:var(--surface); border-color:color-mix(in srgb,var(--accent) 35%,var(--line)); text-decoration:none; }
+.settings-legal-symbol { display:grid; place-items:center; width:40px; height:40px; border-radius:10px; background:var(--tint); color:var(--accent-text); flex:none; }
+.settings-legal-copy { display:flex; flex-direction:column; gap:7px; min-width:0; flex:1; }
+.settings-legal-copy strong { font:550 .98rem/1.4 var(--font-ui); letter-spacing:-.015em; }
+.settings-legal-copy>span { color:var(--muted); font-size:.85rem; line-height:1.6; }
+.settings-legal-card>.icon { flex:none; color:var(--muted); margin-top:3px; }
+.settings-legal-source { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.8rem; margin-top:20px; line-height:1.6; }
+@container workspace (max-width:1000px) { .settings-legal-grid { grid-template-columns:1fr; } }
+@media(max-width:600px) { .settings-legal-card { padding:18px; gap:12px; }.settings-legal-symbol { width:34px; height:34px; }.settings-legal-copy strong { font-size:.92rem; }.settings-legal-copy>span { font-size:.81rem; }.settings-legal-source { align-items:flex-start; font-size:.76rem; }.settings-legal-source .icon { margin-top:3px; flex:none; } }
 @media(max-width:1050px) { .settings-workspace { grid-template-columns:160px minmax(0,1fr); gap:24px; }.settings-panel .account-facts { grid-template-columns:1fr; }.settings-navigation button { padding-inline:10px; } }
 @media(max-width:760px) { .settings-workspace { grid-template-columns:1fr; gap:24px; }.settings-navigation { position:static; flex-direction:row; overflow-x:auto; gap:4px; padding:0 0 8px; scrollbar-width:thin; }.settings-navigation button { white-space:nowrap; flex:0 0 auto; padding:10px 12px; }.settings-page>.page-heading { margin-bottom:20px; }.settings-navigation button .icon { width:16px!important; height:16px!important; }.settings-panel .account-facts { grid-template-columns:1fr; }.settings-signout { align-items:flex-start; }.settings-row { padding-block:20px; }.settings-group-heading { margin-bottom:18px; } }

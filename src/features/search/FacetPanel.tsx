@@ -5,6 +5,8 @@ import type { AnalyticsFacet, FacetData } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Alert, Button, Checkbox, Dialog, EmptyState, Field, Icon, Skeleton } from '../../components/ui';
 import { FACET_NAMES, facetTitle, facetUnit } from './model';
+import { CountryFlag } from '../../components/CountryFlag';
+import { TechnologyMark } from '../../components/TechnologyMark';
 
 const FACET_PAGE_SIZE = 50;
 const FACET_OVERVIEW_SIZE = 5;
@@ -39,12 +41,12 @@ function FacetValues({ facet, selected, disabled, shared, onSelect }: { facet: F
   const shown = filtered.slice(start, start + pageSize);
   const max = values.reduce((highest, value) => Math.max(highest, value.count || 0), 0);
   return <section className="search-facet" aria-labelledby={headingId}>
-    <div className="search-facet-title"><h3 id={headingId}>{title}</h3><span>{facetUnit(facet.facet_name)}</span></div>
+    <div className="search-facet-title"><h3 id={headingId}><Icon name={facet.facet_name.includes('country') ? 'globe' : facet.facet_name === 'org' ? 'users' : facet.facet_name.includes('product') || facet.facet_name.includes('vendor') ? 'package' : facet.facet_name === 'port' ? 'server' : 'chart'} size={17} />{title}</h3><span>{facetUnit(facet.facet_name)}</span></div>
     {(values.length > 10 || query) && <Field className="search-facet-search" type="search" label={`Search ${title.toLowerCase()} values`} value={query} placeholder={`Search ${values.length.toLocaleString()} values`} onChange={event => { setQuery(event.target.value); setPage(1); setExpanded(true); }} />}
     {selected.length > 0 && <button type="button" className="search-facet-selection" aria-pressed={selectedOnly} onClick={() => { setSelectedOnly(!selectedOnly); setPage(1); }}>Selected ({selected.length.toLocaleString()})</button>}
     <div className="search-facet-values">
       {shown.map(value => <div key={value.key} className="search-facet-item">
-        <button type="button" disabled={disabled} aria-pressed={selection.has(value.key)} title={shared ? 'This shared search is fixed. Start your own search to change it.' : `${selection.has(value.key) ? 'Remove' : 'Add'} ${value.key} filter`} onClick={() => onSelect(facet.facet_name, value.key)}><span>{selection.has(value.key) && <Icon name="check" size={13} />}{value.key}</span><strong title={value.count === null ? 'Count not returned' : undefined}>{value.count === null ? '—' : value.count.toLocaleString()}</strong></button>
+        <button type="button" disabled={disabled} aria-pressed={selection.has(value.key)} title={shared ? 'This shared search is fixed. Start your own search to change it.' : `${selection.has(value.key) ? 'Remove' : 'Add'} ${value.key} filter`} onClick={() => onSelect(facet.facet_name, value.key)}><span>{selection.has(value.key) && <Icon name="check" size={13} />}{facet.facet_name === 'country_name' && <CountryFlag name={value.key} />}{facet.facet_name === 'country_code' && <CountryFlag code={value.key} />}{(facet.facet_name === 'products' || facet.facet_name === 'vendors') && <TechnologyMark name={value.key} size={18} />}{value.key}</span><strong title={value.count === null ? 'Count not returned' : undefined}>{value.count === null ? '—' : value.count.toLocaleString()}</strong></button>
         <div className="search-facet-track" aria-hidden="true"><span style={{ width: `${max && value.count !== null ? value.count / max * 100 : 0}%` }} /></div>
       </div>)}
     </div>

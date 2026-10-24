@@ -5,6 +5,8 @@ import { ApiError, isApiError } from '../../api';
 import type { ShareLinkData, ShortLinkData } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Alert, Button, Card, Field, Icon, PageHeader } from '../../components/ui';
+import { CodeCanvas } from '../../components/CodeCanvas';
+import { copyText } from '../account/operation';
 import { SearchAccessNotice } from './SearchPage';
 import { decodeSearch, encodeSearch, isShared, queryLabel, safeExternalUrl, searchPath, withoutShareToken } from './model';
 import type { Dataset } from './model';
@@ -56,7 +58,7 @@ export function ShareSearchPage() {
     {parsed.error && <Alert tone="error">{parsed.error}</Alert>}
     {shared && <Alert tone="info" title="This is already a limited search"><Link to={`${searchPath(dataset)}?${query}`}>Open it with your own access</Link> to create another link.</Alert>}
     {!parsed.hasSearch && <Alert tone="info">Run a search first, then share it from the results.</Alert>}
-    {parsed.hasSearch && !parsed.error && <div className="search-share-query"><span>{dataset === 'private' ? 'Private search' : 'Search'}</span><strong>{queryLabel(search)}</strong><details><summary>Included conditions</summary><pre>{JSON.stringify(search, null, 2)}</pre></details></div>}
+    {parsed.hasSearch && !parsed.error && <div className="search-share-query"><span>{dataset === 'private' ? 'Private search' : 'Search'}</span><strong>{queryLabel(search)}</strong><details><summary>Included conditions</summary><CodeCanvas content={JSON.stringify(search, null, 2)} language="json" title="Shared request" onCopy={text => copyText(text, toast)} /></details></div>}
     <div className="search-share-grid">
       <Card className="search-share-card"><span className="search-share-icon"><Icon name="link" size={20} /></span><header><h2>Search link</h2><p>Share the query. Each viewer uses their own access and credits.</p></header><Button loading={normal.isPending} disabled={!queryValid || !canCall || busy || unknownNormal} onClick={() => normal.mutate()}>Create search link</Button>
         {unknownNormal && <Alert tone="warning" title="Link creation is not confirmed">{normal.error?.message} Return to the search before attempting another creation.</Alert>}

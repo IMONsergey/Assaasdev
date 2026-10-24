@@ -7,6 +7,7 @@ import { errorMessage } from '../../lib/format';
 import { useTabOverflow } from '../../lib/tab-overflow';
 import { ProfilePanel, SecurityPanel, SessionsPanel, TeamPanel } from '../account/AccountPage';
 import { IndexStatistics } from '../search/IndexStatistics';
+import { LegalPanel } from './LegalPanel';
 import './settings.css';
 
 const sections = [
@@ -16,6 +17,7 @@ const sections = [
   { id: 'sessions', label: 'Sessions', icon: 'desktop' },
   { id: 'team', label: 'Organization', icon: 'users' },
   { id: 'workspace', label: 'Workspace', icon: 'adjustments' },
+  { id: 'legal', label: 'Legal', icon: 'file' },
 ] as const;
 type SettingsSection = typeof sections[number]['id'];
 
@@ -107,6 +109,7 @@ export function SettingsPage() {
           </div>
           <IndexStatistics />
         </section>
+        <section className="settings-panel" id="settings-panel-legal" role="tabpanel" aria-labelledby="settings-tab-legal" hidden={section !== 'legal'}><LegalPanel /></section>
       </div>
     </div>
   </div>;

@@ -296,3 +296,113 @@
   .host-domain-names>span { max-width:100%; }
 }
 @media (prefers-reduced-motion:reduce) { .host-service-row { transition:none; } }
+
+/* A consistent workspace scale, with the catalog acting as the local navigator. */
+.host-page,.host-overview,.host-dns-layout { gap:var(--page-gap,24px); }
+.host-metrics { gap:16px; }
+.host-metric { appearance:none; text-align:left; color:var(--text); font-family:var(--font-ui); padding:20px; border-radius:12px; cursor:pointer; transition:background-color .16s,border-color .16s; }
+.host-metric:hover:not(:disabled) { background:var(--surface); border-color:color-mix(in srgb,var(--accent) 45%,var(--line)); }
+.host-metric:disabled { cursor:default; opacity:1; }
+.host-metric-label { display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; color:var(--muted); font-size:13px; }
+.host-metric>small { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; }
+.host-metric>small>.icon { color:var(--muted); flex-shrink:0; }
+.host-metric:disabled>small>.icon { visibility:hidden; }
+.host-attributes,.host-overview-card,.host-record-section { border-radius:12px; padding:var(--card-padding,24px); }
+.host-technology-list>button { padding:12px 10px; border-radius:9px; transition:background-color .16s; }
+.host-technology-list>button:hover { background:var(--surface); }
+.host-product-mark { width:40px; height:40px; flex-basis:40px; background:var(--surface); }
+.host-protocol-track>span { transform-origin:left; animation:host-bar-enter .5s ease-out both; }
+.host-services-layout { grid-template-columns:clamp(260px,25%,312px) minmax(0,1fr); gap:var(--page-gap,24px); }
+.host-service-picker { top:calc(var(--workspace-header-height,68px) + 20px); padding-right:24px; gap:12px; max-height:calc(100dvh - var(--workspace-header-height,68px) - 40px); }
+.host-service-picker .field input { min-height:44px; font-size:13px; }
+.host-service-count h2 { font-size:15px; }
+.host-service-classify { border-radius:9px; }
+.host-service-classify>summary { min-height:44px; padding:10px 12px; font-size:12px; }
+.host-service-classify>summary::after,.host-service-classify[open]>summary::after { content:none; }
+.host-service-classify>summary>.icon:last-child { margin-left:auto; transition:transform .18s; }
+.host-service-classify[open]>summary>.icon:last-child { transform:rotate(180deg); }
+.host-service-filters { padding:12px; gap:12px; }
+.host-service-filters select,.host-data-select select,.host-service-sort select { min-height:40px; border-radius:7px; padding:8px 40px 8px 12px; background-color:var(--bg); font-size:12px; }
+.host-service-sort select { width:170px; }
+.host-service-window { min-height:32px; gap:8px; }
+.host-service-row { min-height:68px; padding:11px 12px; border-radius:9px; }
+.host-service-row strong { font-weight:600; }
+.host-service-row em { font-size:11px; }
+.host-service-row small { font-size:12px; }
+.host-service-pagination>.button { width:36px; height:36px; min-width:36px; }
+.host-service-jump { padding-top:10px; border-top:1px solid var(--line); }
+.host-observation-switcher { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:36px; margin:0 0 16px; padding:0 0 12px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; }
+.host-observation-switcher strong { color:var(--text); font-weight:500; }
+.host-observation-switcher>div { display:flex; gap:6px; flex-shrink:0; }
+.host-observation-switcher .button { width:34px; height:34px; min-height:34px; padding:7px; }
+.host-detail-navigation { position:sticky; top:var(--workspace-header-height,68px); z-index:4; display:grid; gap:16px; min-width:0; background:var(--bg); padding-top:12px; }
+.host-detail-navigation>.tabs { width:100%; min-width:0; margin:0; gap:20px; }
+.host-detail-navigation>.tabs button { min-height:44px; font-size:13px; }
+.host-service-title { gap:8px; }
+.host-service-context { font-size:13px; }
+.host-secondary-facts { gap:16px; }
+.host-fact-panel { padding:20px; border-radius:12px; }
+.host-response-products { gap:6px; }
+.host-response-products>li>button { display:flex; align-items:center; gap:10px; width:100%; padding:8px 0; border:0; color:var(--text); background:none; font:inherit; text-align:left; cursor:pointer; }
+.host-response-products>li>button>span:not(.icon) { min-width:0; flex:1; display:grid; gap:4px; }
+.host-response-products>li>button small { color:var(--muted); font-size:11px; }
+.host-response-products>li>button:hover strong { color:var(--accent-text); }
+.host-response-products>li>button>.icon:last-child { color:var(--muted); }
+.host-disclosure { padding-inline:16px; border-radius:10px; }
+.host-disclosure>summary { display:flex; align-items:center; gap:12px; min-height:48px; list-style:none; }
+.host-disclosure>summary::-webkit-details-marker { display:none; }
+.host-disclosure>summary>.icon:last-child { margin-left:auto; flex-shrink:0; transition:transform .18s; }
+.host-disclosure[open]>summary>.icon:last-child { transform:rotate(180deg); }
+.host-disclosure>.code-canvas { margin-top:4px; }
+.host-product { padding:20px; border-radius:12px; }
+.host-data-explorer { padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--bg); }
+.host-data-controls { gap:12px; }
+.host-data-controls .field input,.host-data-select select { min-height:44px; }
+.host-data-table-wrap { border:1px solid var(--line); border-radius:9px; }
+.host-data-table-wrap .data-table th { padding:10px 12px; font-size:12px; font-weight:500; text-transform:none; }
+.host-data-table-wrap .data-table td { padding:12px; font-size:12px; }
+.host-sort-arrow { display:inline-flex; color:var(--muted); flex-shrink:0; }
+.host-sort-arrow.is-asc { transform:rotate(-90deg); }
+.host-sort-arrow.is-desc { transform:rotate(90deg); }
+.host-sort-arrow.is-idle { opacity:.65; }
+.host-inspectable-row { cursor:pointer; }
+.host-inspectable-row:hover,.host-inspectable-row:focus-within { background:var(--surface); }
+.host-data-cell { display:flex; align-items:start; gap:10px; }
+.host-data-cell>div { flex:1; min-width:0; }
+.host-inspect-row { display:inline-flex; justify-content:center; align-items:center; flex:0 0 28px; width:28px; height:28px; margin:-4px -4px -4px 0; border:0; border-radius:5px; background:none; color:var(--muted); cursor:pointer; }
+.host-inspect-row:hover { color:var(--accent-text); background:var(--tint); }
+.host-row-inspector { display:grid; gap:24px; min-width:0; }
+.host-row-inspector>p { margin:0; font-size:13px; }
+.host-row-inspector .host-data-grid { gap:16px; }
+@keyframes host-bar-enter { from{transform:scaleX(0)}to{transform:scaleX(1)} }
+@container host-details (max-width:980px) {
+  .host-services-layout { grid-template-columns:244px minmax(0,1fr); gap:20px; }
+  .host-service-picker { padding-right:20px; }
+  .host-metric { padding:16px; }
+  .host-service-sort select { width:158px; }
+}
+@container host-details (max-width:760px) {
+  .host-services-layout { grid-template-columns:minmax(0,1fr); gap:0; }
+  .host-service-picker { position:static; max-height:none; padding:0; }
+  .host-detail-navigation { position:static; padding:0; }
+  .host-service-picker input,.host-service-picker select,.host-data-select select { font-size:16px; min-height:44px; }
+  .host-service-pagination>.button,.host-observation-switcher .button { width:40px; height:40px; min-height:40px; }
+  .host-data-explorer { padding:12px; }
+  .host-inspect-row { width:36px; height:36px; flex-basis:36px; }
+}
+@container host-details (max-width:540px) {
+  .host-overview-card,.host-record-section,.host-attributes,.host-fact-panel,.host-product { padding:16px; }
+  .host-metric { padding:14px; }
+  .host-metric-label { font-size:12px; }
+  .host-metric>small { font-size:11px; }
+  .host-data-explorer { padding:12px; }
+  .host-data-controls>.field { flex-basis:100%; }
+  .host-data-size { flex-basis:88px; }
+  .host-technology-count { max-width:80px; white-space:normal; }
+  .host-disclosure { padding-inline:12px; }
+}
+@media(prefers-reduced-motion:reduce) { .host-metric,.host-technology-list>button,.host-disclosure>summary>.icon:last-child,.host-service-classify>summary>.icon:last-child { transition:none; }.host-protocol-track>span{animation:none} }
+[data-reduced-motion='true'] .host-metric,[data-reduced-motion='true'] .host-technology-list>button,[data-reduced-motion='true'] .host-disclosure>summary>.icon:last-child,[data-reduced-motion='true'] .host-service-classify>summary>.icon:last-child { transition:none; }
+[data-reduced-motion='true'] .host-protocol-track>span { animation:none; }
+
+.host-location { display:flex; align-items:center; gap:8px; }

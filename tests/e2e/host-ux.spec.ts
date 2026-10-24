@@ -175,3 +175,57 @@ test('private legacy web-file links keep task scope and display false, zero and 
   expect(hostRequests(requests)[0]).toMatchObject({ type: 'private_hostinfo', data: { task_ids: ['1042'] } });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test('adjacent services cross catalog pages while keeping the filtered scope and selected detail view', async ({ page }, testInfo) => {
+  const requests: RequestLog = [];
+  await hostUxFixture(page, requests);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/hosts/192.0.2.44?tab=services&port=10048&service_protocol=https&view=tls');
+  const detail = page.getByRole('region', { name: 'Selected service details', exact: true });
+  const navigation = page.getByRole('navigation', { name: 'Navigate matching services', exact: true });
+  await expect(navigation).toContainText('Service 25 of 500 matching');
+  await navigation.getByRole('button', { name: 'Next matching service', exact: true }).click();
+  await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10050');
+  await expect(page.getByRole('navigation', { name: 'Received service pages', exact: true })).toContainText('2 / 20');
+  await expect(page.getByRole('tab', { name: 'TLS', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveValue('https');
+  await navigation.getByRole('button', { name: 'Previous matching service', exact: true }).click();
+  await expect(detail.getByRole('heading', { level: 2 }).first()).toContainText('10048');
+  await expect(page.getByRole('navigation', { name: 'Received service pages', exact: true })).toContainText('1 / 20');
+  expect(hostRequests(requests)).toHaveLength(1);
+  await capture(page, testInfo.outputPath('host-catalog-navigation-desktop.png'));
+});
+
+test('data rows open an inspector and complete records use a bounded highlighted source canvas', async ({ page }, testInfo) => {
+  const requests: RequestLog = [];
+  await hostUxFixture(page, requests);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/hosts/192.0.2.44?tab=services&port=443&view=exposed');
+  const table = page.getByRole('region', { name: 'Core server exposed data', exact: true });
+  await expect(table.locator('tbody tr')).toHaveCount(50);
+  await table.locator('tbody tr').first().locator('td').first().click();
+  const dialog = page.getByRole('dialog', { name: 'Record 1', exact: true });
+  await expect(dialog).toContainText('entry-00000');
+  await expect(dialog.locator('.code-token--string').first()).toBeVisible();
+  await capture(page, testInfo.outputPath('host-row-inspector-desktop.png'));
+  await dialog.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+  await page.locator('.host-disclosure > summary').filter({ hasText: 'Complete host record' }).click();
+  const source = page.locator('.host-disclosure .code-canvas');
+  await expect(source.locator('.code-token--key').first()).toBeVisible();
+  expect((await source.locator('pre').textContent())!.length).toBeLessThan(30000);
+  await expect(source.getByRole('button', { name: 'Next code page', exact: true })).toBeEnabled();
+  const first = await source.locator('pre').textContent();
+  await source.getByRole('button', { name: 'Next code page', exact: true }).click();
+  await expect(source.locator('pre')).not.toHaveText(first!);
+  const jump = source.getByRole('spinbutton', { name: 'Go to Complete host record page', exact: true });
+  await jump.fill('10');
+  await source.getByRole('button', { name: 'Go', exact: true }).click();
+  await expect(source.getByRole('navigation', { name: 'Complete host record pages', exact: true })).toContainText('10 /');
+  await expect(jump).toHaveValue('10');
+  await page.setViewportSize({ width: 320, height: 900 });
+  await source.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('host-source-mobile.png') });
+  expect(hostRequests(requests)).toHaveLength(1);
+});

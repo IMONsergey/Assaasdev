@@ -25,6 +25,15 @@ for (const width of [1440, 390, 320]) {
         console.error('LAYOUT_OVERFLOW', JSON.stringify(layout));
         throw error;
       }
+      if (route === '/search?q=example&run=1') {
+        // Flags below the fold intentionally load on approach. Exercise that
+        // scroll path before checking every rendered image, then restore the view.
+        for (const flag of await page.locator('.search-result-row .country-flag').all()) {
+          await flag.scrollIntoViewIfNeeded();
+          await expect.poll(() => flag.evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        }
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+      }
       await expect.poll(() => page.locator('img:visible').evaluateAll(images => images.every(node => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0))).toBe(true);
       await page.evaluate(() => document.fonts.ready);
       await page.screenshot({ path: test.info().outputPath(`route-${route.slice(1).replace(/[^a-z0-9_-]+/gi, '-')}-${width}.png`), fullPage: false });
@@ -45,7 +54,7 @@ test('search opens with a centered single-line title and keeps the query after c
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto('/search');
   const heading = page.getByRole('heading', { name: 'Search internet infrastructure', exact: true });
-  const query = page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true });
+  const query = page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true });
   const form = page.locator('form').filter({ has: query });
   await expect(heading).toBeVisible();
   await expect(query).toBeVisible();

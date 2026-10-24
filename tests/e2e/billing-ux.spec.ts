@@ -19,6 +19,82 @@ async function billingApi(page: Page, options: { mismatchPayment?: boolean; unav
   return frames;
 }
 
+test('annual plans are the default and switching keeps exact prices and explicit purchase intent', async ({ page }, testInfo) => {
+  const frames = await billingApi(page);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/billing?section=plans');
+  const annual = page.getByRole('tab', { name: 'Annually', exact: true });
+  const monthly = page.getByRole('tab', { name: 'Monthly', exact: true });
+  const plus = page.locator('.billing-plan').filter({ has: page.getByRole('heading', { name: 'Plus', exact: true }) });
+  await expect(annual).toHaveAttribute('aria-selected', 'true');
+  await expect(plus.locator('.billing-price strong')).toHaveText('$40');
+  await expect(plus.locator('.billing-period')).toHaveText('$480 billed yearly');
+  await page.locator('.billing-page').screenshot({ path: testInfo.outputPath('billing-annual-default.png') });
+
+  // Cadence and Choose are independent controls; a fast choice must use the new period.
+  await monthly.evaluate(element => {
+    (element as HTMLButtonElement).click();
+    const choose = [...document.querySelectorAll<HTMLButtonElement>('.billing-plan button')].find(button => button.textContent?.trim() === 'Choose Plus');
+    if (!choose) throw new Error('Plus selection must be available.');
+    choose.click();
+  });
+  const immediateReview = page.getByRole('dialog', { name: 'Plus · monthly', exact: true });
+  await expect(immediateReview.getByLabel('Billing period', { exact: true })).toHaveValue('monthly');
+  await expect(immediateReview.locator('.billing-purchase-summary strong')).toHaveText('$50');
+  await immediateReview.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await annual.click();
+
+  await monthly.click();
+  await expect(monthly).toHaveAttribute('aria-selected', 'true');
+  await expect(plus.locator('.billing-price strong')).toHaveText('$50');
+  await expect(plus.locator('.billing-period')).toHaveText('$50 billed monthly');
+  await expect(page).toHaveURL(url => url.searchParams.get('cadence') === 'monthly');
+  await plus.getByRole('button', { name: 'Choose Plus', exact: true }).click();
+  const review = page.getByRole('dialog', { name: 'Plus · monthly', exact: true });
+  await expect(review.getByLabel('Billing period', { exact: true })).toHaveValue('monthly');
+  await expect(review.locator('.billing-purchase-summary strong')).toHaveText('$50');
+  await review.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.reload();
+  await expect(monthly).toHaveAttribute('aria-selected', 'true');
+  await expect(plus.locator('.billing-price strong')).toHaveText('$50');
+  expect(frames.filter(frame => ['init_checkout', 'pay_with_balance', 'get_address', 'confirm_payment'].includes(frame.type))).toEqual([]);
+
+  await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
+  const pack = page.locator('.billing-token').filter({ has: page.getByRole('heading', { name: 'Research Pack', exact: true }) });
+  await expect(pack.locator('.billing-token-price strong')).toHaveText('$180');
+  await expect(pack.getByRole('button', { name: 'Buy credits', exact: true })).toBeVisible();
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 960 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.locator('.billing-page').screenshot({ path: testInfo.outputPath(`billing-credit-packs-${width}.png`) });
+  }
+});
+
+test('plan loading displays the branded canvas only while pricing is pending', async ({ page }, testInfo) => {
+  await billingApi(page);
+  let releasePricing!: () => void;
+  const pricingReady = new Promise<void>(resolve => { releasePricing = resolve; });
+  await page.route('**/backend/pricing', async route => {
+    await pricingReady;
+    await route.fulfill({ json: seedPricing() });
+  });
+  try {
+    await page.goto('/billing?section=plans');
+    const pending = page.getByRole('status', { name: 'Loading plans…', exact: true });
+    await expect(pending).toBeVisible();
+    const canvas = pending.locator('.orb-cube-loader__canvas');
+    await expect(canvas).toBeVisible();
+    await expect.poll(() => canvas.evaluate(element => {
+      const canvas = element as HTMLCanvasElement;
+      const pixels = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height).data;
+      return pixels ? pixels.some((value, index) => index % 4 === 3 && value > 0) : false;
+    })).toBe(true);
+    await pending.screenshot({ path: testInfo.outputPath('billing-pending-orb.png') });
+  } finally { releasePricing(); }
+  await expect(page.locator('.billing-plan')).toHaveCount(4);
+  await expect(page.getByRole('status', { name: 'Loading plans…', exact: true })).toHaveCount(0);
+});
+
 test('billing sections preserve local payment filters and history without extra billing requests', async ({ page }, testInfo) => {
   const frames = await billingApi(page);
   const initial = '/billing?section=payments&history_rows=10&history_page=3&history_status=completed';

@@ -8,6 +8,11 @@ export const BILLING_SECTIONS = [
 
 export type BillingSection = typeof BILLING_SECTIONS[number]['id'];
 
+/** Yearly is the comparison default; explicit monthly links remain authoritative. */
+export function billingCadence(params: URLSearchParams): 'annually' | 'monthly' {
+  return params.get('cadence') === 'monthly' ? 'monthly' : 'annually';
+}
+
 export function billingSection(location: { pathname: string; search: string; hash: string }, signedIn: boolean): BillingSection {
   const params = new URLSearchParams(location.search);
   if (location.hash === '#billing-token-packs') return 'credits';

@@ -37,6 +37,13 @@ test('primary file search and grouped filters submit explicitly and changing vie
   await expect(page.getByRole('heading', { name: '1 file record', exact: true })).toBeVisible();
   expect(frames.filter(frame => frame.type === 'buckets')).toHaveLength(1);
   await expect(page.locator('.files-table')).toContainText('0 MB');
+  await page.locator('.files-table tbody tr').first().getByText('0 MB', { exact: true }).click();
+  const metadata = page.getByRole('dialog', { name: 'report.csv', exact: true });
+  await expect(metadata).toContainText('docs/report.csv');
+  await metadata.getByText('Source metadata', { exact: true }).click();
+  await expect(metadata.locator('.code-token--number')).toContainText(['0', '1800000000']);
+  expect(frames.filter(frame => frame.type === 'buckets')).toHaveLength(1);
+  await metadata.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await page.locator('.files-page').screenshot({ path: testInfo.outputPath('files-results-1440.png') });
   const filters = page.getByRole('button', { name: 'Filters', exact: true });
   await filters.click();

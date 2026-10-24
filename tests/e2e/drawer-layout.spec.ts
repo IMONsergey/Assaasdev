@@ -16,7 +16,11 @@ test('left filter drawers keep their actions reachable with dark theme and enlar
         await dialog.locator('.search-condition-group').first().getByRole('button', { name: 'Add group', exact: true }).click();
       }
       const box = await dialog.boundingBox();
-      expect(box!.x).toBe(0);
+      const workspace = await page.locator('.workspace-main').boundingBox();
+      const header = await page.locator('.app-topbar').boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(workspace!.x);
+      expect(box!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
       expect(box!.width).toBeLessThanOrEqual(width);
       await expect(dialog.getByRole('button', { name: 'Close dialog', exact: true })).toBeInViewport();
       await expect(dialog.getByRole('button', { name: kind === 'search' ? 'Apply conditions' : 'Apply filters', exact: true })).toBeInViewport();

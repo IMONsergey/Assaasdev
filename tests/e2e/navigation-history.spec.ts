@@ -40,7 +40,7 @@ for (const returnMethod of ['browser Back', 'Back to results'] as const) {
     else await page.getByRole('link', { name: /^Back to results/ }).click();
     await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
     expect(new URL(page.url()).search).toBe(originalSearch);
-    await expect(page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('example');
+    await expect(page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('example');
     await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toContainText('Page 2');
     await expect.poll(() => page.evaluate(position => Math.abs(window.scrollY - position), resultPosition)).toBeLessThan(3);
     await expect(result).toBeInViewport();

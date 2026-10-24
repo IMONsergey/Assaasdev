@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { billingIntent, billingSection, paymentHistoryState } from './navigation';
+import { billingCadence, billingIntent, billingSection, paymentHistoryState } from './navigation';
 
 const location = (href: string) => new URL(href, 'https://workspace.example');
 
 describe('billing navigation contracts', () => {
+  it('defaults to annual comparison without changing explicit monthly purchase intent', () => {
+    expect(billingCadence(new URLSearchParams())).toBe('annually');
+    expect(billingCadence(new URLSearchParams('cadence=annually'))).toBe('annually');
+    expect(billingCadence(new URLSearchParams('plan=Plus&cadence=monthly'))).toBe('monthly');
+    expect(billingCadence(new URLSearchParams('cadence=invalid'))).toBe('annually');
+  });
   it('keeps legacy entry points and checkout return on the appropriate section', () => {
     expect(billingSection(location('/billing'), true)).toBe('overview');
     expect(billingSection(location('/billing'), false)).toBe('plans');

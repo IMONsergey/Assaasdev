@@ -6,6 +6,7 @@ import { SearchPage } from '../features/search/SearchPage';
 import { EmptyState, Button, Skeleton } from '../components/ui';
 import { useApp } from './AppProvider';
 import { safeReturnPath } from '../features/auth/auth-state';
+import { ScenarioGuide } from '../features/journeys/ScenarioGuide';
 
 const AuthPage = lazy(() => import('../features/auth/AuthPage').then(module => ({ default: module.AuthPage })));
 const SavedQueriesPage = lazy(() => import('../features/search/SavedQueriesPage').then(module => ({ default: module.SavedQueriesPage })));
@@ -18,6 +19,7 @@ const ScannerPage = lazy(() => import('../features/scanner/ScannerPage').then(mo
 const FilesPage = lazy(() => import('../features/files/FilesPage').then(module => ({ default: module.FilesPage })));
 const NotificationsPage = lazy(() => import('../features/notifications/NotificationsPage').then(module => ({ default: module.NotificationsPage })));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then(module => ({ default: module.SettingsPage })));
+const ScenariosPage = lazy(() => import('../features/journeys/ScenariosPage').then(module => ({ default: module.ScenariosPage })));
 
 class ScreenBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -49,7 +51,7 @@ export function App() {
   }
   if (location.pathname === '/login') return <Navigate to={`/auth/login${location.search}`} state={location.state} replace />;
   return <><NavigationEffects /><Routes>
-    <Route path="/auth/*" element={<ScreenBoundary key={location.pathname}><Suspense fallback={<RouteLoading />}><AuthPage /></Suspense></ScreenBoundary>} />
+    <Route path="/auth/*" element={<div className="auth-scenario-shell"><ScenarioGuide /><ScreenBoundary key={location.pathname}><Suspense fallback={<RouteLoading />}><AuthPage /></Suspense></ScreenBoundary></div>} />
     <Route element={<AppShell collapsed={navigationCollapsed} onCollapsedChange={setNavigationCollapsed} />}>
       <Route element={<WorkspaceView />}>
         <Route index element={<Navigate to="/search" replace />} />
@@ -66,6 +68,7 @@ export function App() {
         <Route path="/account/*" element={<AccountPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/scenarios" element={<ScenariosPage />} />
         <Route path="*" element={<EmptyState title="This page has moved" description="The address does not match a workspace view. Your account and saved queries are still available." actions={<Link className="button button--primary" to="/search">Back to search</Link>} />} />
       </Route>
     </Route>
