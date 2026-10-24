@@ -81,6 +81,8 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
   let connection: ConnectionStatus = 'idle', sequence = 10, keyVersion = 1, deletedPaymentCount = 0;
   let sessions = seedSessions().sessions, saved = seedSavedQueries(), tasks = seedTasks(), planned = seedPlanning();
   let payments = seedPayments(), notifications = seedNotifications().notifications;
+  // Account-wallet orders exist only in this isolated adapter. They never call a payment provider.
+  const walletOrders = new Map<string, { owner: Profile; request: Data; amount: number; status: 'pending' | 'completed' | 'failed' | 'canceled' | 'expired' }>();
   let backupCodes = [...DEMO_BACKUP_CODES], totpExpires = 0;
   let pendingProfile: { email: string; user_name: string; expires: number } | undefined;
   const pendingAccounts = new Map<string, { user_name: string; password: string }>();
@@ -266,7 +268,32 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     if (!plan && !pack) throw new ApiError('server', 'Unknown subscription or token pack');
     if (plan && !['monthly', 'annually'].includes(text(data.cadence))) throw new ApiError('server', 'cadence must be monthly or annually');
     const amount = plan ? data.cadence === 'annually' ? plan.annually_price : plan.monthly_price : pack!.price_usd;
-    return { amount, final: amount * (text(data.promo_code).toUpperCase() === 'WELCOME' ? 0.9 : 1) };
+    return { amount, final: Math.round(amount * (text(data.promo_code).toUpperCase() === 'WELCOME' ? 0.9 : 1) * 100) / 100, plan, pack };
+  }
+  function settleWallet(paymentId: string) {
+    const order = walletOrders.get(paymentId), payment = payments.find(item => item.payment_id === paymentId);
+    if (!order || !payment) return { payment_id: paymentId, status: 'canceled', message: 'This payment was canceled before completion.', timestamp: now() };
+    if (order.status === 'pending') {
+      if ((payment.expires_at ?? Infinity) <= now()) order.status = 'expired';
+      else if ((order.owner.balance ?? 0) < order.amount) order.status = 'failed';
+      else {
+        const { plan, pack } = purchase(order.request);
+        order.owner.balance = Math.round(((order.owner.balance ?? 0) - order.amount) * 100) / 100;
+        if (pack) {
+          order.owner.credits = (order.owner.credits ?? 0) + pack.tokens;
+          order.owner.purchased_credits = (order.owner.purchased_credits ?? 0) + pack.tokens;
+        } else if (plan) {
+          const days = order.request.cadence === 'annually' ? 365 : 30;
+          order.owner.subscription = { type: plan.type, start_date: now(), expiry_date: now() + days * 86400, last_payment: paymentId, credits: plan.credits, scan_credits: plan.scan_credits, search_pages: plan.search_pages, api_access: plan.api_access, price: order.amount, payment_required: true, duration: days * 86400 * 1e9, canceled: false };
+          order.owner.credits = (plan.credits ?? 0) + (order.owner.purchased_credits ?? 0);
+          order.owner.scan_credits = plan.scan_credits ?? 0;
+        }
+        order.status = 'completed'; payment.completed_at = now();
+      }
+      payment.status = order.status; payment.updated_at = now();
+    }
+    return { payment_id: paymentId, status: order.status, subscription_type: order.owner.subscription?.type, expiry_date: order.owner.subscription?.expiry_date,
+      message: order.status === 'completed' ? 'Payment completed. Your account has been updated.' : order.status === 'expired' ? 'This payment expired. Start a new purchase when you are ready.' : 'The payment could not be completed. Your wallet was not charged.', timestamp: now() };
   }
   function taskInput(data: Data) {
     const hosts = stringArray(data.host_list), cidrs = stringArray(data.cidr_list), ports = Array.isArray(data.port_list) && data.port_list.length ? data.port_list as number[] : [...DEFAULT_SCAN_PORTS];
@@ -286,7 +313,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     return { host_list: hosts, cidr_list: cidrs, port_list: ports, schedule, workers: 500, cost: addressCount * ports.length };
   }
 
-  function frames(type: string, data: Data, requestId: string): { frames: ApiFrame[]; persistent?: boolean } {
+  function frames(type: string, data: Data, requestId: string): { frames: ApiFrame[]; persistent?: boolean; intervalMs?: number; beforeDelivery?: (frame: ApiFrame, index: number) => ApiFrame } {
     if (!getMethodDefinition(type)) throw new ApiError('server', `Unknown request type: ${type}`, { outcome: 'not-sent' });
     const { owner, shared } = ownerFor(type, data); checkAccess(type, data, owner);
     const query = data as SearchRequest, privateData = type.startsWith('private_');
@@ -397,23 +424,39 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       return one({ valid, promo_code: text(data.promo_code), description: valid ? '10% discount' : 'Promo code not recognized', discount_pct: valid ? 10 : 0, original_amount_usd: amount.amount, final_amount_usd: valid ? amount.final : amount.amount, timestamp: now() });
     }
     if (type === 'init_checkout' || type === 'billing_manage') throw new ApiError('server', 'Payment service unavailable. Please try again later.', { outcome: 'not-sent' });
-    if (type === 'get_address' || type === 'pay_with_balance') {
+    if (type === 'pay_with_balance') {
       const amount = purchase(data);
-      if (type === 'get_address' && (data.network !== 'demo-network' || data.coin !== 'DEMO')) throw new ApiError('server', 'Choose the demo network and DEMO token');
-      if (type === 'pay_with_balance' && (profile.balance ?? 0) < amount.final) throw new ApiError('server', 'Insufficient balance');
+      const reserved = [...walletOrders.entries()].reduce((total, [paymentId, order]) => total + (order.owner === owner && order.status === 'pending' && (payments.find(item => item.payment_id === paymentId)?.expires_at ?? 0) > now() ? order.amount : 0), 0);
+      if ((owner.balance ?? 0) - reserved < amount.final) throw new ApiError('server', reserved ? 'Part of your balance is reserved for a pending payment. Check it before starting another purchase.' : 'Insufficient balance', { outcome: 'not-sent' });
+      const paymentId = id('pay');
+      walletOrders.set(paymentId, { owner, request: clone(data), amount: amount.final, status: 'pending' });
+      payments.unshift({ payment_id: paymentId, subscription: amount.plan?.type ?? amount.pack?.name ?? 'Search credits', amount: amount.final, amount_usd: amount.final, status: 'pending', created_at: now(), updated_at: now(), expires_at: now() + 3600 });
+      return one({ payment_id: paymentId, amount: amount.final, amount_usd: amount.final, original_amount_usd: amount.amount, final_amount_usd: amount.final, expires_at: now() + 3600, timestamp: now(), message: 'Your wallet payment is ready for confirmation.' });
+    }
+    if (type === 'get_address') {
+      const amount = purchase(data);
+      if (data.network !== 'demo-network' || data.coin !== 'DEMO') throw new ApiError('server', 'Cryptocurrency payments are unavailable.');
       const paymentId = id('pay'), address = 'DEMO_ONLY_NOT_A_PAYMENT_ADDRESS';
-      // Financial completion is never fabricated, including balance payments.
+      // Non-payable cryptocurrency placeholders never settle or grant access.
       payments.unshift({ payment_id: paymentId, subscription: text(data.subscription), amount: amount.final, amount_usd: amount.final, address, network: 'demo-network', coin: 'DEMO', status: 'pending', created_at: now(), updated_at: now(), expires_at: now() + 3600 });
       return one({ payment_id: paymentId, network: 'demo-network', coin: 'DEMO', address, amount: amount.final, amount_usd: amount.final, original_amount_usd: amount.amount, final_amount_usd: amount.final, expires_at: now() + 3600, timestamp: now(), message: 'Demo invoice only. Do not send money. Payment remains pending; access and balance are unchanged.' });
     }
     if (type === 'confirm_payment') {
       const paymentId = requiredString(data, 'payment_id'), payment = payments.find(item => item.payment_id === paymentId);
       if (!payment) throw new ApiError('server', 'Payment not found');
+      const order = walletOrders.get(paymentId);
+      if (order) {
+        if (order.owner !== owner) throw new ApiError('auth', 'This payment belongs to another account');
+        if (order.status !== 'pending') return one(settleWallet(paymentId));
+        const pending = result({ payment_id: paymentId, status: 'pending', message: 'Confirming payment from your account wallet.', timestamp: now() });
+        return { frames: [pending, pending], intervalMs: delay === 0 ? 0 : 850, beforeDelivery: (frame, index) => index === 1 ? result(settleWallet(paymentId)) : frame };
+      }
       return { frames: [result({ payment_id: paymentId, status: 'pending', message: 'Payment is pending. Access updates after confirmation.', timestamp: now() })], persistent: true };
     }
     if (type === 'delete_payment') {
       const paymentId = requiredString(data, 'payment_id', 'Missing payment_id');
       if (!payments.some(item => item.payment_id === paymentId)) throw new ApiError('server', 'Payment not found');
+      const order = walletOrders.get(paymentId); if (order?.status === 'pending') order.status = 'canceled';
       payments = payments.filter(item => item.payment_id !== paymentId); deletedPaymentCount++;
       return one({ payment_id: paymentId, status: 'moved_to_deleted', payments_count: payments.length, deleted_count: deletedPaymentCount, timestamp: now() });
     }
@@ -562,10 +605,13 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
           const prepared = frames(type, object(data), id('demo-request')); started = true;
           const accepted = input.responseTypes ?? getMethodDefinition(type)?.responseTypes ?? [type];
           prepared.frames.forEach((frame, index) => later(() => {
-            emit(frame);
-            if (accepted.includes(frame.type)) input.onFrame(clone(frame) as ApiFrame<T>);
-            if (index === prepared.frames.length - 1 && !prepared.persistent) { cleanup(); input.onComplete?.(); }
-          }, delay * (index + 1)));
+            try {
+              const delivered = prepared.beforeDelivery?.(frame, index) ?? frame;
+              emit(delivered);
+              if (accepted.includes(delivered.type)) input.onFrame(clone(delivered) as ApiFrame<T>);
+              if (index === prepared.frames.length - 1 && !prepared.persistent) { cleanup(); input.onComplete?.(); }
+            } catch (error) { stop(asApiError(error)); }
+          }, (prepared.intervalMs ?? delay) * (index + 1)));
           const timeout = input.timeoutMs ?? 60000;
           if (timeout > 0) later(() => stop(new ApiError(input.mutation ? 'unknown' : 'timeout', 'The response stream timed out.', { outcome: 'unknown', method: type })), timeout);
         } catch (error) { stop(asApiError(error)); }

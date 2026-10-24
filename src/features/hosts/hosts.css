@@ -376,7 +376,7 @@
 .host-sort-arrow.is-desc { transform:rotate(90deg); }
 .host-sort-arrow.is-idle { opacity:.65; }
 .host-inspectable-row { cursor:pointer; }
-.host-inspectable-row:hover,.host-inspectable-row:focus-within { background:var(--surface); }
+.host-inspectable-row:hover,:root:not([data-input-modality="pointer"]) .host-inspectable-row:focus-within { background:var(--surface); }
 .host-data-cell { display:flex; align-items:start; gap:10px; }
 .host-data-cell>div { flex:1; min-width:0; }
 .host-inspect-row { display:inline-flex; justify-content:center; align-items:center; flex:0 0 28px; width:28px; height:28px; margin:-4px -4px -4px 0; border:0; border-radius:5px; background:none; color:var(--muted); cursor:pointer; }
@@ -416,3 +416,10 @@
 [data-reduced-motion='true'] .host-protocol-track>span { animation:none; }
 
 .host-location { display:flex; align-items:center; gap:8px; }
+
+/* A field can be reused as a search draft without losing the host’s current view. */
+.host-searchable-value { display:flex; align-items:flex-start; gap:8px; min-width:0; }
+.host-searchable-value>span:first-child,.host-searchable-value>a:first-child:not(.host-field-search) { min-width:0; overflow-wrap:anywhere; padding-block:8px; }
+.host-field-search { display:inline-grid; place-items:center; flex:0 0 36px; width:36px; height:36px; min-width:36px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--muted); text-decoration:none!important; transition:background-color .16s,border-color .16s,color .16s; }
+.host-field-search:hover { color:var(--accent-text); background:var(--tint); border-color:color-mix(in srgb,var(--accent) 30%,var(--line)); }
+@media(max-width:760px),(pointer:coarse) { .host-field-search { flex-basis:44px; width:44px; min-width:44px; height:44px; }.host-searchable-value>span:first-child,.host-searchable-value>a:first-child:not(.host-field-search) { padding-block:11px; } }

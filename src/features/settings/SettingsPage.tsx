@@ -11,12 +11,12 @@ import { LegalPanel } from './LegalPanel';
 import './settings.css';
 
 const sections = [
-  { id: 'appearance', label: 'Appearance', icon: 'sun' },
   { id: 'profile', label: 'Profile', icon: 'user' },
   { id: 'security', label: 'Security', icon: 'shield' },
   { id: 'sessions', label: 'Sessions', icon: 'desktop' },
   { id: 'team', label: 'Organization', icon: 'users' },
   { id: 'workspace', label: 'Workspace', icon: 'adjustments' },
+  { id: 'appearance', label: 'Appearance', icon: 'sun' },
   { id: 'legal', label: 'Legal', icon: 'file' },
 ] as const;
 type SettingsSection = typeof sections[number]['id'];
@@ -39,7 +39,7 @@ export function SettingsPage() {
   const { preferences, setPreferences, connectionStatus, refreshSession, toast, user, session } = useApp();
   const [params, setParams] = useSearchParams();
   const requested = params.get('section') === 'account' ? 'profile' : params.get('section');
-  const section: SettingsSection = sections.find(item => item.id === requested)?.id ?? 'appearance';
+  const section: SettingsSection = sections.find(item => item.id === requested)?.id ?? 'profile';
   const { ref: navigation, overflow } = useTabOverflow(section);
   const activeSection = sections.find(item => item.id === section)!;
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
@@ -65,7 +65,7 @@ export function SettingsPage() {
     { id: 'dark' as const, label: 'Dark', description: 'Dark interface' },
     { id: 'system' as const, label: 'System', description: 'Match your device' },
   ];
-  function selectSection(next: SettingsSection) { setVisited(previous => new Set([...previous, next])); setParams(next === 'appearance' ? {} : { section: next }, { state: { preserveTabFocus: true } }); }
+  function selectSection(next: SettingsSection) { setVisited(previous => new Set([...previous, next])); setParams(next === 'profile' ? {} : { section: next }, { state: { preserveTabFocus: true } }); }
   function navigateTabs(event: KeyboardEvent<HTMLDivElement>) {
     const index = sections.findIndex(item => item.id === section);
     const next = ['ArrowRight', 'ArrowDown'].includes(event.key) ? (index + 1) % sections.length : ['ArrowLeft', 'ArrowUp'].includes(event.key) ? (index + sections.length - 1) % sections.length : event.key === 'Home' ? 0 : event.key === 'End' ? sections.length - 1 : -1;
@@ -117,6 +117,7 @@ export function SettingsPage() {
             <SettingsRow title="Connection"><div className="settings-connection-actions"><span className={`settings-connection-state${connectionStatus === 'open' ? ' is-connected' : ''}`}>{connectionStatus === 'open' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting' : 'Offline'}</span><Button variant="secondary" size="sm" loading={checkingConnection} onClick={async () => { setCheckingConnection(true); try { await refreshSession(); toast('Connection checked.', 'success'); } catch (error) { toast(errorMessage(error), 'error'); } finally { setCheckingConnection(false); } }}>Check connection</Button></div></SettingsRow>
             <SettingsRow title="Notifications" description="Updates about payments, access and your team."><Link className="button button--secondary button--sm" to="/notifications">Open inbox<Icon name="arrow-up-right" size={16} /></Link></SettingsRow>
             <SettingsRow title="API access"><Link className="button button--secondary button--sm" to="/api">Manage API key<Icon name="arrow-up-right" size={16} /></Link></SettingsRow>
+            <SettingsRow title="Search history" description="Manage searches saved in this browser."><Link className="button button--secondary button--sm" to="/search/history">Manage history<Icon name="arrow-up-right" size={16} /></Link></SettingsRow>
           </div>
           <IndexStatistics />
         </section>

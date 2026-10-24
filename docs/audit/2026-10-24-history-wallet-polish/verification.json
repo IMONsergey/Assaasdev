@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-24",
+  "base_commit": "85f41b7569ccb172b4eceabd345e9c79cfde470e",
+  "typecheck": "passed",
+  "live_build": "passed",
+  "presentation_build": "passed",
+  "unit": {
+    "passed": 170,
+    "files": 25
+  },
+  "chrome_release_regression": {
+    "startTime": "2026-10-24T09:22:00.011Z",
+    "duration": 60111.904,
+    "expected": 41,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "firefox_release": {
+    "startTime": "2026-10-24T09:22:00.442Z",
+    "duration": 84141.627,
+    "expected": 53,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "chrome_full_pre_fix": {
+    "startTime": "2026-10-24T09:12:02.703Z",
+    "duration": 302563.19200000004,
+    "expected": 200,
+    "skipped": 0,
+    "unexpected": 5,
+    "flaky": 0
+  },
+  "pre_fix_failures_resolved": [
+    "auth guide could overlap three active mobile fields",
+    "native Chrome select swallowed keydown; Firefox focus-visible differed",
+    "workspace test expected the former default Appearance section"
+  ],
+  "retries": 0,
+  "immutable_preview": true,
+  "source_files": 556,
+  "source_unchanged_after_build": true,
+  "ci_workflow": "https://github.com/IMONsergey/Assaasdev/actions/workflows/ci.yml",
+  "live_customer_payment_acceptance": "not run",
+  "physical_iOS_acceptance": "not run"
+}

@@ -51,6 +51,7 @@ export function SavedQueriesPage() {
   function openQuery(item: SavedQuery) { if (busy) return; try { const request = parseSavedQuery(item.query); navigate(`${searchPath(itemDataset(item))}?${encodeSearch(request)}`); } catch (cause) { toast(cause instanceof Error ? cause.message : 'This saved query could not be restored.', 'error'); } }
   const visibleQueries = (list.data || []).filter(item => !needle.trim() || `${label(item)} ${item.query}`.toLowerCase().includes(needle.trim().toLowerCase()));
   const backParams = new URLSearchParams(parsed.hasSearch && !parsed.error ? encodeSearch(parsed.request) : '');
+  if (params.get('draft') === '1') { backParams.delete('run'); backParams.set('draft', '1'); }
   if (params.get('return_view') === 'analytics') backParams.set('view', 'analytics');
   if (dataset === 'private' && /^\/scanner(?:\?|$)/.test(params.get('scanner_back') || '')) backParams.set('scanner_back', params.get('scanner_back')!);
   const back = `${searchPath(dataset)}${backParams.size ? `?${backParams}` : ''}`;

@@ -7,8 +7,13 @@ import { OrbCubeLoader } from './brand';
 
 const join = (...names: (string | undefined | false)[]) => names.filter(Boolean).join(' ');
 
-export function Button({ variant = 'primary', size = 'md', loading, fullWidth, className, children, disabled, type = 'button', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost'; size?: 'sm' | 'md'; loading?: boolean; fullWidth?: boolean }) {
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost'; size?: 'sm' | 'md'; loading?: boolean; fullWidth?: boolean };
+export function Button({ variant = 'primary', size = 'md', loading, fullWidth, className, children, disabled, type = 'button', ...props }: ButtonProps) {
   return <button type={type} className={join('button', `button--${variant}`, `button--${size}`, fullWidth && 'button--full', className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>{loading && <OrbCubeLoader size={20} decorative color="currentColor" />}{children}</button>;
+}
+
+export function FilterButton({ active, count, children = 'Filters', className, ...props }: Omit<ButtonProps, 'variant'> & { active?: boolean; count?: number }) {
+  return <Button variant="secondary" className={join('filter-button', active && 'is-active', className)} {...props}><Icon name="filter" size={18} /><span>{children}</span>{typeof count === 'number' && count > 0 && <span className="filter-button-count" aria-label={`${count} active filters`}>{count}</span>}</Button>;
 }
 
 type FieldMeta = { label: ReactNode; hint?: ReactNode; error?: ReactNode; icon?: ReactNode };
@@ -104,7 +109,7 @@ const iconNames: Record<string, string> = {
   bell: 'bell', copy: 'copy', download: 'download', external: 'external-link', menu: 'menu-2', close: 'x',
   'chevron-left': 'chevron-left', 'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down',
   'chevrons-left': 'chevrons-left', 'chevrons-right': 'chevrons-right', plus: 'plus', arrow: 'arrow-right',
-  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'filter', clock: 'clock', user: 'user',
+  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'adjustments-horizontal', clock: 'clock', user: 'user',
   lock: 'lock', logout: 'logout', trash: 'trash', info: 'info-circle', grid: 'layout-grid', list: 'list',
   settings: 'settings', 'help-circle': 'help-circle', bookmark: 'bookmark', server: 'server', globe: 'world',
   shield: 'shield-check', package: 'package', key: 'key', desktop: 'device-desktop', users: 'users', mail: 'mail',

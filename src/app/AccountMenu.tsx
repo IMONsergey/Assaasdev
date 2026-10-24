@@ -62,7 +62,7 @@ export function AccountMenu({ collapsed, mobile, onNavigate }: { collapsed: bool
       <header className="account-popover-identity"><UserAvatar principal={user?.user_id} size={44} /><div><strong>{name}</strong>{user?.email && <span>{user.email}</span>}</div></header>
       <nav role="menu" aria-label="Account actions">
         <Link role="menuitem" to="/settings?section=profile" className="account-menu-item" onClick={navigate}><Icon name="user" size={18} /><span>Profile & avatar</span><Icon name="chevron-right" size={15} /></Link>
-        <Link role="menuitem" to="/settings" className="account-menu-item" onClick={navigate}><Icon name="sun" size={18} /><span>Appearance</span><Icon name="chevron-right" size={15} /></Link>
+        <Link role="menuitem" to="/settings?section=appearance" className="account-menu-item" onClick={navigate}><Icon name="sun" size={18} /><span>Appearance</span><Icon name="chevron-right" size={15} /></Link>
         <Link role="menuitem" to="/billing" className="account-menu-item account-menu-plan" onClick={navigate} aria-label="Manage plan"><Icon name="card" size={18} /><span><small>Current plan</small><strong>{plan || 'Unavailable'}</strong></span><Icon name="chevron-right" size={15} /></Link>
       </nav>
     </div>, document.body)}

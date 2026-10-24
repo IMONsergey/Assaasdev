@@ -5,7 +5,7 @@ export type TourSignal =
   | { kind: 'visible'; selector: string }
   | { kind: 'hidden'; selector: string }
   | { kind: 'route'; pattern: string; session?: 'authenticated' | 'authenticated-or-verifying' }
-  | { kind: 'event'; event: 'click' | 'input' | 'change' | 'submit'; selector: string; thenVisible?: string };
+  | { kind: 'event'; event: 'click' | 'input' | 'change' | 'submit'; selector: string; thenVisible?: string; thenHidden?: string };
 export interface TourStep {
   anchor: string;
   wait?: TourSignal;
@@ -14,6 +14,10 @@ export interface TourStep {
   target?: ScenarioTarget | null;
   nextLabel?: string;
   missing?: string;
+}
+/** An observed click alone cannot certify a save while its form is still open. */
+export function observedEventComplete(signal: Extract<TourSignal, {kind:'event'}>, observed: boolean, isVisible: (selector:string)=>boolean) {
+  return observed && (!signal.thenVisible || isVisible(signal.thenVisible)) && (!signal.thenHidden || !isVisible(signal.thenHidden));
 }
 const read = (anchor: string, nextLabel?: string): TourStep => ({ anchor, nextLabel });
 const visible = (anchor: string, selector: string, hint: string): TourStep => ({ anchor, wait: { kind: 'visible', selector }, hint });
@@ -89,6 +93,11 @@ export const tourFlows: Record<string, TourStep[]> = {
   'buy-credit-pack': [read(pack,'Choose a credit pack'),visible(pack,purchase,'Choose Buy credits to review the selected pack.'),read(purchase,'Review current balance'),read('.billing-metrics')],
   'register-account': [route('.auth-form','^/auth/verify','Submit valid account details to open email verification.'),route('.auth-form','^/auth/login','Complete email verification before signing in.'),signIn(),read(profile)],
   'recover-password': [route('.auth-form','^/auth/recovery/confirm','Request the recovery code to continue.'),visible('.auth-form','.auth-form-wrap .alert--success','Complete recovery with your code and new password.'),signIn(),read(sessionList)],
+  'search-history': [runSearch(), route('[data-onboarding="history-restore"]','^/(?:private/)?search\\?(?:[^#]*&)?draft=1(?:&|$)','Choose Restore to open a previous query as a draft.'), event('.search-results-list .empty-state .button, .search-query-bar button[type="submit"]','click','.search-query-bar button[type="submit"], .search-results-list .empty-state .button','Check the restored conditions, then select Run search.',results),read('[data-onboarding="search-results"], .search-result-toolbar','Finish walkthrough')],
+  'manage-search-history': [runSearch(), {anchor:'[data-onboarding="history-clear"], [data-onboarding="search-history"]',open:{selector:'[data-onboarding="history-clear"]',label:'Review clearing history',until:'.search-history-clear-dialog[open]'},wait:{kind:'visible',selector:'.search-history-clear-dialog[open]'},hint:'Open Clear history to review the confirmation.'},event('[data-onboarding="history-confirm-clear"]','click','[data-onboarding="history-confirm-clear"]','Confirm Clear history only when you are ready.','[data-onboarding="search-history"][data-onboarding-state="cleared"]'),event('[data-onboarding="history-undo"]','click','[data-onboarding="history-undo"]','Choose Undo to restore the removed entries.','[data-onboarding="search-history"][data-onboarding-state="restored"]')],
+  'upload-avatar': [{anchor:'[data-onboarding="avatar-picker"]',open:{selector:'[data-onboarding="avatar-picker"]',label:'Open avatar picker',until:'.avatar-dialog[open]'},wait:{kind:'visible',selector:'.avatar-dialog[open]'}},visible('.avatar-upload-control','[data-onboarding="avatar-preview"][data-onboarding-state="ready"] img[src^="data:image/"]','Choose an image using Upload photo, then wait for its preview.'),{anchor:'[data-onboarding="avatar-preview"], [data-onboarding="avatar-save"]',wait:{kind:'event',event:'click',selector:'[data-onboarding="avatar-save"]',thenHidden:'.avatar-dialog[open]',thenVisible:'.profile-avatar-button img[src^="data:image/"]'},hint:'Review your photo and select Use avatar.'},read('.profile-avatar-button, ' + profile,'Finish walkthrough')],
+  'wallet-payment': [read('[data-onboarding="checkout-review"]','Check wallet balance'),visible('[data-onboarding="wallet-pay"], [data-onboarding="wallet-checkout"]','[data-onboarding="wallet-receipt"]','Select Pay with balance when ready. Continue when the payment is confirmed.'),event('[data-onboarding="wallet-receipt"]','click','[data-onboarding="wallet-done"]','Check the receipt, then select View payments.','.billing-history-table'),read('.billing-history-table, .billing-history','Finish walkthrough')],
+  'pivot-from-host': [chooseHost(),route('[data-onboarding="host-field-search"], .host-response-content','^/(?:private/)?search\\?(?:[^#]*&)?draft=1(?:&|$)','Choose a search icon beside a response fact or header.'),event('.search-results-list .empty-state .button, .search-query-bar button[type="submit"]','click','.search-query-bar button[type="submit"], .search-results-list .empty-state .button','Review the field and value, then select Run search.',results),read('[data-onboarding="search-results"], .search-result-toolbar','Finish walkthrough')],
 };
 
 export function tourStepFor(scenario: Scenario, index: number): TourStep {

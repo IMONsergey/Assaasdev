@@ -1,7 +1,7 @@
-import { useCallback, useSyncExternalStore, type CSSProperties } from 'react';
+import { useCallback, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { asset } from '../config';
 import { Icon } from './ui';
-import { AVATARS, createAvatarStore, type AvatarId } from './avatar-store';
+import { AVATARS, createAvatarStore, isAvatarId, type AvatarChoice, type AvatarSaveResult } from './avatar-store';
 import './avatars.css';
 
 let storage: Storage | undefined;
@@ -15,11 +15,15 @@ function subscribe(listener: () => void) {
 }
 export function useUserAvatar(principal?: string | null) {
   const selected = useSyncExternalStore(subscribe, () => principal ? store.read(principal) : null, () => null);
-  const select = useCallback((id: AvatarId) => principal ? store.select(principal, id) : false, [principal]);
-  return { selected, select };
+  const select = useCallback((choice: AvatarChoice) => principal ? store.select(principal, choice) : false, [principal]);
+  const save = useCallback((choice: AvatarChoice): AvatarSaveResult => principal ? store.save(principal, choice) : 'invalid', [principal]);
+  return { selected, select, save };
 }
-export function AvatarArtwork({ id, size = 36, className }: { id: AvatarId; size?: number; className?: string }) {
-  return <span className={`user-avatar${className ? ` ${className}` : ''}`} style={{ '--avatar-size': `${size}px` } as CSSProperties} aria-hidden="true"><img src={asset(`avatars/${id}.svg`)} alt="" width={size} height={size} draggable={false} /></span>;
+export function AvatarArtwork({ id, size = 36, className }: { id: AvatarChoice; size?: number; className?: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const photo = !isAvatarId(id);
+  const src = photo && failed !== id.dataUrl ? id.dataUrl : asset(`avatars/${photo ? id.preset : id}.svg`);
+  return <span className={`user-avatar${photo ? ' user-avatar--photo' : ''}${className ? ` ${className}` : ''}`} style={{ '--avatar-size': `${size}px` } as CSSProperties} aria-hidden="true"><img src={src} alt="" width={size} height={size} draggable={false} onError={photo ? () => setFailed(id.dataUrl) : undefined} /></span>;
 }
 export function UserAvatar({ principal, size = 36, className }: { principal?: string | null; size?: number; className?: string }) {
   const { selected } = useUserAvatar(principal);

@@ -212,7 +212,7 @@ export function filterSummary(filter: SearchFilter): string {
   return `${filter.field || 'Field'}: ${filter.value || 'value'}`;
 }
 export function queryLabel(request: SearchRequest): string {
-  return request.full_text_search || request.host || (request.simple_search_filters || []).map(filterSummary).join(' · ') || 'All accessible hosts';
+  return request.full_text_search || request.host || request.ip || request.cve_ID || (request.simple_search_filters || []).map(filterSummary).join(' · ') || (request.range_filter || []).map(range => `${({ uts: 'Observed date', cts: 'Created date' } as Record<string, string>)[range.field] || range.field} range`).join(' · ') || (request.security_body ? 'Security.txt content' : request.robots_body ? 'Robots.txt content' : request.exposed_data ? `Exposed data: ${request.exposed_data}` : request.min_size_mb !== undefined || request.max_size_mb !== undefined ? 'Data size range' : 'All accessible hosts');
 }
 export function facetUnit(name: string): 'Hosts' | 'Records' { return ['type', 'org', 'country_name'].includes(name) ? 'Hosts' : 'Records'; }
 export function facetTitle(name: string): string { return ({ country_name: 'Country', org: 'Organization', status_code: 'HTTP status', cve_id: 'CVE', port: 'Ports' } as Record<string, string>)[name] || name.charAt(0).toUpperCase() + name.slice(1).replaceAll('_', ' '); }

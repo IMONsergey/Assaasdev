@@ -6,7 +6,7 @@
 .notification-list > li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; transition:background-color 160ms ease; }
 .notification-list > li + li { border-top:1px solid var(--line); }
 .notification-list > li.notification--unread { background:color-mix(in srgb,var(--accent) 4%,var(--bg)); }
-.notification-list > li:has(.notification-open:is(:hover,:focus-visible)) { background:var(--surface-hover); }
+.notification-list > li:has(.notification-open:hover),:root:not([data-input-modality="pointer"]) .notification-list > li:has(.notification-open:focus-visible) { background:var(--surface-hover); }
 .notification-open { display:grid; grid-template-columns:36px minmax(0,1fr) auto; align-items:start; gap:16px; min-width:0; padding:20px; color:var(--text); border-radius:8px; }
 a.notification-open:hover { color:var(--text); text-decoration:none; }
 a.notification-open:focus-visible { outline-offset:-3px; }

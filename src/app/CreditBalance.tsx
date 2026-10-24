@@ -42,7 +42,7 @@ export function CreditBalance() {
       title={`${available} · View usage`} onClick={() => setOpen(true)}>
       <span className="credit-trigger-line"><span className="credit-trigger-label">{guest ? 'Searches' : 'Credits'}</span>
         <strong className="credit-value-full">{number(search.available ?? undefined)}</strong>
-        <strong className="credit-value-compact">{compactCredits(search.available)}</strong><Icon name="chevron-down" size={12} />
+        <strong className="credit-value-compact">{compactCredits(search.available)}</strong>
       </span>
       <span className={`credit-trigger-track${search.fraction === null ? ' credit-trigger-track--unknown' : ''}`} aria-hidden="true">
         {search.fraction !== null && <span style={{ width: `${search.fraction * 100}%` }} />}

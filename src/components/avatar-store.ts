@@ -1,3 +1,5 @@
+import { isAvatarDataUrl } from './avatar-image';
+
 /** User-supplied artwork. IDs stay stable when the presentation order changes. */
 export const AVATARS = [
   { id: 'avatar-01', label: 'Surprised' }, { id: 'avatar-02', label: 'Wink' },
@@ -12,9 +14,25 @@ export const AVATARS = [
   { id: 'avatar-19', label: 'Star' }, { id: 'avatar-20', label: 'Joy' },
 ] as const;
 export type AvatarId = typeof AVATARS[number]['id'];
+export type AvatarPhoto = Readonly<{ kind: 'photo'; dataUrl: string; preset: AvatarId }>;
+export type AvatarChoice = AvatarId | AvatarPhoto;
+export type AvatarSaveResult = 'saved' | 'temporary' | 'invalid';
 export const AVATAR_STORAGE_PREFIX = 'apcosys.avatar.v1:';
 const available = new Set<string>(AVATARS.map(item => item.id));
 export function isAvatarId(value: unknown): value is AvatarId { return typeof value === 'string' && available.has(value); }
+export function isAvatarPhoto(value: unknown): value is AvatarPhoto {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<AvatarPhoto>;
+  return item.kind === 'photo' && isAvatarDataUrl(item.dataUrl) && isAvatarId(item.preset);
+}
+function normalizeAvatar(value: unknown): AvatarChoice | null {
+  return isAvatarId(value) ? value : isAvatarPhoto(value) ? Object.freeze({ kind: 'photo', dataUrl: value.dataUrl, preset: value.preset }) : null;
+}
+function storedAvatar(value: string | null): AvatarChoice | null {
+  if (isAvatarId(value)) return value;
+  if (!value || value.length > 400_000) return null;
+  try { return normalizeAvatar(JSON.parse(value)); } catch { return null; }
+}
 export function avatarStorageKey(principal: string) {
   // A stable opaque lookup key, not an authentication or encryption primitive.
   // Never persist the account ID, email, or other profile fields with the artwork choice.
@@ -32,28 +50,34 @@ export function randomAvatar(random = Math.random, previous?: AvatarId): AvatarI
 type AvatarStorage = Pick<Storage, 'getItem' | 'setItem'>;
 /** The API has no avatar field. Keep this device preference separate from the profile payload. */
 export function createAvatarStore(storage?: AvatarStorage, random = Math.random) {
-  const cached = new Map<string, AvatarId>();
+  const cached = new Map<string, AvatarChoice>();
   const listeners = new Set<() => void>();
-  function read(principal: string): AvatarId {
+  function read(principal: string): AvatarChoice {
     const existing = cached.get(principal);
     if (existing) return existing;
     let saved: string | null = null;
     try { saved = storage?.getItem(avatarStorageKey(principal)) ?? null; } catch { /* Storage may be disabled. */ }
-    const selected = isAvatarId(saved) ? saved : randomAvatar(random);
+    const restored = storedAvatar(saved);
+    const selected = restored ?? randomAvatar(random);
     cached.set(principal, selected);
-    if (!isAvatarId(saved)) { try { storage?.setItem(avatarStorageKey(principal), selected); } catch { /* Keep a stable in-memory preference. */ } }
+    if (!restored) { try { storage?.setItem(avatarStorageKey(principal), selected as AvatarId); } catch { /* Keep a stable in-memory preference. */ } }
     return selected;
+  }
+  function save(principal: string, value: unknown): AvatarSaveResult {
+    const choice = normalizeAvatar(value);
+    if (!choice) return 'invalid';
+    let result: AvatarSaveResult = 'temporary';
+    try {
+      if (storage) { storage.setItem(avatarStorageKey(principal), isAvatarId(choice) ? choice : JSON.stringify(choice)); result = 'saved'; }
+    } catch { /* Report the temporary selection to the caller instead of claiming it persisted. */ }
+    cached.set(principal, choice);
+    listeners.forEach(listener => listener());
+    return result;
   }
   return {
     read,
-    select(principal: string, value: unknown) {
-      if (!isAvatarId(value)) return false;
-      if (read(principal) === value) return true;
-      cached.set(principal, value);
-      try { storage?.setItem(avatarStorageKey(principal), value); } catch { /* Live selection still works without storage. */ }
-      listeners.forEach(listener => listener());
-      return true;
-    },
+    save,
+    select(principal: string, value: unknown) { return save(principal, value) !== 'invalid'; },
     sync(key: string | null) {
       if (key !== null && !key.startsWith(AVATAR_STORAGE_PREFIX)) return;
       if (key === null) cached.clear();

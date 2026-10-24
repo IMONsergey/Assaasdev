@@ -2,7 +2,7 @@ import { ApiError } from '../api';
 import type { BucketFilter, FacetData, SearchFilter, SearchRequest } from '../api';
 import type { DemoBucket, DemoHost } from './fixtures';
 
-export const DEMO_FIELDS = ['host', 'ip', 'type', 'port', 'protocol', 'transport', 'country_name', 'country_code', 'city_name', 'org', 'asn', 'os', 'status_code', 'title', 'products', 'vendors', 'cve_id', 'base_score', 'labels', 'redirects', 'domain', 'tls_info.server_name', 'cts', 'uts', 'port_count'];
+export const DEMO_FIELDS = ['host', 'ip', 'type', 'port', 'protocol', 'transport', 'country_name', 'country_code', 'city_name', 'org', 'asn', 'os', 'status_code', 'title', 'products', 'vendors', 'cve_id', 'base_score', 'labels', 'redirects', 'domain', 'tls_info.server_name', 'cts', 'uts', 'port_count', 'favicon_md5', 'banner_sha256', 'body_sha256', 'headers.server', 'headers.content-type'];
 export const DEMO_FACETS = ['type', 'port', 'status_code', 'org', 'country_name', 'protocol', 'products', 'title', 'cve_id', 'vendors', 'labels', 'redirects'];
 
 export function fieldValues(host: DemoHost, field: string): Array<string | number> {
@@ -25,7 +25,8 @@ export function fieldValues(host: DemoHost, field: string): Array<string | numbe
   if (field === 'labels') return ports.flatMap((port) => (port.detected_products ?? []).flatMap((product) => product.labels ?? []));
   if (field === 'redirects') return ports.flatMap((port) => port.redirects ?? []);
   if (field === 'tls_info.server_name') return ports.flatMap((port) => typeof port.tls_info?.server_name === 'string' ? [port.tls_info.server_name] : []);
-  if (['port', 'protocol', 'transport', 'status_code', 'title'].includes(field)) return ports.flatMap((port) => {
+  if (field.startsWith('headers.') && field.length > 8) return ports.flatMap(port => Object.entries(port.headers || {}).filter(([name]) => name.toLowerCase() === field.slice(8).toLowerCase()).flatMap(([, values]) => (Array.isArray(values) ? values : [values]).filter((value): value is string => typeof value === 'string')));
+  if (['port', 'protocol', 'transport', 'status_code', 'title', 'favicon_md5', 'banner_sha256', 'body_sha256'].includes(field)) return ports.flatMap((port) => {
     const value = (port as Record<string, unknown>)[field];
     return typeof value === 'string' || typeof value === 'number' ? [value] : [];
   });
@@ -43,7 +44,10 @@ function filterMatches(host: DemoHost, filter: SearchFilter): boolean {
   }
   if (!filter.field) throw new ApiError('server', 'search field cannot be empty');
   if (!filter.value) throw new ApiError('server', 'search value cannot be empty');
-  const requested = filter.value.toLowerCase();
+  let requested = filter.value.toLowerCase();
+  if (filter.field === 'title' && filter.value.startsWith('"') && filter.value.endsWith('"')) {
+    try { const literal: unknown = JSON.parse(filter.value); if (typeof literal === 'string') requested = literal.toLowerCase(); } catch { /* An unquoted literal keeps its original semantics. */ }
+  }
   return fieldValues(host, filter.field).some((value) => String(value).toLowerCase() === requested);
 }
 

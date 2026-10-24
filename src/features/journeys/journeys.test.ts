@@ -75,6 +75,15 @@ describe('interactive walkthrough contracts', () => {
   it('only offers explicit UI-opening actions, without any destructive or paid control', async()=>{
     const {tourFlows}=await import('./tour-flow');
     const selectors=Object.values(tourFlows).flat().flatMap(step=>step.open?[step.open.selector]:[]);
-    expect(selectors.every(selector=>['[data-onboarding="export-search"]','[data-onboarding="share-search"]','[data-onboarding="save-query"]','[data-onboarding="support"]','[data-onboarding="export-files"]','[data-onboarding="check-payment"]','#files-filter-toggle'].includes(selector))).toBe(true);
+    expect(selectors.every(selector=>['[data-onboarding="export-search"]','[data-onboarding="share-search"]','[data-onboarding="save-query"]','[data-onboarding="support"]','[data-onboarding="export-files"]','[data-onboarding="check-payment"]','[data-onboarding="avatar-picker"]','[data-onboarding="history-clear"]','#files-filter-toggle'].includes(selector))).toBe(true);
+  });
+  it('requires an explicit avatar save and a closed picker before observing success', async()=>{
+    const {observedEventComplete,tourFlows}=await import('./tour-flow');
+    const signal=tourFlows['upload-avatar'][2].wait!;
+    if(signal.kind!=='event') throw new Error('Avatar save must be explicitly observed');
+    expect(observedEventComplete(signal,false,selector=>selector===signal.thenVisible)).toBe(false);
+    expect(observedEventComplete(signal,true,()=>true)).toBe(false);
+    expect(observedEventComplete(signal,true,()=>false)).toBe(false);
+    expect(observedEventComplete(signal,true,selector=>selector===signal.thenVisible)).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router';
 import { AppShell } from './AppShell';
 import { NavigationEffects } from './NavigationEffects';
+import { useInputModality } from './input-modality';
 import { SearchPage } from '../features/search/SearchPage';
 import { EmptyState, Button, Skeleton } from '../components/ui';
 import { useApp } from './AppProvider';
@@ -10,6 +11,7 @@ import { ScenarioGuide } from '../features/journeys/ScenarioGuide';
 
 const AuthPage = lazy(() => import('../features/auth/AuthPage').then(module => ({ default: module.AuthPage })));
 const SavedQueriesPage = lazy(() => import('../features/search/SavedQueriesPage').then(module => ({ default: module.SavedQueriesPage })));
+const SearchHistoryPage = lazy(() => import('../features/search/SearchHistoryPage').then(module => ({ default: module.SearchHistoryPage })));
 const ShareSearchPage = lazy(() => import('../features/search/ShareSearchPage').then(module => ({ default: module.ShareSearchPage })));
 const HostPage = lazy(() => import('../features/hosts/HostPage').then(module => ({ default: module.HostPage })));
 const AccountPage = lazy(() => import('../features/account/AccountPage').then(module => ({ default: module.AccountPage })));
@@ -19,6 +21,7 @@ const ScannerPage = lazy(() => import('../features/scanner/ScannerPage').then(mo
 const FilesPage = lazy(() => import('../features/files/FilesPage').then(module => ({ default: module.FilesPage })));
 const NotificationsPage = lazy(() => import('../features/notifications/NotificationsPage').then(module => ({ default: module.NotificationsPage })));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then(module => ({ default: module.SettingsPage })));
+const NotFoundPage = lazy(() => import('../features/notfound/NotFoundPage').then(module => ({ default: module.NotFoundPage })));
 const ScenariosPage = lazy(() => import('../features/journeys/ScenariosPage').then(module => ({ default: module.ScenariosPage })));
 
 class ScreenBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -39,6 +42,7 @@ function WorkspaceView() {
 }
 
 export function App() {
+  useInputModality();
   const location = useLocation();
   const { session, preferences, setPreferences } = useApp();
   if (session.status === 'pending-2fa' && location.pathname !== '/auth/totp') {
@@ -56,19 +60,20 @@ export function App() {
         <Route index element={<Navigate to="/search" replace />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/search/saved" element={<SavedQueriesPage />} />
+        <Route path="/search/history" element={<SearchHistoryPage />} />
         <Route path="/search/share" element={<ShareSearchPage />} />
         <Route path="/hosts/:identifier" element={<HostPage />} />
         <Route path="/private/search" element={<SearchPage />} />
         <Route path="/private/hosts/:identifier" element={<HostPage />} />
-        <Route path="/scanner/*" element={<ScannerPage />} />
+        {['/scanner', '/scanner/new'].map(path => <Route key={path} path={path} element={<ScannerPage />} />)}
         <Route path="/files" element={<FilesPage />} />
         <Route path="/api" element={<ApiPage />} />
-        <Route path="/billing/*" element={<BillingPage />} />
-        <Route path="/account/*" element={<AccountPage />} />
+        {['/billing', '/billing/return'].map(path => <Route key={path} path={path} element={<BillingPage />} />)}
+        {['/account', '/account/profile', '/account/security', '/account/sessions', '/account/team'].map(path => <Route key={path} path={path} element={<AccountPage />} />)}
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/scenarios" element={<ScenariosPage />} />
-        <Route path="*" element={<EmptyState title="This page has moved" description="The address does not match a workspace view. Your account and saved queries are still available." actions={<Link className="button button--primary" to="/search">Back to search</Link>} />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Route>
   </Routes></>;

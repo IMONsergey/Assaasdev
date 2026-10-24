@@ -61,7 +61,7 @@ test('annual plans are the default and switching keeps exact prices and explicit
 
   await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
   const pack = page.locator('.billing-token').filter({ has: page.getByRole('heading', { name: 'Research Pack', exact: true }) });
-  await expect(pack.locator('.billing-token-price strong')).toHaveText('$180');
+  await expect(pack.locator('.billing-token-price strong')).toHaveText('$150');
   await expect(pack.getByRole('button', { name: 'Buy credits', exact: true })).toBeVisible();
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: 960 });
@@ -214,7 +214,7 @@ test('payment return is explicit and an unknown check remains blocked through se
 test('unavailable payment networks cannot produce payable instructions or new invoices', async ({ page }) => {
   const frames = await billingApi(page, { unavailableCrypto: true });
   await page.goto('/billing?pack=token_pack_2');
-  const review = page.getByRole('dialog', { name: 'Add 100,000 credits', exact: true });
+  const review = page.getByRole('dialog', { name: 'Add 85,000 credits', exact: true });
   await expect(review).toBeVisible();
   await review.getByLabel('Payment method', { exact: true }).selectOption('crypto');
   await expect(review.getByRole('heading', { name: 'Payment service unavailable', exact: true })).toBeVisible();

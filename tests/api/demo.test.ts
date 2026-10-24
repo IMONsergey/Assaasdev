@@ -187,7 +187,7 @@ describe('in-memory demo implements meaningful client behavior', () => {
     await api.request('mark_all_notifications_read', {}); expect((await api.request<NotificationsData>('get_notifications', {})).data?.unread_count).toBe(0);
   });
 
-  it('creates pending demo invoices without financial completion or subscription changes', async () => {
+  it('does not settle a wallet order when its confirmation stream is canceled before completion', async () => {
     const api = createDemoApi({ delayMs: 0 }), before = await api.http<Profile>('/whoami');
     const invoice = await api.request<CryptoInvoice>('pay_with_balance', { subscription: 'Plus', cadence: 'monthly' });
     const received = new Promise<ApiFrame>(resolve => { const stop = api.stream('confirm_payment', { payment_id: invoice.data?.payment_id }, { onFrame(frame) { stop(); resolve(frame); }, onError: error => { throw error; }, timeoutMs: 5000 }); });
@@ -197,6 +197,62 @@ describe('in-memory demo implements meaningful client behavior', () => {
     expect((await api.request<BillingData>('user_billing', {})).data?.payments?.some(payment => payment.payment_id === invoice.data?.payment_id)).toBe(false);
     await expect(api.request('init_checkout', { subscription: 'Plus', cadence: 'monthly' })).rejects.toThrow('Payment service unavailable');
     await expect(api.request('billing_manage')).rejects.toThrow('Payment service unavailable');
+  });
+
+  it('settles a wallet credit purchase once, keeps money and credits separate, and has no payable address', async () => {
+    const api = createDemoApi({ delayMs: 0 }), before = await api.http<Profile>('/whoami');
+    const invoice = (await api.request<CryptoInvoice>('pay_with_balance', { token_pack_id: 'token_pack_1' })).data!;
+    expect(invoice).toMatchObject({ amount_usd: 50, final_amount_usd: 50 });
+    expect(invoice.address).toBeUndefined(); expect(invoice.network).toBeUndefined(); expect(invoice.coin).toBeUndefined();
+    expect((await api.http<Profile>('/whoami')).balance).toBe(before.balance);
+    const streams = await Promise.all([collect(api, 'confirm_payment', { payment_id: invoice.payment_id }), collect(api, 'confirm_payment', { payment_id: invoice.payment_id })]);
+    for (const stream of streams) expect(stream.map(frame => (frame.data as { status: string }).status)).toEqual(['pending', 'completed']);
+    const after = await api.http<Profile>('/whoami');
+    expect(after.balance).toBe(70); expect(after.credits).toBe(before.credits! + 25000); expect(after.purchased_credits).toBe(25000);
+    expect(after.subscription).toEqual(before.subscription); expect(after.scan_credits).toBe(before.scan_credits);
+    const replay = await collect(api, 'confirm_payment', { payment_id: invoice.payment_id });
+    expect(replay.map(frame => (frame.data as { status: string }).status)).toEqual(['completed']);
+    expect(await api.http<Profile>('/whoami')).toEqual(after);
+    const payment = (await api.request<BillingData>('user_billing', {})).data!.payments!.find(item => item.payment_id === invoice.payment_id);
+    expect(payment).toMatchObject({ status: 'completed', amount_usd: 50, subscription: 'Starter Pack' });
+    expect(payment?.completed_at).toBeTypeOf('number');
+    await api.request('delete_payment', { payment_id: invoice.payment_id });
+    expect((await api.http<Profile>('/whoami')).balance).toBe(70);
+  });
+
+  it('rejects insufficient funds and prevents pending wallet orders from overspending a balance', async () => {
+    const api = createDemoApi({ delayMs: 0 });
+    const before = (await api.request<BillingData>('user_billing', {})).data!;
+    await expect(api.request('pay_with_balance', { subscription: 'Plus', cadence: 'annually' })).rejects.toThrow('Insufficient balance');
+    expect((await api.request<BillingData>('user_billing', {})).data).toEqual(before);
+    const first = (await api.request<CryptoInvoice>('pay_with_balance', { token_pack_id: 'token_pack_1' })).data!;
+    await api.request('pay_with_balance', { token_pack_id: 'token_pack_1' });
+    await expect(api.request('pay_with_balance', { token_pack_id: 'token_pack_1' })).rejects.toThrow('reserved for a pending payment');
+    expect((await api.http<Profile>('/whoami')).balance).toBe(120);
+    await api.request('delete_payment', { payment_id: first.payment_id });
+    await expect(api.request('pay_with_balance', { token_pack_id: 'token_pack_1' })).resolves.toHaveProperty('data.payment_id');
+  });
+
+  it('applies a validated promo exactly once and grants the purchased plan only at confirmation', async () => {
+    const api = createDemoApi({ delayMs: 0, now: () => DEMO_TIMESTAMP * 1000 });
+    const invoice = (await api.request<CryptoInvoice>('pay_with_balance', { subscription: 'Plus', cadence: 'monthly', promo_code: 'WELCOME' })).data!;
+    expect(invoice).toMatchObject({ original_amount_usd: 50, final_amount_usd: 45 });
+    expect((await api.http<Profile>('/whoami')).subscription?.type).toBe('Business');
+    await collect(api, 'confirm_payment', { payment_id: invoice.payment_id });
+    const profile = await api.http<Profile>('/whoami');
+    expect(profile.balance).toBe(75); expect(profile.credits).toBe(25000); expect(profile.scan_credits).toBe(0);
+    expect(profile.subscription).toMatchObject({ type: 'Plus', price: 45, start_date: DEMO_TIMESTAMP, expiry_date: DEMO_TIMESTAMP + 30 * 86400, canceled: false, last_payment: invoice.payment_id });
+  });
+
+  it('expires a pending wallet order without deducting money or granting access', async () => {
+    let current = DEMO_TIMESTAMP * 1000;
+    const api = createDemoApi({ delayMs: 0, now: () => current }), before = await api.http<Profile>('/whoami');
+    const invoice = (await api.request<CryptoInvoice>('pay_with_balance', { token_pack_id: 'token_pack_1' })).data!;
+    current += 3601 * 1000;
+    const frames = await collect(api, 'confirm_payment', { payment_id: invoice.payment_id });
+    expect(frames.at(-1)?.data).toMatchObject({ status: 'expired' });
+    expect(await api.http<Profile>('/whoami')).toEqual(before);
+    expect((await api.request<BillingData>('user_billing', {})).data?.payments?.find(item => item.payment_id === invoice.payment_id)?.status).toBe('expired');
   });
 
   it('preserves huge crypto unit strings in read-only fixtures without settling payments', async () => {

@@ -1,6 +1,21 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+test('settings open the profile first and keep appearance below account and workspace categories', async ({ page }) => {
+  await page.goto('/settings');
+  await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Profile', exact: true })).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Settings categories', exact: true }).getByRole('tab')).toHaveText(['Profile', 'Security', 'Sessions', 'Organization', 'Workspace', 'Appearance', 'Legal']);
+  await page.getByRole('tab', { name: 'Appearance', exact: true }).click();
+  await expect(page).toHaveURL(/section=appearance/);
+  await page.reload();
+  await expect(page.getByRole('tabpanel', { name: 'Appearance', exact: true })).toBeVisible();
+  await page.goto('/settings?section=unknown');
+  await expect(page.getByRole('tabpanel', { name: 'Profile', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Workspace', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Manage history', exact: true })).toHaveAttribute('href', '/search/history');
+});
+
 test('settings keep an unsaved profile while navigating and contain the sign-out action', async ({ page }) => {
   await page.goto('/settings?section=profile');
   const navigation = page.getByRole('complementary', { name: 'Workspace navigation' });
@@ -61,7 +76,7 @@ for (const width of [1440, 390, 320]) {
   test(`settings and API sections have complete layouts at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: width > 760 ? 960 : 844 });
     await page.goto('/settings');
-    for (const name of ['Appearance', 'Profile', 'Security', 'Sessions', 'Organization', 'Workspace']) {
+    for (const name of ['Profile', 'Security', 'Sessions', 'Organization', 'Workspace', 'Appearance', 'Legal']) {
       if (width <= 760) {
         await page.getByRole('button', { name: /^Choose settings section:/ }).click();
         await page.getByRole('dialog', { name: 'Settings categories', exact: true }).getByRole('button', { name, exact: true }).click();
@@ -97,7 +112,7 @@ for (const width of [1440, 390, 320]) {
 }
 
 test('settings sections and API key page remain accessible', async ({ page }) => {
-  for (const route of ['/settings?section=profile', '/settings?section=security', '/settings?section=sessions', '/settings?section=team', '/api']) {
+  for (const route of ['/settings', '/settings?section=security', '/settings?section=sessions', '/settings?section=team', '/settings?section=workspace', '/settings?section=appearance', '/settings?section=legal', '/api']) {
     await page.goto(route);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('.skeleton')).toHaveCount(0);

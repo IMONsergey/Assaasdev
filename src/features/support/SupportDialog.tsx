@@ -6,20 +6,28 @@ import { copyText } from '../account/operation';
 import { prepareSupportMessage, supportEmail, supportTopics, type SupportDraft } from './resources';
 import './support.css';
 
-export function SupportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SupportDialog({ open, onClose, initialTopic, initialMessage }: { open: boolean; onClose: () => void; initialTopic?: string; initialMessage?: string }) {
   const { user, toast } = useApp();
   const [view,setView] = useState<'help'|'form'|'review'>('help');
   const [draft,setDraft] = useState<SupportDraft>({name:'',email:'',topic:supportTopics[0],message:''});
   const [error,setError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(false);
   const prepared = prepareSupportMessage(draft);
+  useLayoutEffect(() => {
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!justOpened || (!initialTopic && !initialMessage)) return;
+    setDraft({ name: user?.user_name ?? '', email: user?.email ?? '', topic: initialTopic ?? supportTopics[0], message: initialMessage ?? '' });
+    setView('form'); setError('');
+  }, [open, initialTopic, initialMessage, user]);
   useLayoutEffect(() => {
     if (!open) return;
     if (view === 'form') formRef.current?.querySelector<HTMLInputElement>('input')?.focus({preventScroll:true});
     else bodyRef.current?.closest<HTMLDialogElement>('dialog')?.focus({preventScroll:true});
   },[view,open]);
-  function close() { setView('help'); setError(''); onClose(); }
+  function close() { setView('help'); setError(''); if (initialTopic || initialMessage) setDraft({ name: '', email: '', topic: supportTopics[0], message: '' }); onClose(); }
   function contact() {
     setDraft(current => ({...current,name:current.name || user?.user_name || '',email:current.email || user?.email || ''}));
     setView('form'); setError('');

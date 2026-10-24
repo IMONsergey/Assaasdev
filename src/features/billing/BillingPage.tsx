@@ -10,6 +10,10 @@ import { CryptoActivity } from './CryptoActivity';
 import { PaymentHistory } from './PaymentHistory';
 import { BILLING_SECTIONS, billingCadence, billingIntent, billingSection, type BillingSection } from './navigation';
 import { unavailablePaymentValue } from './payment-display';
+import { WalletPayment, WalletReview, type WalletPaymentState } from './WalletPayment';
+import { rememberWallet, resolveWallet, usePendingWallet } from './pending-wallet';
+import { walletSnapshotUpdated, type WalletExpectation } from './wallet-sync';
+import { SupportDialog } from '../support/SupportDialog';
 import './billing.css';
 
 type Selection = { kind: 'plan'; value: PricingPlan } | { kind: 'tokens'; value: TokenPack };
@@ -24,9 +28,13 @@ function externalPaymentUrl(value: string) {
 }
 
 export function BillingPage() {
-  const { api, session, user, refreshSession, toast } = useApp();
+  const { api, session, user, refreshSession, toast, mode } = useApp();
   const location = useLocation(), navigate = useNavigate();
   const signedIn = session.status === 'authenticated';
+  const walletPrincipal = signedIn ? user?.user_id ?? '' : '';
+  const persistWallet = mode !== 'demo';
+  const pendingWalletRecord = usePendingWallet(walletPrincipal, persistWallet);
+  const pendingWalletId = typeof pendingWalletRecord === 'string' ? pendingWalletRecord : null;
   const section = billingSection(location, signedIn);
   const pricing = useQuery({ queryKey: ['pricing'], queryFn: ({ signal }) => api.http<PricingData>('/pricing', { signal, mutation: false }) });
   const billing = useQuery({ queryKey: ['user-billing', user?.user_id], enabled: signedIn, queryFn: async ({ signal }) => responseData(await api.request<BillingData>('user_billing', {}, { signal, mutation: false })) });
@@ -48,6 +56,9 @@ export function BillingPage() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentState>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [confirmation, setConfirmation] = useState<PaymentConfirmation | null>(null);
+  const [accountSync, setAccountSync] = useState<'idle' | 'loading' | 'ready' | 'pending' | 'error'>('idle');
+  const walletExpectation = useRef<WalletExpectation | null>(null);
+  const [invoiceRequestOpen, setInvoiceRequestOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BillingPayment | null>(null);
   const purchase = useOperation();
   const portal = useOperation();
@@ -56,12 +67,16 @@ export function BillingPage() {
   const deletion = useOperation();
   const paymentStream = useRef<(() => void) | null>(null);
   const paymentGeneration = useRef(0);
+  const mounted = useRef(true);
+  const accountSyncGeneration = useRef(0);
+  const activeWalletPrincipal = useRef(walletPrincipal);
+  activeWalletPrincipal.current = walletPrincipal;
   const handledIntent = useRef('');
   const currentPromoRequest = useRef('');
   const networks = useQuery({ queryKey: ['billing-networks'], enabled: signedIn && selection !== null && method === 'crypto', queryFn: async ({ signal }) => responseData(await api.request<NetworkData[]>('networks', {}, { signal, mutation: false })) });
   const availableNetworks = networks.data?.filter(item => !unavailablePaymentValue(item.network)).map(item => ({ ...item, coins: item.coins.filter(coin => !unavailablePaymentValue(coin.coin)) })).filter(item => item.coins.length > 0) ?? [];
 
-  useEffect(() => () => { ++paymentGeneration.current; paymentStream.current?.(); }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; ++paymentGeneration.current; ++accountSyncGeneration.current; paymentStream.current?.(); }; }, []);
   useEffect(() => {
     const first = availableNetworks[0];
     if (first && !availableNetworks.some(item => item.network === network)) { setNetwork(first.network); setCoin(first.coins[0]?.coin ?? ''); }
@@ -77,21 +92,31 @@ export function BillingPage() {
   const scanCredits = billing.data?.scan_credits ?? user?.scan_credits;
   const selectedName = selection?.kind === 'plan' ? selection.value.name ?? selection.value.type : selection?.value.name ?? selection?.value.id;
   const selectedPrice = selection?.kind === 'plan' ? cadence === 'monthly' ? selection.value.monthly_price : selection.value.annually_price : selection?.value.price_usd;
+  const reviewPrice = promoResult?.valid && typeof promoResult.final_amount_usd === 'number' ? promoResult.final_amount_usd : selectedPrice;
+  const walletInsufficient = method === 'balance' && (typeof balance !== 'number' || !Number.isFinite(balance) || typeof reviewPrice !== 'number' || balance < reviewPrice);
+  const paymentFailed = ['failed', 'canceled', 'cancelled', 'expired'].includes(confirmation?.status ?? '');
+  const unresolvedPayment = Boolean(pendingWalletRecord) || paymentStatus === 'checking' || paymentStatus === 'unknown' || invoice !== null && method === 'balance' && (paymentStatus === 'idle' || paymentStatus === 'error' && !paymentFailed);
+  const walletActive = method === 'balance' && (purchase.busy || invoice !== null);
+  const walletState: WalletPaymentState = purchase.busy ? 'processing' : paymentStatus === 'completed' ? 'completed' : paymentStatus === 'unknown' || paymentStatus === 'error' && !paymentFailed ? 'unknown' : paymentStatus === 'error' ? 'failed' : 'pending';
   const selectedCoins = availableNetworks.find(item => item.network === network)?.coins ?? [];
   currentPromoRequest.current = `${selection?.kind}|${selectedName}|${cadence}|${promo.trim()}`;
+
+  useEffect(() => {
+    if (pendingWalletId && !selection) { setPaymentId(pendingWalletId); setPaymentPanelOpen(true); }
+  }, [pendingWalletId, selection]);
 
   useEffect(() => {
     if (!signedIn || !pricing.data) return;
     const params = new URLSearchParams(location.search), plan = params.get('plan'), pack = params.get('pack');
     const intent = billingIntent(params);
     if (!plan && !pack) { handledIntent.current = ''; return; }
-    if (handledIntent.current === intent || purchase.blocked) return;
+    if (handledIntent.current === intent || purchase.blocked || unresolvedPayment) return;
     handledIntent.current = intent;
     const selectedPlan = plan ? pricing.data.subscriptions.find(item => item.type === plan) : undefined;
     const selectedPack = pack ? pricing.data.tokens?.find(item => item.id === pack) : undefined;
     if (!selectedPlan && !selectedPack) { toast('That selection is no longer available. Choose from the current plans and credit packs.', 'info'); return; }
-    openReview(selectedPlan ? { kind: 'plan', value: selectedPlan } : { kind: 'tokens', value: selectedPack! }, billingCadence(params));
-  }, [signedIn, pricing.data, location.key, location.search, purchase.blocked, toast]);
+    openReview(selectedPlan ? { kind: 'plan', value: selectedPlan } : { kind: 'tokens', value: selectedPack! }, billingCadence(params), params.get('method') === 'balance' ? 'balance' : undefined);
+  }, [signedIn, pricing.data, location.key, location.search, purchase.blocked, unresolvedPayment, toast]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -119,11 +144,14 @@ export function BillingPage() {
     return { ...(selection.kind === 'plan' ? { subscription: selection.value.type, cadence } : { token_pack_id: selection.value.id }), ...(promo.trim() ? { promo_code: promo.trim() } : {}) };
   }
 
-  function openReview(item: Selection, period = cadence) {
+  function openReview(item: Selection, period = cadence, requestedMethod?: PaymentMethod) {
     purchase.reset(); promoCheck.reset();
     setSelection(item); setCadence(period); setPromo(''); setPromoResult(null);
-    setCheckout(null); setInvoice(null); setMethod('card'); setCurrency('');
+    setCheckout(null); setInvoice(null); setMethod(requestedMethod ?? (mode === 'demo' ? 'balance' : 'card')); setCurrency('');
     setAutomaticDiscount(false); setNetwork(''); setCoin('');
+    setAccountSync('idle'); setConfirmation(null); setPaymentStatus('idle'); setPaymentMessage('');
+    walletExpectation.current = null;
+    ++accountSyncGeneration.current;
   }
 
   function choose(item: Selection) {
@@ -134,8 +162,43 @@ export function BillingPage() {
       navigate(`/auth/login?returnTo=${encodeURIComponent(`/billing?${params}`)}`);
       return;
     }
-    if (purchase.blocked) { toast('Review your latest billing before starting another purchase.', 'info'); return; }
+    if (purchase.blocked || unresolvedPayment) { toast('Review your latest billing before starting another purchase.', 'info'); return; }
     openReview(item, chosenCadence);
+  }
+
+  function finishCheckout() {
+    setSelection(null);
+    const params = new URLSearchParams(window.location.search);
+    for (const key of ['plan', 'pack', 'method']) params.delete(key);
+    params.set('section', 'payments');
+    if (invoice?.payment_id) params.set('payment_id', invoice.payment_id);
+    navigate({ search: `?${params}`, hash: '' });
+  }
+
+  function closeReview() {
+    if (purchase.busy) return;
+    if (walletActive && invoice) finishCheckout(); else setSelection(null);
+  }
+
+  function openPendingWallet() {
+    setSelection(null); setPaymentId(pendingWalletId ?? ''); setPaymentPanelOpen(true);
+    const params = new URLSearchParams(window.location.search);
+    for (const key of ['plan', 'pack', 'method', 'payment_id']) params.delete(key);
+    params.set('section', 'payments');
+    if (pendingWalletId) params.set('payment_id', pendingWalletId);
+    navigate({ search: `?${params}`, hash: '' });
+  }
+
+  async function syncAccount(confirmedId = paymentId) {
+    const generation = ++accountSyncGeneration.current;
+    const expected = walletExpectation.current;
+    setAccountSync('loading');
+    try {
+      const result = await billing.refetch();
+      if (!result.isSuccess) throw result.error;
+      await refreshSession();
+      if (mounted.current && generation === accountSyncGeneration.current) setAccountSync(walletSnapshotUpdated(result.data, expected, confirmedId) ? 'ready' : 'pending');
+    } catch { if (mounted.current && generation === accountSyncGeneration.current) setAccountSync('error'); }
   }
 
   async function reconcileBilling() {
@@ -144,9 +207,11 @@ export function BillingPage() {
       if (result.isSuccess) {
         await refreshSession();
         purchase.reset(); portal.reset(); subscription.reset(); deletion.reset();
-        if (paymentStatus === 'unknown') {
-          const checkedPayment = result.data.payments?.find(item => item.payment_id === paymentId);
-          if (checkedPayment?.status === 'completed') { setPaymentStatus('completed'); setPaymentMessage('Your billing history confirms that this payment completed.'); }
+        if (paymentStatus === 'unknown' || paymentStatus === 'error' || pendingWalletId) {
+          const checkedId = pendingWalletId || paymentId;
+          const checkedPayment = result.data.payments?.find(item => item.payment_id === checkedId);
+          if (checkedPayment?.status === 'completed') { resolveWallet(walletPrincipal, checkedId, persistWallet); setPaymentStatus('completed'); setAccountSync(walletSnapshotUpdated(result.data, walletExpectation.current, checkedId) ? 'ready' : 'pending'); setPaymentMessage('Your billing history confirms that this payment completed.'); }
+          else if (checkedPayment && ['failed', 'canceled', 'cancelled', 'expired'].includes(checkedPayment.status ?? '')) { resolveWallet(walletPrincipal, checkedId, persistWallet); setPaymentStatus('error'); setConfirmation({ payment_id: checkedPayment.payment_id, status: checkedPayment.status! }); setPaymentMessage(`Payment ${checkedPayment.status}. You can check the status again or start a new purchase.`); }
           else setPaymentStatus('idle');
         }
         toast('Latest billing loaded. Review payment and subscription status before taking another action.', 'info');
@@ -167,9 +232,12 @@ export function BillingPage() {
   }
 
   async function beginPurchase() {
-    if (!signedIn || !selection) return;
+    if (!signedIn || !selection || unresolvedPayment || walletInsufficient) return;
     const request = purchaseBody();
+    if (method === 'balance') walletExpectation.current = { amount: reviewPrice, balance, credits: searchCredits, ...(selection.kind === 'tokens' ? { addedCredits: selection.value.tokens } : { plan: selection.value.type, priorPlan: currentPlan, priorExpiry: currentSubscription?.expiry_date }) };
     const result = await purchase.run(async () => {
+      if (method === 'balance') rememberWallet(walletPrincipal, true, persistWallet);
+      try {
       if (method === 'card') {
         const returnUrl = new URL(`${import.meta.env.BASE_URL}billing/return`, window.location.origin).href;
         const data = responseData(await api.request<CheckoutData>('init_checkout', { ...request, ...(currency.trim() ? { currency: currency.trim().toUpperCase() } : {}), apply_discount: automaticDiscount, return_url: returnUrl, cancel_url: returnUrl }, { mutation: true }));
@@ -180,10 +248,24 @@ export function BillingPage() {
       const data = responseData(await api.request<CryptoInvoice>(method === 'crypto' ? 'get_address' : 'pay_with_balance', { ...request, ...(method === 'crypto' ? { network, coin } : {}) }, { mutation: true }));
       if (!data.payment_id) throw new ApiError('unknown', 'A payment ID was not returned. Review your billing before trying again.', { outcome: 'unknown' });
       return { kind: 'invoice' as const, data };
-    }, method === 'card' ? 'Your secure checkout link is ready. Payment is not confirmed yet.' : 'A payment has been created. Check its status to confirm completion.');
+      } catch (error) {
+        if (method === 'balance' && !(error instanceof ApiError && error.outcome === 'unknown')) rememberWallet(walletPrincipal, null, persistWallet);
+        throw error;
+      }
+    }, method === 'card' ? 'Your secure checkout link is ready. Payment is not confirmed yet.' : method === 'balance' ? '' : 'A payment has been created. Check its status to confirm completion.');
     if (result.ok) {
+      if (method === 'balance' && result.data.kind === 'invoice') {
+        if (walletExpectation.current) walletExpectation.current.amount = result.data.data.final_amount_usd ?? result.data.data.amount_usd ?? reviewPrice;
+        rememberWallet(walletPrincipal, result.data.data.payment_id, persistWallet);
+      }
+      if (!mounted.current || activeWalletPrincipal.current !== walletPrincipal) return;
       if (result.data.kind === 'checkout') setCheckout(result.data.data);
-      else { setInvoice(result.data.data); setPaymentId(result.data.data.payment_id); }
+      else {
+        setInvoice(result.data.data); setPaymentId(result.data.data.payment_id);
+        if (method === 'balance') {
+          checkPayment(result.data.data.payment_id, true);
+        }
+      }
       await billing.refetch();
     }
   }
@@ -205,13 +287,15 @@ export function BillingPage() {
     if (result.ok) { await billing.refetch(); await refreshSession().catch(() => undefined); }
   }
 
-  function checkPayment(id = paymentId) {
+  function checkPayment(id = paymentId, inline = false) {
     if (!signedIn || !id.trim() || paymentStatus === 'checking' || paymentStatus === 'unknown') return;
     setPaymentPanelOpen(true);
-    if (section !== 'payments') changeSection('payments');
+    if (!inline && section !== 'payments') changeSection('payments');
     const generation = ++paymentGeneration.current;
+    const recoveringUnidentified = pendingWalletRecord === true;
     paymentStream.current?.();
     setPaymentId(id.trim()); setConfirmation(null); setPaymentStatus('checking'); setPaymentMessage('Waiting for the payment service. Your subscription updates after confirmation.');
+    let receivedTerminal = false;
     paymentStream.current = api.stream<PaymentConfirmation>('confirm_payment', { payment_id: id.trim() }, {
       mutation: true,
       onFrame(frame) {
@@ -220,20 +304,35 @@ export function BillingPage() {
         setConfirmation(frame.data);
         setPaymentMessage(frame.data.message ?? `Payment status: ${frame.data.status}`);
         if (frame.data.status === 'completed') {
+          receivedTerminal = true;
+          resolveWallet(walletPrincipal, id.trim(), persistWallet, recoveringUnidentified);
+          purchase.reset();
           setPaymentStatus('completed');
-          void billing.refetch(); void refreshSession().catch(() => undefined);
+          paymentStream.current?.();
+          void syncAccount(id.trim());
+        } else if (['failed', 'canceled', 'cancelled', 'expired'].includes(frame.data.status)) {
+          receivedTerminal = true;
+          resolveWallet(walletPrincipal, id.trim(), persistWallet, recoveringUnidentified);
+          purchase.reset();
+          setPaymentStatus('error');
+          paymentStream.current?.();
+          void billing.refetch();
         }
       },
       onError(error) {
-        if (generation !== paymentGeneration.current) return;
+        if (generation !== paymentGeneration.current || receivedTerminal) return;
         setPaymentStatus(error.outcome === 'unknown' ? 'unknown' : 'error');
         setPaymentMessage(error.outcome === 'unknown' ? 'Payment confirmation was interrupted. Review your latest billing before initiating another payment.' : error.message);
+      },
+      onComplete() {
+        if (generation !== paymentGeneration.current || receivedTerminal) return;
+        setPaymentStatus('unknown'); setPaymentMessage('The confirmation ended before a final status was returned. Refresh billing to check this payment.');
       },
     });
   }
 
   async function removePayment() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || unresolvedPayment) return;
     const result = await deletion.run(async () => {
       const data = responseData(await api.request<{ status: string }>('delete_payment', { payment_id: deleteTarget.payment_id }, { mutation: true }));
       if (data.status !== 'moved_to_deleted') throw new ApiError('unknown', 'The payment record change was not confirmed.', { outcome: 'unknown' });
@@ -247,6 +346,7 @@ export function BillingPage() {
 
   return <div className="billing-page stack">
     <PageHeader title="Billing" actions={signedIn ? <Button size="sm" variant="secondary" onClick={() => void reconcileBilling()} loading={billing.isFetching}><Icon name="refresh" size={16} />Refresh billing</Button> : <Link className="button button--secondary" to="/auth/login?returnTo=%2Fbilling">Sign in</Link>} />
+    {pendingWalletRecord && !selection && <div className="billing-pending-wallet" role="status"><Icon name="clock" size={20} /><div><strong>A wallet payment is awaiting confirmation</strong><span>{pendingWalletId ? 'Check its status before starting another purchase.' : 'The payment reference has not arrived. Review your recent payments.'}</span></div><Button variant="secondary" onClick={openPendingWallet}>Review payment<Icon name="arrow" size={16} /></Button></div>}
     <Tabs idPrefix="billing" ariaLabel="Billing sections" items={[...BILLING_SECTIONS]} value={section} onChange={value => changeSection(value as BillingSection)} />
 
     {!selection && <OperationNotice state={purchase.state} onCheck={() => void reconcileBilling()} />}
@@ -264,7 +364,7 @@ export function BillingPage() {
           <div className="billing-subscription-body"><dl><div><dt>Current period ends</dt><dd>{formatDate(currentSubscription?.expiry_date)}</dd></div><div><dt>Renewal</dt><dd>{currentSubscription?.canceled === true ? 'Ends after this period' : currentSubscription?.canceled === false ? 'Enabled' : currentPlan === 'Free' ? 'Free plan' : 'Not provided'}</dd></div></dl>
             <div className="cluster"><Button variant="secondary" onClick={() => changeSection('plans')}>Change plan<Icon name="arrow" size={16} /></Button><Button variant="secondary" onClick={() => changeSection('credits')}><Icon name="plus" size={16} />Add credits</Button></div>
           </div>
-          <div className="billing-subscription-actions"><Button variant="secondary" loading={portal.busy} disabled={portal.blocked} onClick={() => void openPortal()}><Icon name="external" size={16} />Payment methods & invoices</Button>{pricing.data?.subscriptions.find(plan => plan.type === currentPlan && plan.monthly_price > 0) && <Button variant="ghost" disabled={purchase.blocked} onClick={() => { const plan = pricing.data?.subscriptions.find(item => item.type === currentPlan); if (plan) choose({ kind: 'plan', value: plan }); }}>Change billing period</Button>}{currentPlan && !['Free', 'Guest'].includes(currentPlan) && <Button variant="ghost" disabled={subscription.blocked} onClick={() => setSubscriptionAction(currentSubscription?.canceled ? 'resume' : 'cancel')}>{currentSubscription?.canceled ? 'Resume renewal' : 'Cancel renewal'}</Button>}</div>
+          <div className="billing-subscription-actions"><Button variant="secondary" loading={portal.busy} disabled={portal.blocked} onClick={() => void openPortal()}><Icon name="external" size={16} />Payment methods & invoices</Button>{pricing.data?.subscriptions.find(plan => plan.type === currentPlan && plan.monthly_price > 0) && <Button variant="ghost" disabled={purchase.blocked || unresolvedPayment} onClick={() => { const plan = pricing.data?.subscriptions.find(item => item.type === currentPlan); if (plan) choose({ kind: 'plan', value: plan }); }}>Change billing period</Button>}{currentPlan && !['Free', 'Guest'].includes(currentPlan) && <Button variant="ghost" disabled={subscription.blocked} onClick={() => setSubscriptionAction(currentSubscription?.canceled ? 'resume' : 'cancel')}>{currentSubscription?.canceled ? 'Resume renewal' : 'Cancel renewal'}</Button>}</div>
           {portalUrl && <div className="billing-ready-link"><Icon name="check" size={18} /><span>Customer portal ready</span><a href={portalUrl} target="_blank" rel="noopener noreferrer" className="button button--secondary">Open customer portal<Icon name="external" size={16} /></a></div>}
         </Card>
       </>}
@@ -281,11 +381,12 @@ export function BillingPage() {
           <p className="billing-plan-description">{plan.description || [plan.private_scanning && 'Private Scanner', plan.advanced_search && 'Advanced Search', plan.buckets && 'Buckets'].filter(Boolean).join(' · ') || 'Search access'}</p>
           <div className="billing-price"><strong><AnimatedPrice amount={amount} /></strong><span>/ month</span></div>
           <p className="billing-period">{plan.monthly_price === 0 && plan.annually_price === 0 ? 'No subscription payment' : cadence === 'annually' ? `${money(plan.annually_price)} billed yearly` : `${money(plan.monthly_price)} billed monthly`}</p>
-          {plan.monthly_price === 0 ? <Link to={signedIn ? '/search' : '/auth/signup'} className="button button--secondary">{signedIn ? 'Open search' : 'Create account'}</Link> : <DoubleButton fullWidth variant={current ? 'secondary' : 'primary'} onClick={() => current && signedIn ? changeSection('overview') : choose({ kind: 'plan', value: plan })} disabled={purchase.blocked}>{current ? 'View current plan' : `Choose ${plan.name ?? plan.type}`}</DoubleButton>}
+          {plan.monthly_price === 0 ? <Link to={signedIn ? '/search' : '/auth/signup'} className="button button--secondary">{signedIn ? 'Open search' : 'Create account'}</Link> : <DoubleButton fullWidth variant={current ? 'secondary' : 'primary'} onClick={() => current && signedIn ? changeSection('overview') : choose({ kind: 'plan', value: plan })} disabled={purchase.blocked || unresolvedPayment}>{current ? 'View current plan' : `Choose ${plan.name ?? plan.type}`}</DoubleButton>}
           <dl className="billing-plan-features"><div><dt><Icon name="search" size={15} />Search credits</dt><dd>{formatNumber(plan.credits)}</dd></div><div><dt><Icon name="user" size={15} />Users</dt><dd>{formatNumber(plan.users)}</dd></div><div><dt><Icon name="list" size={15} />Search pages</dt><dd>{formatNumber(plan.search_pages)}</dd></div><div><dt><Icon name="code" size={15} />API requests / sec</dt><dd>{plan.api_access === true ? formatNumber(plan.api_rate_limit) : plan.api_access === false ? 'Not included' : '—'}</dd></div>{(plan.scan_credits ?? 0) > 0 && <div><dt><Icon name="scan" size={15} />Scan credits</dt><dd>{formatNumber(plan.scan_credits)}</dd></div>}</dl>
           <PlanCapabilities plan={plan} />
         </Card>;
       })}</div>}
+      {cadence === 'annually' && pricing.data?.subscriptions.some(plan => plan.type === 'Business') && <div className="billing-invoice-request"><div><Icon name="receipt" size={22} /><div><strong>Annual Business by invoice</strong><p>Request an invoice and arrange a bank transfer with our team.</p></div></div><Button variant="secondary" onClick={() => setInvoiceRequestOpen(true)}>Request invoice<Icon name="arrow" size={16} /></Button></div>}
     </TabPanel>
 
     <TabPanel idPrefix="billing" value="credits" hidden={section !== 'credits'} className="billing-panel stack">
@@ -295,7 +396,7 @@ export function BillingPage() {
         <div className="billing-token-amount"><strong>{formatNumber(pack.tokens)}</strong><span>search credits</span></div>
         {pack.description && !/^additional search credits[.!]?$/i.test(pack.description.trim()) && <p className="billing-token-description">{pack.description}</p>}
         <div className="billing-token-price"><strong><AnimatedPrice amount={pack.price_usd} /></strong><span>one-time payment</span></div>
-        <DoubleButton fullWidth variant="secondary" onClick={() => choose({ kind: 'tokens', value: pack })} disabled={purchase.blocked}>Buy credits</DoubleButton>
+        <DoubleButton fullWidth variant="secondary" onClick={() => choose({ kind: 'tokens', value: pack })} disabled={purchase.blocked || unresolvedPayment}>Buy credits</DoubleButton>
       </article>)}</div> : <EmptyState title="No credit packs available" actions={<Button variant="secondary" onClick={() => void pricing.refetch()}>Refresh packs</Button>} />}
     </TabPanel>
 
@@ -311,7 +412,7 @@ export function BillingPage() {
           : billing.data?.payments === undefined ? <EmptyState icon={<Icon name="clock" size={24} />} title="Payment history was not provided" actions={<Button variant="secondary" onClick={() => void billing.refetch()}>Refresh history</Button>} />
           : !Array.isArray(billing.data.payments) || billing.data.payments.some(payment => !payment || typeof payment.payment_id !== 'string') ? <Alert tone="error" title="Payment history could not be read" actions={<Button variant="secondary" onClick={() => void billing.refetch()}>Refresh history</Button>}>Refresh to check the latest records.</Alert>
           : !billing.data.payments.length ? <EmptyState icon={<Icon name="card" size={24} />} title="No payments to show" description="Card invoices are available in Payment methods & invoices." />
-          : <PaymentHistory payments={billing.data.payments} onCheck={checkPayment} onRemove={setDeleteTarget} checkDisabled={paymentStatus === 'checking' || paymentStatus === 'unknown'} removeDisabled={deletion.blocked} formatAmount={money} />}
+          : <PaymentHistory payments={billing.data.payments} onCheck={checkPayment} onRemove={setDeleteTarget} checkDisabled={paymentStatus === 'checking' || paymentStatus === 'unknown'} removeDisabled={deletion.blocked || unresolvedPayment} formatAmount={money} />}
       </>}
     </TabPanel>
 
@@ -319,9 +420,37 @@ export function BillingPage() {
       {signedIn ? <CryptoActivity /> : accountRequired}
     </TabPanel>
 
-    <Dialog open={selection !== null} onClose={() => { if (!purchase.busy) setSelection(null); }} title={selection?.kind === 'tokens' ? `Add ${formatNumber(selection.value.tokens)} credits` : `${selectedName ?? 'Plan'} · ${cadence}`} size="md" footer={!checkout && !invoice ? <><Button variant="secondary" disabled={purchase.busy} onClick={() => setSelection(null)}>Cancel</Button>{signedIn ? <Button loading={purchase.busy} disabled={purchase.blocked || method === 'crypto' && (!selectedCoins.some(item => item.coin === coin) || networks.isError)} onClick={() => void beginPurchase()}>{method === 'card' ? 'Create secure checkout' : method === 'balance' ? 'Pay with balance' : 'Create crypto invoice'}</Button> : <Link className="button button--primary" to="/auth/login?returnTo=%2Fbilling">Sign in</Link>}</> : <Button variant="secondary" onClick={() => setSelection(null)}>Close</Button>}>
-      <div className="stack"><div className="billing-purchase-summary"><span>{selectedName}</span><strong><AnimatedPrice amount={selectedPrice} /></strong></div><OperationNotice state={purchase.state} onCheck={() => void reconcileBilling()} />{!checkout && !invoice && <>{selection?.kind === 'plan' && <SelectField label="Billing period" value={cadence} disabled={purchase.busy} onChange={(event) => { setCadence(event.target.value as BillingCadence); setPromoResult(null); promoCheck.reset(); }}><option value="monthly">Monthly</option><option value="annually">Annually</option></SelectField>}<SelectField label="Payment method" value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)} disabled={purchase.busy}><option value="card">Card / payment provider</option><option value="balance">Account balance · {money(balance)}</option><option value="crypto">Cryptocurrency</option></SelectField>{method === 'crypto' && <>{networks.isPending ? <Spinner label="Loading payment networks…" /> : networks.isError ? <Alert tone="error" actions={<Button onClick={() => void networks.refetch()}>Try again</Button>}>{networks.error.message}</Alert> : availableNetworks.length ? <div className="form-grid"><SelectField label="Network" value={network} disabled={purchase.busy} onChange={(event) => { setNetwork(event.target.value); setCoin(availableNetworks.find((item) => item.network === event.target.value)?.coins[0]?.coin ?? ''); }}>{availableNetworks.map((item) => <option key={item.network} value={item.network}>{item.network}</option>)}</SelectField><SelectField label="Coin" value={coin} disabled={purchase.busy} onChange={(event) => setCoin(event.target.value)}>{selectedCoins.map((item) => <option key={item.coin} value={item.coin}>{item.coin}{item.name ? ` · ${item.name}` : ''}</option>)}</SelectField></div> : <EmptyState icon={<Icon name="card" size={24} />} title="Payment service unavailable" description="Cryptocurrency payments are currently unavailable." />}{availableNetworks.length > 0 && <Alert tone="warning">Only send the selected coin on the specified network. The invoice provides the amount, destination and expiry.</Alert>}</>}{method === 'balance' && <p className="billing-method-note">Available money balance: <strong>{money(balance)}</strong></p>}<div className="billing-promo"><Field label="Promo code (optional)" value={promo} onChange={(event) => { setPromo(event.target.value); setPromoResult(null); promoCheck.reset(); }} disabled={purchase.busy} /><Button variant="secondary" loading={promoCheck.busy} disabled={!promo.trim() || purchase.busy} onClick={() => void validatePromo()}>Check code</Button></div><OperationNotice state={promoCheck.state} />{promoResult && <p className="billing-promo-result" role="status"><Icon name={promoResult.valid ? 'check' : 'info'} size={18} />{promoResult.valid ? `${promoResult.description || 'Promo applied'}${promoResult.final_amount_usd !== undefined ? ` · ${money(promoResult.final_amount_usd)}` : ''}` : promoResult.message || 'This promo code could not be applied.'}</p>}{method === 'card' && <><Field label="Currency code (optional)" value={currency} maxLength={8} onChange={(event) => setCurrency(event.target.value.toUpperCase())} placeholder="Provider default" hint="Leave blank to use the provider’s default currency." disabled={purchase.busy} /><Checkbox label="Apply an eligible automatic discount" checked={automaticDiscount} onChange={(event) => setAutomaticDiscount(event.target.checked)} disabled={purchase.busy} /></>}<p className="muted">Access updates after payment is confirmed.</p></>}{checkout && <div className="billing-checkout-ready"><Icon name="check" size={24} /><h3>Checkout ready</h3><p>Continue with the payment provider to complete your purchase.</p><a className="button button--primary" href={checkout.checkout_url} target="_blank" rel="noopener noreferrer">Open secure checkout ↗</a></div>}{invoice && (unavailablePaymentValue(invoice.address) || unavailablePaymentValue(invoice.coin) || unavailablePaymentValue(invoice.network) ? <EmptyState icon={<Icon name="card" size={24} />} title="Payment service unavailable" description="No payment instructions are available." /> : <div className="stack"><h3>Payment details</h3><dl className="billing-invoice"><div><dt>Payment ID</dt><dd className="mono">{invoice.payment_id}</dd></div>{invoice.network && <div><dt>Network</dt><dd>{invoice.network}</dd></div>}{invoice.coin && <div><dt>Amount</dt><dd>{invoice.amount} {invoice.coin}</dd></div>}{invoice.address && <div><dt>Destination</dt><dd className="mono billing-break">{invoice.address}</dd></div>}<div><dt>Total in USD</dt><dd>{money(invoice.final_amount_usd ?? invoice.amount_usd)}</dd></div>{invoice.expires_at !== undefined && <div><dt>Expires</dt><dd>{formatDate(invoice.expires_at)}</dd></div>}</dl>{invoice.message && <Alert tone="info">{invoice.message}</Alert>}<div className="cluster">{invoice.address && <Button variant="secondary" onClick={() => void copyText(invoice.address!, toast)}>Copy address</Button>}<Button onClick={() => { setSelection(null); checkPayment(invoice.payment_id); }}>Check payment status</Button></div></div>)}</div>
+    <Dialog open={selection !== null} onClose={closeReview} title={selection?.kind === 'tokens' ? `Add ${formatNumber(selection.value.tokens)} credits` : `${selectedName ?? 'Plan'} · ${cadence}`} size="md" className="billing-checkout-dialog" footer={walletActive ? <>
+      {walletState === 'completed' ? <Button data-onboarding="wallet-done" onClick={finishCheckout}>View payments<Icon name="arrow" size={16} /></Button> : <>
+        <Button variant="secondary" disabled={purchase.busy} onClick={finishCheckout}>View in payments</Button>
+        {walletState === 'unknown' ? <Button loading={billing.isFetching} onClick={() => void reconcileBilling()}><Icon name="refresh" size={16} />Refresh billing</Button> : walletState === 'failed' ? <Button onClick={() => { setInvoice(null); setPaymentStatus('idle'); setConfirmation(null); purchase.reset(); }}>Back to purchase</Button> : paymentStatus === 'idle' && invoice ? <Button onClick={() => checkPayment(invoice.payment_id, true)}>Check payment</Button> : null}
+      </>}
+    </> : !checkout && !invoice ? <>
+      <Button variant="secondary" disabled={purchase.busy} onClick={closeReview}>Cancel</Button>
+      {signedIn ? <Button data-onboarding={method === 'balance' ? 'wallet-pay' : undefined} loading={purchase.busy} disabled={purchase.blocked || unresolvedPayment || walletInsufficient || method === 'crypto' && (!selectedCoins.some(item => item.coin === coin) || networks.isError)} onClick={() => void beginPurchase()}>{method === 'card' ? 'Create secure checkout' : method === 'balance' ? 'Pay with balance' : 'Create crypto invoice'}</Button> : <Link className="button button--primary" to="/auth/login?returnTo=%2Fbilling">Sign in</Link>}
+    </> : <Button variant="secondary" onClick={closeReview}>Close</Button>}>
+      {walletActive ? <WalletPayment state={walletState} paymentId={invoice?.payment_id} product={selectedName ?? 'Purchase'} total={invoice?.final_amount_usd ?? invoice?.amount_usd ?? reviewPrice} balance={balance} credits={searchCredits} sync={accountSync} message={paymentMessage} onCopy={() => void copyText(invoice?.payment_id ?? '', toast)} onRefresh={() => void syncAccount()} /> : <div className="stack checkout-review" data-onboarding="checkout-review">
+        <div className="billing-purchase-summary"><span><Icon name={selection?.kind === 'tokens' ? 'search' : 'card'} size={21} /><span>{selectedName}<small>{selection?.kind === 'tokens' ? 'One-time credit purchase' : cadence === 'annually' ? 'Billed yearly' : 'Billed monthly'}</small></span></span><strong><AnimatedPrice amount={reviewPrice} /></strong></div>
+        <OperationNotice state={purchase.state} onCheck={() => void reconcileBilling()} />
+        {!checkout && !invoice && <>
+          {selection?.kind === 'plan' && <SelectField label="Billing period" value={cadence} disabled={purchase.busy} onChange={event => { setCadence(event.target.value as BillingCadence); setPromoResult(null); promoCheck.reset(); }}><option value="monthly">Monthly</option><option value="annually">Annually</option></SelectField>}
+          <SelectField label="Payment method" value={method} onChange={event => setMethod(event.target.value as PaymentMethod)} disabled={purchase.busy}><option value="card">Card / payment provider</option><option value="balance">Account wallet · {money(balance)}</option><option value="crypto">Cryptocurrency</option></SelectField>
+          {method === 'balance' && <WalletReview balance={balance} total={reviewPrice} onOtherMethod={() => setMethod('card')} />}
+          {method === 'crypto' && <>
+            {networks.isPending ? <Spinner label="Loading payment networks…" /> : networks.isError ? <Alert tone="error" actions={<Button onClick={() => void networks.refetch()}>Try again</Button>}>{networks.error.message}</Alert> : availableNetworks.length ? <div className="form-grid"><SelectField label="Network" value={network} disabled={purchase.busy} onChange={event => { setNetwork(event.target.value); setCoin(availableNetworks.find(item => item.network === event.target.value)?.coins[0]?.coin ?? ''); }}>{availableNetworks.map(item => <option key={item.network} value={item.network}>{item.network}</option>)}</SelectField><SelectField label="Coin" value={coin} disabled={purchase.busy} onChange={event => setCoin(event.target.value)}>{selectedCoins.map(item => <option key={item.coin} value={item.coin}>{item.coin}{item.name ? ` · ${item.name}` : ''}</option>)}</SelectField></div> : <EmptyState icon={<Icon name="card" size={24} />} title="Payment service unavailable" description="Cryptocurrency payments are currently unavailable." />}
+            {availableNetworks.length > 0 && <Alert tone="warning">Only send the selected coin on the specified network. The invoice provides the amount, destination and expiry.</Alert>}
+          </>}
+          <div className="billing-promo"><Field label="Promo code (optional)" value={promo} onChange={event => { setPromo(event.target.value); setPromoResult(null); promoCheck.reset(); }} disabled={purchase.busy} /><Button variant="secondary" loading={promoCheck.busy} disabled={!promo.trim() || purchase.busy} onClick={() => void validatePromo()}>Check code</Button></div>
+          <OperationNotice state={promoCheck.state} />
+          {promoResult && <p className="billing-promo-result" role="status"><Icon name={promoResult.valid ? 'check' : 'info'} size={18} />{promoResult.valid ? `${promoResult.description || 'Promo applied'}${promoResult.final_amount_usd !== undefined ? ` · ${money(promoResult.final_amount_usd)}` : ''}` : promoResult.message || 'This promo code could not be applied.'}</p>}
+          {method === 'card' && <><Field label="Currency code (optional)" value={currency} maxLength={8} onChange={event => setCurrency(event.target.value.toUpperCase())} placeholder="Provider default" hint="Leave blank to use the provider’s default currency." disabled={purchase.busy} /><Checkbox label="Apply an eligible automatic discount" checked={automaticDiscount} onChange={event => setAutomaticDiscount(event.target.checked)} disabled={purchase.busy} /></>}
+          <p className="checkout-review-note"><Icon name="lock" size={14} />{method === 'balance' ? 'The total is deducted from your wallet after confirmation.' : 'Access updates after payment is confirmed.'}</p>
+        </>}
+        {checkout && <div className="billing-checkout-ready"><Icon name="check" size={24} /><h3>Checkout ready</h3><p>Continue with the payment provider to complete your purchase.</p><a className="button button--primary" href={checkout.checkout_url} target="_blank" rel="noopener noreferrer">Open secure checkout ↗</a></div>}
+        {invoice && (unavailablePaymentValue(invoice.address) || unavailablePaymentValue(invoice.coin) || unavailablePaymentValue(invoice.network) ? <EmptyState icon={<Icon name="card" size={24} />} title="Payment service unavailable" description="No payment instructions are available." /> : <div className="stack"><h3>Payment details</h3><dl className="billing-invoice"><div><dt>Payment ID</dt><dd className="mono">{invoice.payment_id}</dd></div>{invoice.network && <div><dt>Network</dt><dd>{invoice.network}</dd></div>}{invoice.coin && <div><dt>Amount</dt><dd>{invoice.amount} {invoice.coin}</dd></div>}{invoice.address && <div><dt>Destination</dt><dd className="mono billing-break">{invoice.address}</dd></div>}<div><dt>Total in USD</dt><dd>{money(invoice.final_amount_usd ?? invoice.amount_usd)}</dd></div>{invoice.expires_at !== undefined && <div><dt>Expires</dt><dd>{formatDate(invoice.expires_at)}</dd></div>}</dl>{invoice.message && <Alert tone="info">{invoice.message}</Alert>}<div className="cluster">{invoice.address && <Button variant="secondary" onClick={() => void copyText(invoice.address!, toast)}><Icon name="copy" size={16} />Copy address</Button>}<Button onClick={() => { setSelection(null); checkPayment(invoice.payment_id); }}>Check payment status</Button></div></div>)}
+      </div>}
     </Dialog>
+    <SupportDialog open={invoiceRequestOpen} onClose={() => setInvoiceRequestOpen(false)} initialTopic="Billing & payments" initialMessage={`I would like to request an invoice for the annual Business plan${pricing.data?.subscriptions.find(plan => plan.type === 'Business') ? ` (${money(pricing.data.subscriptions.find(plan => plan.type === 'Business')!.annually_price)} per year)` : ''} and arrange payment by bank transfer.\n\nCompany name:\nBilling address:\nTax or registration ID (if applicable):`} />
     <ConfirmDialog open={subscriptionAction !== null} onClose={() => setSubscriptionAction(null)} onConfirm={() => void updateSubscription()} title={subscriptionAction === 'cancel' ? 'Cancel subscription renewal?' : 'Resume subscription renewal?'} description={subscriptionAction === 'cancel' ? 'Benefits remain active until the current period ends. This action does not request a refund.' : 'The server will confirm whether renewal can be resumed for this subscription.'} confirmLabel={subscriptionAction === 'cancel' ? 'Cancel renewal' : 'Resume renewal'} danger={subscriptionAction === 'cancel'} busy={subscription.busy} />
     <ConfirmDialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} onConfirm={() => void removePayment()} title="Remove this payment record?" description="The record will move to deleted. This does not refund a payment or cancel a subscription." confirmLabel="Remove record" danger busy={deletion.busy} />
   </div>;

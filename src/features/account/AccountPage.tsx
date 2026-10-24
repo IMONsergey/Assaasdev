@@ -103,7 +103,7 @@ export function ProfilePanel({ user }: { user: Profile }) {
         <div className="profile-account-reference"><span>User ID</span><code>{user.user_id ?? '—'}</code></div>
       </aside>
     </div>
-    {avatarOpen && user.user_id && <AvatarPicker principal={user.user_id} onClose={() => setAvatarOpen(false)} />}
+    {avatarOpen && user.user_id && <AvatarPicker key={user.user_id} principal={user.user_id} onClose={() => setAvatarOpen(false)} />}
   </div>;
 }
 

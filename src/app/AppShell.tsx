@@ -116,7 +116,7 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
         <Button variant="ghost" className="mobile-nav-close" aria-label="Close navigation" onClick={() => setMenu(false)}><Icon name="close" /></Button>
       </div>
       <nav className="sidebar-primary" aria-label="Main navigation">
-        {navigation.map(item => <NavLink key={item.to} to={item.to} end={item.to === '/search'} aria-label={item.label} title={collapsed ? item.label : undefined} className={({ isActive }) => `nav-link${(item.to === '/search' ? isSearch : item.to === '/scanner' ? isPrivate : isActive) ? ' active' : ''}`}><Icon name={item.icon} size={19} /><span className="nav-label">{item.label}</span>{item.to === '/search' && <kbd className="nav-shortcut">⌘ K</kbd>}</NavLink>)}
+        {navigation.map(item => <NavLink key={item.to} to={item.to} end={item.to === '/search'} aria-label={item.label} title={collapsed ? item.label : undefined} className={({ isActive }) => `nav-link${(item.to === '/search' ? isSearch : item.to === '/scanner' ? isPrivate : isActive) ? ' active' : ''}`}><Icon name={item.icon} size={19} /><span className="nav-label">{item.label}</span></NavLink>)}
       </nav>
       <div className="sidebar-bottom">
         <NavLink to="/billing" className="nav-link" aria-label="Billing" title={collapsed ? 'Billing' : undefined}><Icon name="card" size={19} /><span className="nav-label">Billing</span></NavLink>

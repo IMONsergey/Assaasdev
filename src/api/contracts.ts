@@ -62,7 +62,7 @@ export interface DetectedProduct {
 export interface PortRecord {
   port?: number; protocol?: string; transport?: string; uts?: number;
   banner?: string; status?: string; title?: string; status_code?: number;
-  favicon_md5?: string; body?: string; headers?: Record<string, string[]>;
+  favicon_md5?: string; banner_sha256?: string; body_sha256?: string; body?: string; headers?: Record<string, string[]>;
   cert_domains?: string[]; redirects?: string[]; link?: string; header_domains?: string[];
   tls_info?: Record<string, unknown>;
   security_txt?: { is_security_txt?: boolean; body?: string; contacts?: string[]; url?: string; endpoint?: string };

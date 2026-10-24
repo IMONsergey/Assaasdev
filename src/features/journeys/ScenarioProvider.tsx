@@ -5,7 +5,7 @@ import { useApp } from '../../app/AppProvider';
 import { decodeSearch } from '../search/model';
 import { findScenario, type Scenario } from './catalog';
 import { parseGuideState, recordStepOutcome, resolveScenarioTarget, scenarioArea, type GuideState, type RememberedLocations, type StepOutcome } from './guide-state';
-import { findTourTarget, tourStepFor, type TourStep } from './tour-flow';
+import { findTourTarget, observedEventComplete, tourStepFor, type TourStep } from './tour-flow';
 
 interface ScenarioContextValue {
   state: GuideState | null; scenario: Scenario | undefined; tourStep: TourStep | undefined;
@@ -143,7 +143,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       let complete = false;
       if (signal.kind === 'visible') complete = !!findTourTarget(signal.selector);
       else if (signal.kind === 'hidden') { const visible = !!findTourTarget(signal.selector); if (visible) wasVisible = true; complete = wasVisible && !visible; }
-      else complete = observedEvent && (!signal.thenVisible || !!findTourTarget(signal.thenVisible));
+      else complete = observedEventComplete(signal,observedEvent,selector=>!!findTourTarget(selector));
       if (complete && timer === undefined) timer = setTimeout(() => {
         const latest = live.current;
         if (!latest.state || !latest.scenario || `${latest.state.id}:${latest.state.index}` !== key) return;
@@ -157,7 +157,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       if (event.target.closest(signal.selector)) { observedEvent = true; schedule(); }
     }
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','open','inert','disabled','aria-expanded','aria-busy','aria-selected','data-ready','data-onboarding-state','data-export-status','data-payment-status']});
+    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','open','inert','disabled','aria-expanded','aria-busy','aria-selected','data-ready','data-onboarding-state','data-export-status','data-payment-status','data-payment-state','src']});
     if (signal.kind === 'event') document.addEventListener(signal.event,onEvent,true);
     window.addEventListener('popstate',schedule);
     schedule();

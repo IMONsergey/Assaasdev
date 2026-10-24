@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type BucketAnalytics, type BucketFile, type BucketFilter, type BucketResults, type ResponseMetadata } from '../../api';
 import { useApp } from '../../app/AppProvider';
-import { Alert, Badge, Button, Dialog, EmptyState, Field, Icon, PageHeader, Pagination, SelectField, Skeleton, Spinner, TabPanel, Tabs } from '../../components/ui';
+import { Alert, Badge, Button, Dialog, EmptyState, Field, FilterButton, Icon, PageHeader, Pagination, SelectField, Skeleton, Spinner, TabPanel, Tabs } from '../../components/ui';
 import { CodeCanvas } from '../../components/CodeCanvas';
 import { asset } from '../../config';
 import { formatTimestamp } from '../../lib/format';
@@ -130,7 +130,7 @@ export function FilesPage() {
     {restored.error && <Alert tone="error" title="These file filters could not be restored" actions={<Button variant="secondary" onClick={() => { lastWritten.current = ''; setParams({}); }}>Start a new search</Button>}>{restored.error}</Alert>}
     {!permitted && session.status !== 'loading' && <Alert tone="info" title={hasAccount ? 'File search is available on Plus and above' : 'Sign in to search files'} actions={<Link className="inline-link" to={hasAccount ? '/billing' : '/auth/login?returnTo=%2Ffiles'}>{hasAccount ? 'Compare plans' : 'Continue to sign in'} →</Link>}>Prepare your filters below. Files and bucket analytics use your account’s search access.</Alert>}
 
-    <div className="files-scope-toolbar"><Button id="files-filter-toggle" aria-label="Filters" variant="secondary" onClick={openFilters} aria-haspopup="dialog" aria-expanded={advanced}><Icon name="filter" size={18} />Filters{filterChips(restored.filter).length > 0 && <Badge>{filterChips(restored.filter).length}</Badge>}</Button><span>{view === 'files' ? 'File records' : 'Bucket groups'}</span></div>
+    <div className="files-scope-toolbar"><FilterButton id="files-filter-toggle" aria-label="Filters" active={filterChips(restored.filter).length > 0} count={filterChips(restored.filter).length} onClick={openFilters} aria-haspopup="dialog" aria-expanded={advanced} /><span>{view === 'files' ? 'File records' : 'Bucket groups'}</span></div>
     <form className="files-search-toolbar" onSubmit={event => { event.preventDefault(); runCurrent(); }}>
       <Field id="files-main-query" className="files-command-field" label={view === 'files' ? 'Filename or keywords' : 'Keywords in bucket files'} icon={<Icon name="search" size={18} />} placeholder={view === 'files' ? 'Search filenames or keywords' : 'Search matching files in buckets'} value={draft.keywords} onChange={event => edit('keywords', event.target.value)} autoComplete="off" />
       <Button type="submit" loading={loading} disabled={!permitted}>{view === 'files' ? 'Search files' : 'Search buckets'}<Icon name="arrow" size={17} /></Button>

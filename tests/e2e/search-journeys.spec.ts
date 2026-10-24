@@ -90,7 +90,7 @@ test('a mobile deep service link reveals its page and supports returning to the 
 });
 
 test('result and 1000-service layouts fit intermediate widths with large text', async ({ page }, testInfo) => {
-  await page.goto('/settings');
+  await page.goto('/settings?section=appearance');
   await page.getByLabel('Text size').selectOption('125');
   for (const width of [1024, 820, 540, 320]) {
     await page.setViewportSize({ width, height: 780 });

@@ -114,6 +114,8 @@ test('desktop navigation collapses, keeps Settings accessible and expands again'
   await navigation.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page).toHaveURL(/\/settings(?:\?|$)/);
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Appearance', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Appearance', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('button', { name: 'Light theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(navigation.getByRole('button', { name: /^(Light|Dark|System) theme$/ })).toHaveCount(0);
@@ -128,7 +130,7 @@ test('view preferences survive reload and leave no account data in local storage
   await page.addInitScript(() => {
     if (!localStorage.getItem('apcosys.view.v1')) localStorage.setItem('apcosys.view.v1', JSON.stringify({ theme: 'system', density: 'comfortable', language: 'en', fontScale: 100, reducedMotion: false }));
   });
-  await page.goto('/settings');
+  await page.goto('/settings?section=appearance');
   await expect(page.getByRole('button', { name: 'Light theme', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Dark theme', exact: true }).click();

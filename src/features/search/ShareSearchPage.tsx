@@ -49,6 +49,7 @@ export function ShareSearchPage() {
     limited.mutate();
   }
   const backParams = new URLSearchParams(parsed.hasSearch && !parsed.error ? encodeSearch(parsed.request) : '');
+  if (params.get('draft') === '1') { backParams.delete('run'); backParams.set('draft', '1'); }
   if (params.get('return_view') === 'analytics') backParams.set('view', 'analytics');
   if (dataset === 'private' && /^\/scanner(?:\?|$)/.test(params.get('scanner_back') || '')) backParams.set('scanner_back', params.get('scanner_back')!);
 

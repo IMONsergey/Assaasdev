@@ -55,7 +55,7 @@
 .settings-switch>span::after { content:''; display:block; width:18px; height:18px; border-radius:50%; background:var(--muted); margin:2px; transition:transform .18s,background-color .18s; }
 .settings-switch input:checked+span { background:var(--accent); border-color:var(--accent); }
 .settings-switch input:checked+span::after { transform:translateX(16px); background:var(--bg); }
-.settings-switch input:focus-visible+span { outline:3px solid var(--accent); outline-offset:4px; }
+:root:not([data-input-modality='pointer']) .settings-switch input:focus-visible+span { outline:3px solid var(--accent); outline-offset:4px; }
 .settings-footer { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-top:20px; }
 .settings-footer p { color:var(--muted); font-size:.86rem; }
 .settings-footer .button { color:var(--muted); }

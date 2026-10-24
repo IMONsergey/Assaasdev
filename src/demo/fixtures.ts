@@ -103,7 +103,15 @@ export function seedPricing(): PricingData {
       { type: 'Expert', name: 'Expert', monthly_price: 300, annually_price: 2880, credits: 250000, scan_credits: 0, search_pages: 150, users: 1, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: true, bulk_data: false, private_scanning: false, support: 'priority' },
       { type: 'Business', name: 'Business', monthly_price: 900, annually_price: 8640, credits: 1500000, scan_credits: 327680, search_pages: 300, users: 10, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: true, bulk_data: true, private_scanning: true, support: 'priority' },
     ],
-    tokens: [{ id: 'token_pack_1', name: 'Starter Pack', product_name: 'Search credits', tokens: 25000, price_usd: 50, discount_percent: 0, price_per_token: 0.002, description: 'Additional search credits.' }, { id: 'token_pack_2', name: 'Research Pack', product_name: 'Search credits', tokens: 100000, price_usd: 180, discount_percent: 10, price_per_token: 0.0018 }],
+    tokens: [
+      { id: 'token_pack_1', name: 'Starter Pack', product_name: 'Search credits', tokens: 25000, price_usd: 50, discount_percent: 0, price_per_token: 50 / 25000 },
+      { id: 'token_pack_2', name: 'Research Pack', product_name: 'Search credits', tokens: 85000, price_usd: 150, discount_percent: 12, price_per_token: 150 / 85000 },
+      { id: 'token_pack_3', name: 'Explorer Pack', product_name: 'Search credits', tokens: 200000, price_usd: 300, discount_percent: 25, price_per_token: 300 / 200000 },
+      { id: 'token_pack_4', name: 'Analysis Pack', product_name: 'Search credits', tokens: 350000, price_usd: 450, discount_percent: 36, price_per_token: 450 / 350000 },
+      { id: 'token_pack_5', name: 'Scale Pack', product_name: 'Search credits', tokens: 535000, price_usd: 600, discount_percent: 44, price_per_token: 600 / 535000 },
+      { id: 'token_pack_6', name: 'Advanced Pack', product_name: 'Search credits', tokens: 750000, price_usd: 750, discount_percent: 50, price_per_token: 750 / 750000 },
+      { id: 'token_pack_7', name: 'Complete Pack', product_name: 'Search credits', tokens: 1000000, price_usd: 900, discount_percent: 55, price_per_token: 900 / 1000000 },
+    ],
   };
 }
 export function seedSessions(): SessionData {

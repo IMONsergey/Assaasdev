@@ -2,8 +2,8 @@
 .files-page .page-heading { margin-bottom: 0; }
 .files-page .page-description { margin-top: 6px; font-size: .928571rem; line-height: 1.428571rem; }
 .files-page > .tabs { border-bottom: 0; gap: 32px; background: transparent; padding: 0; border-radius: 0; }
-.files-page > .tabs button { padding: 8px 0 10px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; font-size: 1.071429rem; }
-.files-page > .tabs button[aria-selected="true"] { box-shadow: none; background: transparent; border-bottom-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.files-page > .tabs button { padding: 8px 8px 12px; border: 0; border-radius: 7px 7px 0 0; background: transparent; font-size: 1rem; }
+.files-page > .tabs button[aria-selected="true"] { box-shadow: none; background: transparent; color: var(--accent-text); font-weight: 550; }
 .files-filter-surface { background: var(--surface); border-radius: 12px; padding: 16px; }
 .files-primary-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 .files-primary-grid .field { min-width: 0; }
@@ -194,7 +194,7 @@
 .files-table th { height:44px; }
 .files-table tbody tr:last-child td { border-bottom:0; }
 .files-table .files-interactive-row { cursor:pointer; transition:background-color .16s; }
-.files-table .files-interactive-row:focus-within { background:var(--tint); }
+:root:not([data-input-modality="pointer"]) .files-table .files-interactive-row:focus-within { background:var(--tint); }
 .files-table .files-interactive-row.is-busy { cursor:progress; }
 .files-record-name { font-weight:600; }
 .files-name-row { gap:12px; }

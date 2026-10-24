@@ -1,0 +1,65 @@
+.search-history-page { --history-row-gap: 16px; }
+.search-history-page .page-heading { margin-bottom: 0; }
+.search-history-management { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; padding-block: 0 20px; border-bottom: 1px solid var(--line); }
+.search-history-management p { flex: 1; margin: 0; color: var(--muted); font-size: .857143rem; }
+.search-history-management > .button { margin-left: auto; }
+.search-history-toggle { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; flex: none; font-size: .928571rem; cursor: pointer; }
+.search-history-toggle input { appearance: none; position: relative; width: 34px; height: 20px; margin: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--muted); cursor: pointer; transition: background 160ms ease, border-color 160ms ease; }
+.search-history-toggle input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0002; transition: transform 160ms ease; }
+.search-history-toggle input:checked { background: var(--accent); border-color: var(--accent); }
+.search-history-toggle input:checked::before { transform: translateX(14px); }
+.search-history-toggle input:focus-visible { outline: 2px solid var(--focus-ring, var(--accent)); outline-offset: 3px; }
+.search-history-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(150px, 190px) minmax(140px, 180px); gap: 16px; align-items: end; }
+.search-history-toolbar .field { min-width: 0; }
+.search-history-count { display: flex; align-items: center; gap: 10px; margin-bottom: -6px; color: var(--muted); font-size: .857143rem; }
+.search-history-groups { display: flex; flex-direction: column; gap: 28px; }
+.search-history-group h2 { margin: 0 0 10px; font: 550 .928571rem/1.5 var(--font-ui); color: var(--text); }
+.search-history-list { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.search-history-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--history-row-gap); padding: 20px; }
+.search-history-row + .search-history-row { border-top: 1px solid var(--line); }
+.search-history-row:hover { background: color-mix(in srgb, var(--surface) 48%, transparent); }
+.search-history-row:first-child { border-radius: 13px 13px 0 0; }
+.search-history-row:last-child { border-radius: 0 0 13px 13px; }
+.search-history-row:only-child { border-radius: 13px; }
+.search-history-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--muted); background: var(--surface); }
+.search-history-content { min-width: 0; }
+.search-history-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; margin: 0 0 7px; color: var(--text); font-size: 1rem; line-height: 1.5; font-weight: 550; text-decoration: none; }
+.search-history-title:hover { color: var(--accent-text); }
+.search-history-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; color: var(--muted); font-size: .785714rem; }
+.search-history-meta > span { display: inline-flex; align-items: center; gap: 5px; }
+.search-history-meta time { font-variant-numeric: tabular-nums; }
+.search-history-conditions { margin-top: 5px; }
+.search-history-conditions > summary { display: inline-flex; align-items: center; gap: 5px; width: fit-content; min-height: 32px !important; color: var(--muted); font-size: .785714rem; }
+.search-history-conditions > summary::before { flex-basis: 13px !important; width: 13px !important; height: 13px !important; }
+.search-history-conditions[open] > summary { color: var(--text); margin-bottom: 8px; }
+.search-history-conditions .code-canvas { max-width: 100%; }
+.search-history-conditions .code-canvas-source { max-height: 260px; }
+.search-history-actions { display: flex; align-items: flex-start; gap: 8px; }
+.search-history-actions > .button, .search-history-restore { min-height: 36px; }
+.search-history-restore { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: .857143rem; }
+.search-history-restore:hover { color: var(--text); background: var(--surface); }
+.search-history-actions > .icon-button { width: 36px; height: 36px; min-width: 36px; }
+.search-history-more { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 0 12px; }
+.search-history-more > span { color: var(--muted); font-size: .785714rem; }
+.search-history-undo { align-items: center; }
+.search-history-undo > .button { flex: none; width: auto; min-height: 36px; height: auto; padding: 6px 10px; color: var(--accent-text); }
+@media (max-width: 960px) {
+  .search-history-row { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
+  .search-history-mark { width: 32px; height: 32px; }
+  .search-history-actions { grid-column: 2; justify-content: flex-end; }
+}
+@media (max-width: 760px) {
+  .search-history-toolbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 12px; }
+  .search-history-find { grid-column: 1 / -1; }
+  .search-history-toolbar input, .search-history-toolbar select { font-size: 16px; }
+  .search-history-management { gap: 6px 12px; padding-bottom: 16px; }
+  .search-history-management p { order: 3; flex-basis: 100%; font-size: .785714rem; }
+  .search-history-row { padding: 16px 14px; }
+  .search-history-actions > .button, .search-history-restore { min-height: 44px; }
+  .search-history-actions > .icon-button { width: 44px; height: 44px; min-width: 44px; }
+  .search-history-actions { gap: 6px; }
+  .search-history-conditions > summary { min-height: 40px !important; }
+  .search-history-groups { gap: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .search-history-toggle input, .search-history-toggle input::before { transition: none; } }
+:root[data-reduced-motion='true'] .search-history-toggle input, :root[data-reduced-motion='true'] .search-history-toggle input::before { transition: none; }

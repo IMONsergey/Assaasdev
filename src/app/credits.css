@@ -1,8 +1,7 @@
-.credit-trigger { display:flex; flex-direction:column; justify-content:center; gap:7px; min-height:44px; min-width:158px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--muted); transition:background-color .16s,border-color .16s,box-shadow .16s; }
+.credit-trigger { display:flex; flex-direction:column; justify-content:center; gap:7px; min-height:44px; min-width:136px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--muted); transition:background-color .16s,border-color .16s,box-shadow .16s; }
 .credit-trigger:hover,.credit-trigger[aria-expanded='true'] { background:var(--surface-hover); border-color:var(--line); }
 .credit-trigger-line { display:flex; align-items:center; gap:9px; width:100%; line-height:1; font-size:.86rem; }
 .credit-trigger-line strong { margin-left:auto; color:var(--accent-text); font:400 .86rem/1 var(--font-mono); font-variant-numeric:tabular-nums; }
-.credit-trigger-line>.icon { color:var(--muted); }
 .credit-value-compact { display:none; }
 .credit-trigger-track,.credit-meter { display:block; width:100%; height:3px; overflow:hidden; border-radius:10px; background:color-mix(in srgb,var(--accent) 12%,var(--line)); }
 .credit-trigger-track>span,.credit-meter>span { display:block; height:100%; border-radius:inherit; background:var(--accent); transition:width .32s cubic-bezier(.2,.8,.2,1); }
@@ -35,9 +34,9 @@
   .credit-detail { padding:16px; gap:10px; }
   .credit-details { gap:16px; }
 }
-@media(max-width:1100px) and (min-width:761px) { .credit-trigger { min-width:145px; }.credit-trigger-label { font-size:.8rem; } }
+@media(max-width:1100px) and (min-width:761px) { .credit-trigger { min-width:124px; }.credit-trigger-label { font-size:.8rem; } }
 @media(max-width:760px) {
-  .credit-trigger { min-width:82px; min-height:44px; padding:9px 10px; gap:7px; }
+  .credit-trigger { min-width:64px; min-height:44px; padding:9px 10px; gap:7px; }
   .credit-trigger-label,.credit-value-full { display:none; }.credit-value-compact { display:inline; }.credit-trigger-line { gap:7px; }
   .credit-trigger-line strong { margin:0 auto 0 0; font-size:.86rem; }
 }

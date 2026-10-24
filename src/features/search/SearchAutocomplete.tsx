@@ -114,7 +114,7 @@ export function SearchAutocomplete({ value, onChange, onSearch, onFilter, readOn
     }} placeholder="Search an IP, domain or service" readOnly={readOnly} spellCheck={false} autoComplete="off" />
     {visible && <div className={`search-suggestions${placement.above ? ' is-above' : ''}`} style={{ '--suggestions-height': `${placement.height}px` } as CSSProperties}>
       <div id={listId} role="listbox" aria-label="Search suggestions">{suggestions.map((option, index) => <div key={option.id} id={`${listId}-${index}`} role="option" aria-selected={active === index} className="search-suggestion" onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)}><span className="search-suggestion-icon"><SuggestionMark option={option} /></span><span className="search-suggestion-copy"><strong>{option.label}</strong><small>{option.detail}</small></span><Icon name={option.field ? 'plus' : 'arrow'} size={16} /></div>)}</div>
-      <div className="search-suggestions-footer"><span>{results.isError ? 'Suggestions unavailable. You can still run your search.' : results.isFetching ? 'Finding matching values…' : 'Choose a suggestion or continue typing'}</span><span className="search-suggestion-keys"><kbd>↑</kbd><kbd>↓</kbd><kbd>Enter</kbd></span></div>
+      {(results.isError || results.isFetching) && <div className="search-suggestions-footer" role="status">{results.isError ? 'Suggestions unavailable' : 'Finding matching values…'}</div>}
     </div>}
   </div>;
 }

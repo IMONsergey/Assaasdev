@@ -4,32 +4,34 @@ import { CodeCanvas } from '../../components/CodeCanvas';
 import { dateLabel, safeExternalUrl } from '../search/model';
 import { DataExplorer } from './DataExplorer';
 import { displayValue } from './model';
+import { SearchValueLink } from './SearchValueLink';
 
 export const observationDate = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? dateLabel(value) : displayValue(value);
 
-export function DataValue({ value, depth = 0, path = 'data' }: { value: unknown; depth?: number; path?: string }) {
+export function DataValue({ value, depth = 0, path = 'data', searchField }: { value: unknown; depth?: number; path?: string; searchField?: string }) {
   if (value === undefined || value === null || value === '') return <span className="muted">{displayValue(value)}</span>;
-  if (typeof value === 'boolean' || typeof value === 'number') return <>{displayValue(value)}</>;
+  if (typeof value === 'boolean' || typeof value === 'number') return searchField ? <span className="host-searchable-value"><span>{displayValue(value)}</span><SearchValueLink field={searchField} value={value} /></span> : <>{displayValue(value)}</>;
   if (typeof value === 'string') {
     const url = safeExternalUrl(value);
-    return url ? <a href={url} target="_blank" rel="noopener noreferrer nofollow">{value}<span className="host-sr-only"> (opens in a new tab)</span></a> : <span className="host-text-value">{value}</span>;
+    const content = url ? <a href={url} target="_blank" rel="noopener noreferrer nofollow">{value}<span className="host-sr-only"> (opens in a new tab)</span></a> : <span className="host-text-value">{value}</span>;
+    return searchField ? <span className="host-searchable-value">{content}<SearchValueLink field={searchField} value={value} /></span> : content;
   }
   if (Array.isArray(value)) {
     if (!value.length) return <span className="muted">None returned</span>;
-    if (value.length > 30) return <DataExplorer values={value} label={`${path.split('.').at(-1)!.replaceAll('_', ' ')} records`} stateId={path} renderValue={(child, index, column) => <DataValue value={child} depth={depth + 1} path={`${path}.${index}.${column}`} />} />;
-    return <div className="host-data-array"><ul className="host-data-list">{value.map((child, index) => <li key={index}><DataValue value={child} depth={depth + 1} path={`${path}.${index}`} /></li>)}</ul></div>;
+    if (value.length > 30) return <DataExplorer values={value} label={`${path.split('.').at(-1)!.replaceAll('_', ' ')} records`} stateId={path} renderValue={(child, index, column) => <DataValue value={child} depth={depth + 1} path={`${path}.${index}.${column}`} searchField={searchField} />} />;
+    return <div className="host-data-array"><ul className="host-data-list">{value.map((child, index) => <li key={index}><DataValue value={child} depth={depth + 1} path={`${path}.${index}`} searchField={searchField} /></li>)}</ul></div>;
   }
   if (depth > 3) return <NestedRecord value={value} path={path} title="Nested record" />;
   if (typeof value === 'object') {
     const entries = Object.entries(value);
-    if (entries.length > 30) return <DataExplorer values={entries} headers={['Field', 'Value']} label={`${path.split('.').at(-1)} fields`} stateId={path} renderValue={(child, index, column) => <DataValue value={child} depth={depth + 1} path={`${path}.${index}.${column}`} />} />;
-    return <dl className="host-data-grid">{entries.map(([key, child]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd><DataValue value={child} depth={depth + 1} path={`${path}.${key}`} /></dd></div>)}</dl>;
+    if (entries.length > 30) return <DataExplorer values={entries} headers={['Field', 'Value']} label={`${path.split('.').at(-1)} fields`} stateId={path} renderValue={(child, index, column) => <DataValue value={child} depth={depth + 1} path={`${path}.${index}.${column}`} searchField={searchField && column === 1 ? `${searchField}.${entries[index]?.[0]}` : undefined} />} />;
+    return <dl className="host-data-grid">{entries.map(([key, child]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd><DataValue value={child} depth={depth + 1} path={`${path}.${key}`} searchField={searchField ? `${searchField}.${key}` : undefined} /></dd></div>)}</dl>;
   }
   return <>{String(value)}</>;
 }
 
-export function Facts({ values }: { values: [string, unknown][] }) {
-  return <dl className="host-facts">{values.map(([label, value]) => <div key={label}><dt>{label}</dt><dd><DataValue value={value} path={label} /></dd></div>)}</dl>;
+export function Facts({ values }: { values: [string, unknown, string?][] }) {
+  return <dl className="host-facts">{values.map(([label, value, searchField]) => <div key={label}><dt>{label}</dt><dd><DataValue value={value} path={label} searchField={searchField} /></dd></div>)}</dl>;
 }
 
 export function NestedRecord({ value, path, title }: { value: unknown; path: string; title: string }) {

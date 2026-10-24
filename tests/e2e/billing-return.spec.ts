@@ -79,10 +79,10 @@ test('credit pack selection survives login as the same one-off review without st
   expect(frames).toEqual([]);
   await signIn(page);
   await expect(page).toHaveURL(url => url.pathname === '/billing' && url.searchParams.get('pack') === 'token_pack_2');
-  const review = page.getByRole('dialog', { name: 'Add 100,000 credits', exact: true });
+  const review = page.getByRole('dialog', { name: 'Add 85,000 credits', exact: true });
   await expect(review).toBeVisible();
   await expect(review.locator('.billing-purchase-summary')).toContainText('Research Pack');
-  await expect(review.locator('.billing-purchase-summary strong')).toHaveText('$180');
+  await expect(review.locator('.billing-purchase-summary strong')).toHaveText('$150');
   await expect(review.getByLabel('Billing period', { exact: true })).toHaveCount(0);
   await expect(review.getByLabel('Payment method', { exact: true })).toHaveValue('card');
   await expect(review.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
@@ -107,7 +107,7 @@ test('browser Back restores the plan review without reusing a different order ch
   await expect(page).toHaveURL('/billing#billing-token-packs');
   const pack = page.locator('.billing-token').filter({ has: page.getByText('Research Pack', { exact: true }) });
   await pack.getByRole('button', { name: 'Buy credits', exact: true }).click();
-  const packReview = page.getByRole('dialog', { name: 'Add 100,000 credits', exact: true });
+  const packReview = page.getByRole('dialog', { name: 'Add 85,000 credits', exact: true });
   await expect(packReview).toBeVisible();
   await packReview.getByLabel('Promo code (optional)', { exact: true }).fill('HISTORY-CODE');
   await packReview.getByLabel('Currency code (optional)', { exact: true }).fill('EUR');

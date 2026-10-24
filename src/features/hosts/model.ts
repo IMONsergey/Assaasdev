@@ -101,7 +101,7 @@ export function serviceItems(records: PortRecord[]): ServiceItem[] {
     for (const field of ['port', 'uts', 'status_code'] as const) {
       if (record[field] !== undefined && (typeof record[field] !== 'number' || !Number.isFinite(record[field]) || (field === 'port' && (!Number.isInteger(record[field]) || record[field]! < 0 || record[field]! > 65535)))) { invalidFields.push(field); delete record[field]; }
     }
-    for (const field of ['protocol', 'transport', 'banner', 'body', 'status', 'title', 'link', 'favicon_md5'] as const) {
+    for (const field of ['protocol', 'transport', 'banner', 'body', 'status', 'title', 'link', 'favicon_md5', 'banner_sha256', 'body_sha256'] as const) {
       if (record[field] !== undefined && typeof record[field] !== 'string') { invalidFields.push(field); delete record[field]; }
     }
     record.detected_products = normalizeProducts(rawRecord.detected_products, invalidFields);

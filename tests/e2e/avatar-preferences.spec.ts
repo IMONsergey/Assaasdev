@@ -9,7 +9,7 @@ test('an avatar is assigned once, preview is reversible, and saved selection upd
   await page.getByRole('button', { name: 'Choose avatar', exact: true }).click();
   const picker = page.getByRole('dialog', { name: 'Choose your avatar', exact: true });
   await expect(picker.getByRole('radio')).toHaveCount(20);
-  await expect(picker.locator('input:checked')).toBeFocused();
+  await expect(picker.getByLabel('Upload photo', { exact: true })).toBeFocused();
   const target = initial?.endsWith('avatar-20.svg') ? 'Avatar 19: Star' : 'Avatar 20: Joy';
   await picker.getByRole('radio', { name: target, exact: true }).check();
   await expect(identity).toHaveAttribute('src', initial!);
@@ -36,6 +36,8 @@ test('the mobile avatar picker supports keyboard selection, accessible contrast 
   await page.goto('/settings?section=profile');
   await page.getByRole('button', { name: 'Choose avatar', exact: true }).click();
   const picker = page.getByRole('dialog', { name: 'Choose your avatar', exact: true });
+  await expect(picker.getByLabel('Upload photo', { exact: true })).toBeFocused();
+  await picker.locator('input:checked').focus();
   const before = await picker.locator('input:checked').getAttribute('value');
   await page.keyboard.press('ArrowRight');
   await expect(picker.locator('input:checked')).not.toHaveAttribute('value', before!);
@@ -53,7 +55,7 @@ test('the mobile avatar picker supports keyboard selection, accessible contrast 
 
 test('mobile settings and avatar controls stay reachable with dark theme and larger text', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.goto('/settings');
+  await page.goto('/settings?section=appearance');
   await page.getByRole('button', { name: 'Dark theme', exact: true }).click();
   await page.getByLabel('Text size', { exact: true }).selectOption('125');
   for (const name of ['Profile', 'Security', 'Sessions', 'Organization', 'Workspace', 'Legal']) {

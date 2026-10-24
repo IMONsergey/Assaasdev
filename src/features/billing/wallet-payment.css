@@ -1,0 +1,100 @@
+.billing-checkout-dialog .dialog-body { scroll-behavior:smooth; }
+.billing-checkout-dialog .dialog-footer { gap:10px; align-items:stretch; }
+.billing-checkout-dialog .dialog-footer .button { min-height:44px; }
+.checkout-review { gap:20px; }
+.checkout-review > .billing-purchase-summary { border-radius:12px; padding:18px 20px; background:var(--surface); }
+.checkout-review .billing-purchase-summary > span { display:flex; align-items:center; gap:10px; }
+.checkout-review .billing-purchase-summary > span .icon { color:var(--accent); flex:none; }
+.checkout-review .billing-purchase-summary small { display:block; margin-top:3px; color:var(--muted); font-size:12px; font-weight:400; }
+.checkout-review .billing-purchase-summary > strong { white-space:nowrap; }
+.checkout-review-note { display:flex; align-items:flex-start; gap:8px; color:var(--muted); font-size:12px; line-height:1.6; margin:0; }
+.checkout-review-note .icon { flex:none; margin-top:2px; }
+.wallet-review { border:1px solid var(--line); border-radius:12px; padding:18px; background:var(--bg); animation:wallet-reveal 220ms ease both; }
+.wallet-review-heading { display:flex; align-items:center; gap:12px; }
+.wallet-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:11px; background:var(--tint); color:var(--accent); flex:none; }
+.wallet-review-heading > div { display:grid; gap:4px; min-width:0; }
+.wallet-review-heading > div > strong { font-size:14px; font-weight:550; }
+.wallet-review-heading > div > span { font-size:12px; color:var(--muted); }
+.wallet-balance { margin-left:auto; font-size:23px; font-weight:550; font-variant-numeric:tabular-nums; letter-spacing:-.03em; white-space:nowrap; }
+.wallet-review-after { display:flex; justify-content:space-between; gap:16px; font-size:12px; padding-top:16px; margin-top:16px; border-top:1px solid var(--line); color:var(--muted); }
+.wallet-review-after > strong { font-size:13px; color:var(--text); font-weight:550; font-variant-numeric:tabular-nums; }
+.wallet-balance-notice { display:flex; align-items:flex-start; gap:8px; margin:14px 0 0; font-size:12px; line-height:1.6; color:var(--muted); }
+.wallet-balance-notice > .icon { flex:none; margin-top:2px; }
+.wallet-balance-notice p { margin:0; }
+.wallet-balance-notice .button { display:flex; padding:0; min-height:32px; text-align:left; white-space:normal; color:var(--text); }
+.wallet-payment { display:grid; gap:24px; animation:wallet-reveal 260ms ease both; }
+.wallet-steps { display:flex; justify-content:space-between; gap:14px; margin:0; padding:0; list-style:none; }
+.wallet-steps li { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; line-height:1.4; }
+.wallet-steps li > span { display:grid; place-items:center; width:22px; height:22px; flex:none; border:1px solid var(--line); border-radius:50%; font-size:10px; font-variant-numeric:tabular-nums; transition:color 180ms ease,background-color 180ms ease; }
+.wallet-steps li[data-complete] > span { background:var(--tint); border-color:transparent; color:var(--accent); }
+.wallet-steps li[aria-current] { color:var(--text); font-weight:550; }
+.wallet-steps li[aria-current]:not([data-complete]) > span { border-color:var(--accent); color:var(--accent); }
+.wallet-payment-status { display:flex; align-items:center; flex-direction:column; text-align:center; gap:12px; padding:10px 14px 4px; }
+.wallet-status-art { display:grid; place-items:center; width:88px; height:88px; margin-bottom:2px; }
+.wallet-status-art > svg { width:80px; height:80px; fill:none; stroke:var(--accent); stroke-linecap:round; stroke-linejoin:round; stroke-width:2.5; }
+.wallet-success-ring { fill:var(--tint); stroke-dasharray:202; stroke-dashoffset:202; animation:wallet-draw 500ms ease forwards; }
+.wallet-success-check { stroke-width:3; stroke-dasharray:46; stroke-dashoffset:46; animation:wallet-draw 340ms 180ms ease forwards; }
+.wallet-status-notice { display:grid; place-items:center; width:64px; height:64px; border-radius:50%; background:var(--surface); border:1px solid var(--line); color:var(--muted); }
+.wallet-payment-status h3 { margin:0; font:550 25px/1.25 var(--font-display); letter-spacing:-.025em; }
+.wallet-payment-status p { margin:0; max-width:340px; color:var(--muted); font-size:13px; line-height:1.65; }
+.wallet-receipt { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.wallet-receipt-product { display:flex; align-items:center; gap:12px; padding:18px; }
+.wallet-receipt-product > div { display:grid; gap:5px; min-width:0; }
+.wallet-receipt-product > div > span { color:var(--muted); font-size:11px; }
+.wallet-receipt-product > div > strong { font-size:14px; font-weight:550; overflow-wrap:anywhere; }
+.wallet-receipt-price { font-size:26px; margin-left:auto; font-weight:550; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.wallet-receipt-id { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:8px 18px; background:var(--surface); border-top:1px solid var(--line); font-size:11px; color:var(--muted); }
+.wallet-receipt-id > button { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-height:36px; min-width:0; padding:0; background:transparent; border:0; border-radius:4px; color:var(--text); cursor:pointer; }
+.wallet-receipt-id code { font:11px/1.5 var(--font-mono); overflow-wrap:anywhere; text-align:right; }
+.wallet-receipt-id .icon { flex:none; }
+.wallet-receipt-balances { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:0; padding:18px; border-top:1px solid var(--line); }
+.wallet-receipt-balances dt { color:var(--muted); font-size:11px; margin-bottom:6px; }
+.wallet-receipt-balances dd { font-size:18px; font-weight:550; font-variant-numeric:tabular-nums; margin:0; overflow-wrap:anywhere; }
+.wallet-sync { margin:0; color:var(--muted); font-size:12px; text-align:center; }
+.billing-token > .double-button { margin-top:22px; }
+.billing-token-description + .billing-token-price + .double-button { margin-top:0; }
+.billing-invoice-request { display:flex; align-items:center; justify-content:space-between; gap:20px; border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+.billing-invoice-request > div { display:flex; align-items:center; gap:12px; }
+.billing-invoice-request .icon { flex:none; color:var(--accent); }
+.billing-invoice-request strong { font-size:13px; font-weight:550; }
+.billing-invoice-request p { font-size:12px; line-height:1.6; color:var(--muted); margin:4px 0 0; }
+@keyframes wallet-reveal { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+@keyframes wallet-draw { to { stroke-dashoffset:0; } }
+@media (max-width:520px) {
+  .billing-checkout-dialog .dialog-footer > .button { flex:1; white-space:normal; }
+  .checkout-review > .billing-purchase-summary { gap:12px; padding:16px; }
+  .checkout-review .billing-purchase-summary > strong { font-size:24px; }
+  .wallet-review { padding:16px; }
+  .wallet-review-heading { gap:10px; flex-wrap:wrap; }
+  .wallet-review-heading > div > span { font-size:11px; }
+  .wallet-balance { font-size:21px; }
+  .wallet-payment { gap:20px; }
+  .wallet-steps { gap:8px; }
+  .wallet-steps li { font-size:11px; gap:5px; }
+  .wallet-payment-status { padding:2px 0; }
+  .wallet-payment-status h3 { font-size:23px; }
+  .wallet-receipt-product { flex-wrap:wrap; padding:16px; gap:10px; }
+  .wallet-receipt-price { font-size:24px; }
+  .wallet-receipt-id { padding:8px 16px; }
+  .wallet-receipt-balances { padding:16px; gap:12px; }
+  .wallet-receipt-balances dd { font-size:17px; }
+  .billing-invoice-request { flex-direction:column; align-items:stretch; padding:16px; }
+}
+@media (max-width:360px) {
+  .wallet-review-heading { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:8px; }
+  .wallet-review-heading > .wallet-icon { width:34px; height:34px; border-radius:9px; }
+  .wallet-review-heading > div > strong { font-size:13px; }
+  .wallet-review-heading > div > span { max-width:116px; }
+  .wallet-balance { font-size:20px; }
+  .wallet-receipt-product > .wallet-icon { display:none; }
+}
+@container billing (max-width:440px) { .billing-token-price { margin-top:16px; margin-bottom:0; } }
+@media (prefers-reduced-motion:reduce) {
+  .wallet-review,.wallet-payment,.wallet-success-ring,.wallet-success-check { animation:none; }
+  .wallet-success-ring,.wallet-success-check { stroke-dashoffset:0; }
+  .billing-checkout-dialog .dialog-body { scroll-behavior:auto; }
+}
+
+.billing-pending-wallet { display:flex; align-items:center; gap:14px; padding:16px 18px; border:1px solid var(--line); background:var(--surface); border-radius:12px; }
+.billing-pending-wallet>.icon { flex:none; color:var(--accent-text); }.billing-pending-wallet>div { display:grid; flex:1; gap:5px; min-width:0; }.billing-pending-wallet strong { font-size:.9rem; font-weight:550; }.billing-pending-wallet span:not(.icon) { font-size:.82rem; line-height:1.5; color:var(--muted); }
+@media(max-width:600px) { .billing-pending-wallet { flex-wrap:wrap; gap:12px; padding:16px; }.billing-pending-wallet>.button { margin-left:34px; min-height:44px; } }
