@@ -41,12 +41,24 @@ function RequestExample({ endpoint, id = endpoint.id }: { endpoint: ApiEndpoint;
   </section>;
 }
 
+function focusSelectedReferenceTab(prefix: string) {
+  const focused = document.activeElement;
+  if (!focused?.id.startsWith(`${prefix}-tab-`)) return;
+  focused.closest('[role="tablist"]')?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+}
+
 function EndpointArticle({ endpoint, selection, onViewChange }: { endpoint: ApiEndpoint; selection: DocSelection; onViewChange: (view: DocSelection['view']) => void }) {
   const view = selection.view;
   const prefix = `api-reference-${endpoint.id}`;
-  useLayoutEffect(() => {
-    if (document.activeElement?.id.startsWith(`${prefix}-tab-`)) document.getElementById(`${prefix}-tab-${view}`)?.focus({ preventScroll: true });
-  }, [prefix, view]);
+  useLayoutEffect(() => focusSelectedReferenceTab(prefix), [prefix, view]);
+  useEffect(() => {
+    let frame = 0;
+    // A fast Back can cancel the router's pending Request/Response render. The
+    // committed view then stays unchanged even though the click moved focus.
+    const restore = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => focusSelectedReferenceTab(prefix)); };
+    window.addEventListener('popstate', restore);
+    return () => { window.removeEventListener('popstate', restore); cancelAnimationFrame(frame); };
+  }, [prefix]);
   return <>
     <div className="api-docs-endpoint-path"><span className={`api-docs-method api-docs-method--${endpoint.method.toLowerCase()}`}>{endpoint.method}</span><code>/api/v1{endpoint.path}</code></div>
     <div className="api-docs-meta"><Badge>{endpoint.access}</Badge><span>{endpoint.cost} {endpoint.cost === 1 ? 'allowance unit' : 'allowance units'} per request</span><DocLink id="authentication">X-API-Key required</DocLink></div>

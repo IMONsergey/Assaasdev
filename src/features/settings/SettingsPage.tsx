@@ -43,19 +43,32 @@ export function SettingsPage() {
   const { ref: navigation, overflow } = useTabOverflow(section);
   const activeSection = sections.find(item => item.id === section)!;
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
+  const sectionPicker = useRef<HTMLButtonElement>(null);
   const sectionChoices = useRef<HTMLDivElement>(null);
+  const restoreSectionTab = useRef(false);
   useEffect(() => {
-    if (!sectionPickerOpen) return;
+    if (!sectionPickerOpen) {
+      if (restoreSectionTab.current) {
+        restoreSectionTab.current = false;
+        queueMicrotask(() => navigation.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]')?.focus({ preventScroll: true }));
+      }
+      return;
+    }
     let active = true;
     queueMicrotask(() => { if (active) sectionChoices.current?.querySelector<HTMLButtonElement>('[aria-current="page"]')?.focus({ preventScroll: true }); });
     return () => { active = false; };
-  }, [sectionPickerOpen]);
-  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
+  }, [sectionPickerOpen, navigation]);
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 760px)');
-    const update = () => { setMobile(query.matches); if (!query.matches) setSectionPickerOpen(false); };
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
+    const trigger = sectionPicker.current;
+    if (!trigger) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry?.contentRect.width === 0 && trigger.getAttribute('aria-expanded') === 'true') {
+        restoreSectionTab.current = true;
+        setSectionPickerOpen(false);
+      }
+    });
+    observer.observe(trigger);
+    return () => observer.disconnect();
   }, []);
   const [visited, setVisited] = useState(() => new Set<SettingsSection>([section]));
   const [checkingConnection, setCheckingConnection] = useState(false);
@@ -74,7 +87,7 @@ export function SettingsPage() {
   }
   return <div className="settings-page">
     <PageHeader title="Settings" />
-    {mobile && <button type="button" className="settings-section-picker" data-onboarding="settings-sections" aria-label={`Choose settings section: ${activeSection.label}`} aria-haspopup="dialog" aria-expanded={sectionPickerOpen} onClick={() => setSectionPickerOpen(true)}><span className="settings-section-symbol"><Icon name={activeSection.icon} size={20} /></span><span>{activeSection.label}</span><Icon name="chevron-down" size={18} /></button>}
+    <button ref={sectionPicker} type="button" className="settings-section-picker" data-onboarding="settings-sections" aria-label={`Choose settings section: ${activeSection.label}`} aria-haspopup="dialog" aria-expanded={sectionPickerOpen} onClick={() => setSectionPickerOpen(true)}><span className="settings-section-symbol"><Icon name={activeSection.icon} size={20} /></span><span>{activeSection.label}</span><Icon name="chevron-down" size={18} /></button>
     <Dialog open={sectionPickerOpen} onClose={() => setSectionPickerOpen(false)} title="Settings categories" size="sm" className="settings-category-dialog"><div ref={sectionChoices} className="settings-category-list">{sections.map(item => <button key={item.id} type="button" aria-current={section === item.id ? 'page' : undefined} onClick={() => { selectSection(item.id); setSectionPickerOpen(false); }}><span className="settings-category-icon"><Icon name={item.icon} size={20} /></span><span>{item.label}</span><Icon name={section === item.id ? 'check' : 'chevron-right'} size={18} /></button>)}</div></Dialog>
     <div className="settings-workspace">
       <div ref={navigation} data-tab-overflow={overflow} className="settings-navigation" role="tablist" aria-label="Settings categories" aria-orientation="vertical" onKeyDown={navigateTabs}>{sections.map(item => <button key={item.id} id={`settings-tab-${item.id}`} type="button" role="tab" aria-selected={section === item.id} aria-controls={`settings-panel-${item.id}`} tabIndex={section === item.id ? 0 : -1} onClick={() => selectSection(item.id)}><Icon name={item.icon} size={18} />{item.label}</button>)}</div>

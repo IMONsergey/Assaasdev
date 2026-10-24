@@ -25,17 +25,19 @@ test('settings keep an unsaved profile while navigating and contain the sign-out
   await page.getByRole('textbox', { name: 'Username', exact: true }).fill('alex_review');
   await page.getByRole('tab', { name: 'Security', exact: true }).click();
   await expect(page).toHaveURL(/section=security/);
-  await expect(page.getByRole('heading', { name: 'Password', exact: true })).toBeVisible();
-  const confirmation = page.getByLabel('Confirm new password', { exact: true });
-  await page.getByLabel('Current password', { exact: true }).fill('local-current-password');
-  await page.getByLabel('New password', { exact: true }).fill('local-new-password');
+  const security = page.getByRole('tabpanel', { name: 'Security', exact: true });
+  await expect(security).toBeVisible();
+  await expect(security.getByRole('heading', { name: 'Password', exact: true })).toBeVisible();
+  const confirmation = security.getByLabel('Confirm new password', { exact: true });
+  await security.getByLabel('Current password', { exact: true }).fill('local-current-password');
+  await security.getByLabel('New password', { exact: true }).fill('local-new-password');
   await confirmation.fill('local-mismatched-password');
-  await page.getByRole('button', { name: 'Update password', exact: true }).click();
+  await security.getByRole('button', { name: 'Update password', exact: true }).click();
   await expect(confirmation).toBeFocused();
   await expect(confirmation).toHaveAccessibleDescription('The new passwords do not match.');
-  await page.getByLabel('New password', { exact: true }).fill('local-revised-password');
+  await security.getByLabel('New password', { exact: true }).fill('local-revised-password');
   await expect(confirmation).not.toHaveAttribute('aria-invalid', 'true');
-  await page.getByRole('button', { name: 'Update password', exact: true }).click();
+  await security.getByRole('button', { name: 'Update password', exact: true }).click();
   await expect(confirmation).toHaveAccessibleDescription('The new passwords do not match.');
   await confirmation.fill('local-revised-password');
   await expect(confirmation).not.toHaveAttribute('aria-invalid', 'true');
@@ -185,13 +187,22 @@ test('settings controls fit the available tablet column with the largest text si
   const themes = page.getByRole('group', { name: 'Color theme', exact: true });
   await expect(themes).toBeVisible();
   await expect(themes.getByRole('button')).toHaveCount(3);
-  const desktop = await themes.getByRole('button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top));
-  expect(Math.max(...desktop) - Math.min(...desktop)).toBeLessThanOrEqual(1);
+  const picker = page.locator('.settings-section-picker');
+  for (const width of [1440, 1363]) {
+    await page.setViewportSize({ width, height: 960 });
+    await expect(picker).toBeHidden();
+    await expect(page.getByRole('tablist', { name: 'Settings categories', exact: true })).toBeVisible();
+    const desktop = await themes.getByRole('button').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top));
+    expect(Math.max(...desktop) - Math.min(...desktop)).toBeLessThanOrEqual(1);
+  }
   await chooseOption(page.getByRole('combobox', { name: 'Text size', exact: true }), '125');
   for (const width of [768, 320]) {
     await page.setViewportSize({ width, height: 960 });
     await page.goto('/settings?section=appearance');
     await expect(page.getByRole('combobox', { name: 'Text size', exact: true })).toHaveAttribute('data-control-value', '125');
+    await expect(picker).toBeVisible();
+    await expect(page.locator('.settings-navigation')).toBeHidden();
+    expect(await page.locator('.settings-content').evaluate(node => Math.abs(node.getBoundingClientRect().width - node.closest('.settings-workspace')!.getBoundingClientRect().width))).toBeLessThanOrEqual(1);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     expect(await themes.getByRole('button').evaluateAll(nodes => nodes.every(node => {
       const bounds = node.getBoundingClientRect();
@@ -207,16 +218,28 @@ test('settings controls fit the available tablet column with the largest text si
     }))).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`settings-appearance-large-text-${width}.png`), fullPage: true });
 
-    await page.goto('/settings?section=profile');
+    await picker.press('Enter');
+    await page.getByRole('dialog', { name: 'Settings categories', exact: true }).getByRole('button', { name: 'Profile', exact: true }).click();
+    await expect(picker).toBeFocused();
+    await expect(picker).toHaveAccessibleName('Choose settings section: Profile');
     await expect(page.getByRole('button', { name: 'Choose avatar', exact: true })).toBeVisible();
     expect(await page.locator('.profile-identity').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`settings-profile-large-text-${width}.png`), fullPage: true });
 
-    await page.goto('/settings?section=workspace');
+    await picker.press('Enter');
+    await page.getByRole('dialog', { name: 'Settings categories', exact: true }).getByRole('button', { name: 'Workspace', exact: true }).click();
+    await expect(picker).toBeFocused();
+    await expect(picker).toHaveAccessibleName('Choose settings section: Workspace');
     await expect(page.getByRole('button', { name: 'Check connection', exact: true })).toBeVisible();
     expect(await page.locator('.settings-row').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`settings-workspace-large-text-${width}.png`), fullPage: true });
   }
+  await picker.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Settings categories', exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await expect(picker).toBeHidden();
+  await expect(page.getByRole('dialog', { name: 'Settings categories', exact: true })).toBeHidden();
+  await expect(page.getByRole('tab', { name: 'Workspace', exact: true })).toBeFocused();
 });

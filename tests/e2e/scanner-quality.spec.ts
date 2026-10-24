@@ -45,10 +45,12 @@ test('open scanner details refresh and retain the latest record if it leaves the
   await page.locator('.scanner-target-button').click();
   const details = page.getByRole('dialog', { name: 'Task details', exact: true });
   await expect(details.getByRole('progressbar')).toHaveAttribute('value', '20');
+  await expect(details.getByRole('heading', { name: 'Activity', exact: true })).toHaveCount(0);
   tasks = [{ ...tasks[0], status: 'completed', done_task_count: 10, result_count: 4 }];
   await details.getByRole('button', { name: 'Refresh task', exact: true }).click();
   await expect(details.getByText('completed', { exact: true })).toBeVisible();
   await expect(details.getByRole('progressbar')).toHaveAttribute('value', '100');
+  await expect(details.getByRole('heading', { name: 'Activity', exact: true })).toHaveCount(0);
   const results = details.getByRole('link', { name: 'View results', exact: true });
   await expect(results).toBeVisible();
   const href = new URL((await results.getAttribute('href'))!, 'https://example.test');

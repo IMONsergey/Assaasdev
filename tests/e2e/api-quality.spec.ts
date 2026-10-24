@@ -67,7 +67,8 @@ test('documentation links and browser Back keep the selected API tab reachable',
   await expect(page.getByRole('tab', { name: 'API key', exact: true })).toBeFocused();
 });
 
-test('a copied schema link preserves the response field across reload and browser Back', async ({ page }) => {
+for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`a copied schema link preserves the response field across reload and browser Back with ${reducedMotion} motion`, async ({ page }) => {
+  await page.emulateMedia({ reducedMotion });
   await page.addInitScript(() => {
     Object.defineProperty(window, '__docLinks', { value: [] });
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => { (window as unknown as { __docLinks: string[] }).__docLinks.push(text); } } });
@@ -75,13 +76,18 @@ test('a copied schema link preserves the response field across reload and browse
   const target = '/api?section=docs&view=response&group=ports%5B%5D.tls_info&field=ja4s#get-host';
   await page.goto(target);
   const match = page.locator('.api-docs-article [data-doc-match="true"]');
-  await expect(match).toBeFocused();
+  async function expectStableFieldFocus() {
+    await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(match).toBeFocused();
+  }
+  await expectStableFieldFocus();
   await expect(match).toBeInViewport();
   await page.getByRole('button', { name: 'Copy link to this section', exact: true }).click();
   const copied = await page.evaluate(() => (window as unknown as { __docLinks: string[] }).__docLinks[0]);
   expect(new URL(copied).pathname + new URL(copied).search + new URL(copied).hash).toBe(target);
   await page.reload();
-  await expect(match).toBeFocused();
+  await expectStableFieldFocus();
   await page.getByRole('tab', { name: 'Request', exact: true }).click();
   await expect(page).toHaveURL(/section=docs#get-host$/);
   await page.goBack();
