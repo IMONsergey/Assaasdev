@@ -5,14 +5,15 @@ type RequestFrame = { type: string; id: string; data: Record<string, unknown> };
 async function actionFixture(page: Page, options: { uncertainSave?: boolean; uncertainShare?: boolean } = {}) {
   const requests: RequestFrame[] = [];
   const saved: Array<{ id: string; query: string; created_at: number }> = [];
-  let pauseList = false, releaseList: (() => void) | undefined;
+  let pauseList = false;
+  const heldLists: Array<() => void> = [];
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ json: { ...seedProfile(), api_key: 'private-key-never-in-shared-link' } }));
   await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(raw => {
     const frame = JSON.parse(String(raw)) as RequestFrame; requests.push(frame);
     const reply = (data: unknown) => socket.send(JSON.stringify({ id: frame.id, type: frame.type, data, metadata: { subscription_type: 'Business' } }));
     if (frame.type === 'hosts' || frame.type === 'private_hosts') reply([{ ip: '192.0.2.24', org: 'Example network', open_ports: [{ port: 443, protocol: 'https' }] }]);
-    else if (frame.type === 'query_list') { if (pauseList) { pauseList = false; releaseList = () => reply(saved); } else reply(saved); }
+    else if (frame.type === 'query_list') { if (pauseList) heldLists.push(() => reply(saved)); else reply(saved); }
     else if (frame.type === 'query_create') { saved.push({ id: 'aaaaaaaaaaaaaaaaaaaaaaaa', query: JSON.stringify(frame.data), created_at: 1800000000 }); reply({ success: !options.uncertainSave }); }
     else if (frame.type === 'short_link_create' || frame.type === 'share_link_create') {
       if (options.uncertainShare) { reply({}); return; }
@@ -22,7 +23,7 @@ async function actionFixture(page: Page, options: { uncertainSave?: boolean; unc
       reply({ short_id: 'query-link', short_url: url, long_url: url, ...(frame.type === 'share_link_create' ? { share_token: 'limited-scope-token' } : {}) });
     } else reply({ unread_count: 0 });
   }));
-  return { requests, saved, pauseNextList: () => { pauseList = true; }, releaseList: () => releaseList?.() };
+  return { requests, saved, pauseNextList: () => { pauseList = true; }, releaseList: () => { pauseList = false; heldLists.splice(0).forEach(reply => reply()); } };
 }
 
 test('Save and Share stay over results and preserve the exact applied private query', async ({ page }) => {
@@ -35,7 +36,7 @@ test('Save and Share stay over results and preserve the exact applied private qu
   const save = page.getByRole('dialog', { name: 'Save query', exact: true });
   await expect(save).toContainText('Private scans');
   await save.getByRole('button', { name: 'Save current query', exact: true }).click();
-  await expect(save.getByRole('status')).toContainText('Query saved');
+  await expect(save.locator('.search-save-confirmation[role="status"]')).toContainText('Query saved');
   expect(fixture.saved).toHaveLength(1);
   expect(JSON.parse(fixture.saved[0].query)).toEqual(request);
   expect(page.url()).toBe(resultUrl);
@@ -86,9 +87,10 @@ for (const resolution of ['refresh', 'reopen'] as const) test(`an uncertain save
   if (resolution === 'refresh') await save.getByRole('button', { name: 'Check current list', exact: true }).click();
   else {
     await save.getByRole('button', { name: 'Cancel', exact: true }).click();
+    const listReadsBefore = fixture.requests.filter(frame => frame.type === 'query_list').length;
     fixture.pauseNextList();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect.poll(() => fixture.requests.filter(frame => frame.type === 'query_list').length).toBe(2);
+    await expect.poll(() => fixture.requests.filter(frame => frame.type === 'query_list').length).toBeGreaterThan(listReadsBefore);
     await expect(save.getByRole('button', { name: 'Save current query', exact: true })).toBeDisabled();
     fixture.releaseList();
   }

@@ -32,6 +32,7 @@
 .api-docs-article-body>p,.api-docs-section>p { font-size:.93rem; line-height:1.8; color:var(--muted); }
 .api-docs-article-body p code,.api-docs-note code,.api-docs-next-note code,.api-docs-steps code { font-size:.84em; color:var(--text); overflow-wrap:anywhere; }
 .api-docs-article-body>p a,.api-docs-section>p a { white-space:normal; }
+.api-docs-article-body p a { text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:.2em; }
 .api-docs-base-url>span { display:block; margin-bottom:8px; color:var(--muted); font-size:.78rem; }
 .api-docs-base-url .code-canvas-source { min-height:0; padding-block:14px; }
 .api-docs-steps { display:flex; flex-direction:column; gap:22px; list-style:none; padding:0; margin:6px 0; }
@@ -46,7 +47,8 @@
 .api-docs-example { display:flex; flex-direction:column; gap:14px; min-width:0; }
 .api-docs-example .tabs { font-size:.86rem; }
 .api-docs-example>.tab-panel { min-width:0; }
-.api-docs-example .code-canvas-source { height:360px; min-height:360px; max-height:360px; }
+/* Reserve the longest language example for this endpoint; shorter GETs stay compact. */
+.api-docs-example pre.code-canvas-source { --api-example-height:clamp(160px,calc(var(--api-example-lines,16) * 1.435rem + 32px),360px); height:var(--api-example-height); min-height:var(--api-example-height); max-height:var(--api-example-height); }
 .api-docs-example .code-canvas-caption small { display:none; }
 .api-docs-code .code-canvas-source { max-height:460px; }
 .api-docs-code .code-canvas-line-text { font-size:.82rem; }

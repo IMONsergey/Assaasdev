@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useNavigationType } from 'react-router';
 import { CodeCanvas } from '../../components/CodeCanvas';
 import { Badge, Button, Icon, Tabs, TabPanel } from '../../components/ui';
@@ -30,11 +30,13 @@ function Schema({ groups }: { groups: SchemaGroup[] }) {
 
 function RequestExample({ endpoint, id = endpoint.id }: { endpoint: ApiEndpoint; id?: string }) {
   const [language, setLanguage] = useState<ExampleLanguage>('curl');
+  const examples = useMemo(() => ({ curl: buildApiExample(endpoint, 'curl'), javascript: buildApiExample(endpoint, 'javascript'), python: buildApiExample(endpoint, 'python') }), [endpoint]);
+  const reservedLines = Math.max(...Object.values(examples).map(content => content.split('\n').length));
   const prefix = `api-example-${id}`;
-  return <section className="api-docs-example" aria-label="Request examples">
+  return <section className="api-docs-example" style={{ '--api-example-lines': reservedLines } as CSSProperties} aria-label="Request examples">
     <div className="api-docs-example-heading"><h3>Example request</h3><span>Set <code>APCOSYS_API_KEY</code> in your environment.</span></div>
     <Tabs idPrefix={prefix} ariaLabel="Example language" items={languages} value={language} onChange={next => setLanguage(next as ExampleLanguage)} variant="segmented" />
-    {languages.map(item => <TabPanel key={item.id} idPrefix={prefix} value={item.id} hidden={language !== item.id}>{language === item.id && <CodeCanvas content={buildApiExample(endpoint, language)} language={language === 'curl' ? 'shell' : 'text'} title={item.label} className="api-docs-code" />}</TabPanel>)}
+    {languages.map(item => <TabPanel key={item.id} idPrefix={prefix} value={item.id} hidden={language !== item.id}>{language === item.id && <CodeCanvas content={examples[language]} language={language === 'curl' ? 'shell' : 'text'} title={item.label} className="api-docs-code" />}</TabPanel>)}
     <p className="api-docs-note">Run examples on your server with an environment key. This page does not send API requests.</p>
   </section>;
 }

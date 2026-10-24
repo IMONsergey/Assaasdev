@@ -102,7 +102,7 @@ export function Pagination({ page, pageSize, count, total, maxPage, disabled = f
   const [pageDraft, setPageDraft] = useState(String(page));
   useEffect(() => { setPageDraft(String(page)); }, [page]);
   return <nav className="pagination" aria-label="Pagination" aria-busy={disabled || undefined}>
-    <p className="muted" aria-live="polite" aria-atomic="true">{knownTotal !== undefined ? `${knownTotal.toLocaleString()} results · ` : ''}Page {page}{lastPage !== undefined ? ` of ${lastPage}` : ''}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p>
+    <p className="muted" aria-live="polite" aria-atomic="true">{knownTotal !== undefined ? `${knownTotal.toLocaleString()} ${knownTotal === 1 ? 'result' : 'results'} · ` : ''}Page {page}{lastPage !== undefined ? ` of ${lastPage}` : ''}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p>
     <div className="pagination-controls"><div className="cluster"><Button variant="secondary" size="sm" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}><Icon name="chevron-left" size={16} />Previous</Button><Button variant="secondary" size="sm" disabled={disabled || !hasNext} onClick={() => onPageChange(page + 1)}>Next<Icon name="chevron-right" size={16} /></Button></div>
       {lastPage !== undefined && lastPage > 5 && <form className="pagination-jump" onSubmit={event => { event.preventDefault(); const next = Number(pageDraft); if (!disabled && Number.isInteger(next) && next >= 1 && next <= lastPage) onPageChange(next); }}><label>Go to page<input type="number" inputMode="numeric" min={1} max={lastPage} step={1} required disabled={disabled} value={pageDraft} onChange={event => setPageDraft(event.target.value)} /></label><Button variant="secondary" size="sm" type="submit" disabled={disabled}>Go</Button></form>}
     </div>
@@ -121,7 +121,7 @@ const iconNames: Record<string, string> = {
   shield: 'shield-check', package: 'package', key: 'key', desktop: 'device-desktop', users: 'users', mail: 'mail',
   adjustments: 'adjustments-horizontal', chart: 'chart-bar', alert: 'alert-circle', success: 'circle-check',
   file: 'file-text', more: 'dots', eye: 'eye', 'eye-off': 'eye-off', calendar: 'calendar', link: 'link',
-  'arrow-up-right': 'arrow-up-right', 'arrow-left': 'arrow-left', folder: 'folder', receipt: 'receipt', wallet: 'wallet',
+  'arrow-up-right': 'arrow-up-right', 'arrow-left': 'arrow-left', folder: 'folder', receipt: 'receipt', wallet: 'wallet', crypto: 'currency-token',
 };
 export function Icon({ name, size = 20, className }: { name: string; size?: number; className?: string }) {
   const path = asset(`icons/${iconNames[name] ?? 'info-circle'}.svg`);

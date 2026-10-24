@@ -1,0 +1,42 @@
+[
+  {
+    "catalogHeight": 888,
+    "detailHeight": 888,
+    "documentHeight": 1176,
+    "overflow": false,
+    "rowsHeight": 593.5,
+    "tab": "Response"
+  },
+  {
+    "catalogHeight": 888,
+    "detailHeight": 888,
+    "documentHeight": 1176,
+    "overflow": false,
+    "rowsHeight": 593.5,
+    "tab": "TLS"
+  },
+  {
+    "catalogHeight": 888,
+    "detailHeight": 888,
+    "documentHeight": 1176,
+    "overflow": false,
+    "rowsHeight": 593.5,
+    "tab": "Products & CVE2"
+  },
+  {
+    "catalogHeight": 888,
+    "detailHeight": 888,
+    "documentHeight": 1176,
+    "overflow": false,
+    "rowsHeight": 593.5,
+    "tab": "Data"
+  },
+  {
+    "catalogHeight": 888,
+    "detailHeight": 888,
+    "documentHeight": 1176,
+    "overflow": false,
+    "rowsHeight": 593.5,
+    "tab": "Web files"
+  }
+]

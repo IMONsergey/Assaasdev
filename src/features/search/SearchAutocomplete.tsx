@@ -45,7 +45,7 @@ export function SearchAutocomplete({ value, onChange, onSearch, onFilter, readOn
   const root = useRef<HTMLDivElement>(null);
   const listId = useId();
   const [focused, setFocused] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(true);
   const [active, setActive] = useState(-1);
   const [debounced, setDebounced] = useState(value.trim());
   const [placement, setPlacement] = useState({ above: false, height: 360 });
@@ -105,7 +105,7 @@ export function SearchAutocomplete({ value, onChange, onSearch, onFilter, readOn
   }
   return <div ref={root} className="search-autocomplete">
     <label className="search-sr-only" htmlFor="main-search-query">Search internet infrastructure</label>
-    <input id="main-search-query" role="combobox" aria-autocomplete="list" aria-expanded={visible} aria-controls={visible ? listId : undefined} aria-activedescendant={visible && active >= 0 ? `${listId}-${active}` : undefined} aria-invalid={invalid || undefined} aria-describedby={describedBy} value={value} onChange={event => { setDismissed(false); onChange(event.target.value); }} onFocus={() => { setFocused(true); setDismissed(false); }} onBlur={() => { setFocused(false); setActive(-1); }} onKeyDown={event => {
+    <input id="main-search-query" role="combobox" aria-autocomplete="list" aria-expanded={visible} aria-controls={visible ? listId : undefined} aria-activedescendant={visible && active >= 0 ? `${listId}-${active}` : undefined} aria-invalid={invalid || undefined} aria-describedby={describedBy} value={value} onChange={event => { setDismissed(false); onChange(event.target.value); }} onPointerDown={() => setDismissed(false)} onFocus={() => setFocused(true)} onBlur={() => { setFocused(false); setDismissed(true); setActive(-1); }} onKeyDown={event => {
       if (event.nativeEvent.isComposing) return;
       if (event.key === 'Escape') { if (visible) event.preventDefault(); setDismissed(true); setActive(-1); }
       else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { if (!value.trim()) return; event.preventDefault(); setDismissed(false); setActive(current => event.key === 'ArrowDown' ? (current + 1) % suggestions.length : (current <= 0 ? suggestions.length - 1 : current - 1)); }

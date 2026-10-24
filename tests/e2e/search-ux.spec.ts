@@ -23,6 +23,34 @@ async function setupSearch(page: Page, requests: RecordedRequest[], deferAnalyti
   });
 }
 
+test('workspace focus keeps restored results clear and suggestions open only for query interaction', async ({ page }) => {
+  const requests: RecordedRequest[] = [];
+  await setupSearch(page, requests);
+  await page.goto('/search');
+  const input = page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true });
+  const suggestions = page.getByRole('listbox', { name: 'Search suggestions', exact: true });
+  await expect(input).toBeFocused();
+  await input.fill('network');
+  await expect(suggestions).toBeVisible();
+  await input.press('Enter');
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  await expect(page.locator('main')).toBeFocused();
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await expect(suggestions).toHaveCount(0);
+  await input.focus();
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await input.press('ArrowDown');
+  await expect(suggestions).toBeVisible();
+  await input.press('Escape');
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Load analytics', exact: true })).toBeVisible();
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(2);
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+});
+
 test('local search views preserve drafts and analytics requires an explicit request', async ({ page }) => {
   const requests: RecordedRequest[] = [];
   const analyticsReplies: (() => void)[] = [];

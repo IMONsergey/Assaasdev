@@ -52,6 +52,7 @@
 .account-team-table th:last-child, .account-team-table td:last-child { text-align: right; }
 .settings-row-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .settings-row-control > .button { min-height: 40px; }
+.settings-panel .card:last-child { border-bottom: 0; }
 
 @media (max-width: 760px) {
   .app-shell .workspace-main { padding-top: max(80px, calc(env(safe-area-inset-top) + 68px)); }

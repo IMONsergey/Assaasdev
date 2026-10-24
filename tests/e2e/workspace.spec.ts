@@ -1,6 +1,7 @@
 import { chooseOption } from './helpers/controls';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { seedBuckets } from '../../src/demo/fixtures';
 
 const routes = ['/search', '/search?q=example&run=1', '/hosts/192.0.2.10', '/search/saved', '/search/share', '/files', '/scanner', '/scanner/new', '/private/search', '/api', '/billing', '/account', '/account/security', '/account/sessions', '/account/team', '/notifications', '/settings'];
 for (const width of [1440, 390, 320]) {
@@ -222,7 +223,8 @@ for (const failCommit of [false, true]) {
     const data = await page.evaluate(() => (window as unknown as { __downloadTest: { bytes: number[]; closeCalls: number } }).__downloadTest);
     expect(data.closeCalls).toBe(1);
     const lines = new TextDecoder().decode(new Uint8Array(data.bytes)).trim().split('\n');
-    expect(lines.length).toBe(8);
-    for (const line of lines) expect(JSON.parse(line)).toHaveProperty('key');
+    const expected = seedBuckets(), records = lines.map(line => JSON.parse(line) as { key: string });
+    expect(records).toHaveLength(expected.length);
+    expect(records.map(record => record.key).sort()).toEqual(expected.map(record => record.key).sort());
   });
 }

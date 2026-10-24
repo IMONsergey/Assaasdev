@@ -41,7 +41,9 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
     if (entrance !== 'ready') return;
     const frame = requestAnimationFrame(() => {
       if (document.querySelector('dialog[open]')) return;
-      const target = document.getElementById('main-search-query') ?? main.current;
+      // The empty search entry is ready for typing; a restored results page is
+      // ready for reading and must not reopen the query's suggestion overlay.
+      const target = main.current?.querySelector<HTMLElement>('.search-page-home #main-search-query') ?? main.current;
       target?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
