@@ -221,7 +221,7 @@ describe('in-memory demo implements meaningful client behavior', () => {
   });
 
   it('rejects insufficient funds and prevents pending wallet orders from overspending a balance', async () => {
-    const api = createDemoApi({ delayMs: 0 });
+    const api = createDemoApi({ delayMs: 0, now: () => DEMO_TIMESTAMP * 1000 });
     const before = (await api.request<BillingData>('user_billing', {})).data!;
     await expect(api.request('pay_with_balance', { subscription: 'Plus', cadence: 'annually' })).rejects.toThrow('Insufficient balance');
     expect((await api.request<BillingData>('user_billing', {})).data).toEqual(before);

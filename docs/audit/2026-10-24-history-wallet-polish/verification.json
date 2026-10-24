@@ -5,8 +5,9 @@
   "live_build": "passed",
   "presentation_build": "passed",
   "unit": {
-    "passed": 170,
-    "files": 25
+    "passed": 174,
+    "files": 26,
+    "stage": "after presentation clock correction"
   },
   "chrome_release_regression": {
     "startTime": "2026-10-24T09:22:00.011Z",
@@ -14,7 +15,8 @@
     "expected": 41,
     "skipped": 0,
     "unexpected": 0,
-    "flaky": 0
+    "flaky": 0,
+    "stage": "interface regression before presentation-only clock correction"
   },
   "firefox_release": {
     "startTime": "2026-10-24T09:22:00.442Z",
@@ -22,7 +24,8 @@
     "expected": 53,
     "skipped": 0,
     "unexpected": 0,
-    "flaky": 0
+    "flaky": 0,
+    "stage": "interface regression before presentation-only clock correction"
   },
   "chrome_full_pre_fix": {
     "startTime": "2026-10-24T09:12:02.703Z",
@@ -35,7 +38,8 @@
   "pre_fix_failures_resolved": [
     "auth guide could overlap three active mobile fields",
     "native Chrome select swallowed keydown; Firefox focus-visible differed",
-    "workspace test expected the former default Appearance section"
+    "workspace test expected the former default Appearance section",
+    "CI credit-dialog geometry measurement now waits for visible plan cards before retaining count/width/overflow assertions"
   ],
   "retries": 0,
   "immutable_preview": true,
@@ -43,5 +47,28 @@
   "source_unchanged_after_build": true,
   "ci_workflow": "https://github.com/IMONsergey/Assaasdev/actions/workflows/ci.yml",
   "live_customer_payment_acceptance": "not run",
-  "physical_iOS_acceptance": "not run"
+  "physical_iOS_acceptance": "not run",
+  "presentation_clock_regression": {
+    "unit_passed": 4,
+    "chrome_passed": 4,
+    "failed": 0,
+    "retries": 0,
+    "scope": [
+      "fixed browser time: search history and completed payment both 2026-10-24 15:30 UTC",
+      "wallet payment at 1440 px",
+      "wallet payment at 390 px",
+      "wallet payment at 320 px"
+    ],
+    "final_build_assets_identical_to_tested_build": true
+  },
+  "ci_before_clock_correction": {
+    "commit": "947db9e833d3a95d43641152c03d550f1a94a73b",
+    "url": "https://github.com/IMONsergey/Assaasdev/actions/runs/40082713214",
+    "status": "success",
+    "unit_passed": 170,
+    "chrome_e2e_passed": 205,
+    "application": "success",
+    "container": "success"
+  },
+  "configured_chrome_e2e_tests": 206
 }

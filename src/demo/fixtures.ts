@@ -55,24 +55,25 @@ export function seedHosts(): DemoHost[] {
   });
 }
 
-export function seedProfile(): Profile {
+/** Account/workspace dates share one adapter epoch; observed host/file dates stay fixed. */
+export function seedProfile(epoch = DEMO_TIMESTAMP): Profile {
   return {
-    session_id: 'session_current', authenticated_at: DEMO_TIMESTAMP, issued_at: DEMO_TIMESTAMP,
-    expires_at: DEMO_TIMESTAMP + 86400 * 100, user_id: 'usr_01', user_name: 'alex_research', email: 'alex@example.com', user_type: 'USER',
+    session_id: 'session_current', authenticated_at: epoch, issued_at: epoch,
+    expires_at: epoch + 86400 * 100, user_id: 'usr_01', user_name: 'alex_research', email: 'alex@example.com', user_type: 'USER',
     balance: 120, credits: 1_240_500, scan_credits: 327_680, purchased_credits: 0,
-    subscription: { type: 'Business', start_date: DEMO_TIMESTAMP - 86400 * 4, expiry_date: DEMO_TIMESTAMP + 86400 * 26, credits: 1_500_000, scan_credits: 327_680, search_pages: 300, api_access: true, price: 900, payment_required: true, duration: 2_592_000_000_000_000, canceled: false },
+    subscription: { type: 'Business', start_date: epoch - 86400 * 4, expiry_date: epoch + 86400 * 26, credits: 1_500_000, scan_credits: 327_680, search_pages: 300, api_access: true, price: 900, payment_required: true, duration: 2_592_000_000_000_000, canceled: false },
     api_key: '00000000-0000-4000-8000-000000000001', totp_active: false, is_paddle_client: false,
     addresses: [{ network: 'demo-network', coin: 'DEMO', address: DEMO_PAYMENT_ADDRESS }],
     analytics_facets: [{ key: 'type', enabled: true, priority: 0 }, { key: 'country_name', enabled: true, priority: 1 }, { key: 'org', enabled: true, priority: 2 }, { key: 'port', enabled: true, priority: 3 }, { key: 'protocol', enabled: true, priority: 4 }],
-    team: { team_owner_id: 'usr_01', team_owner_name: 'alex_research', team_owner_email: 'alex@example.com', team_members: [{ user_id: 'usr_member_001', user_name: 'maya_analysis', email: 'maya@example.com', added_at: DEMO_TIMESTAMP - 86400 * 2 }, { user_id: 'usr_member_002', user_name: 'sam_security', email: 'sam@example.org', added_at: DEMO_TIMESTAMP - 86400 }] },
+    team: { team_owner_id: 'usr_01', team_owner_name: 'alex_research', team_owner_email: 'alex@example.com', team_members: [{ user_id: 'usr_member_001', user_name: 'maya_analysis', email: 'maya@example.com', added_at: epoch - 86400 * 2 }, { user_id: 'usr_member_002', user_name: 'sam_security', email: 'sam@example.org', added_at: epoch - 86400 }] },
   };
 }
 
-export function seedTasks(): PrivateTask[] {
+export function seedTasks(epoch = DEMO_TIMESTAMP): PrivateTask[] {
   return [
-    { id: 'scan_001', status: 'completed', created_at: DEMO_TIMESTAMP - 10800, start_time: DEMO_TIMESTAMP - 10790, end_time: DEMO_TIMESTAMP - 10200, schedule: '', done_task_count: 30, task_count: 30, host_list: ['192.0.2.10'], cidr_list: ['203.0.113.0/28'], port_list: [80, 443], result_count: 4, has_results: true },
-    { id: 'scan_002', status: 'running', created_at: DEMO_TIMESTAMP - 900, start_time: DEMO_TIMESTAMP - 890, end_time: 0, schedule: '', done_task_count: 4, task_count: 10, host_list: ['198.51.100.24'], cidr_list: [], port_list: DEFAULT_SCAN_PORTS, result_count: 4, has_results: true },
-    { id: 'scan_003', status: 'completed', created_at: DEMO_TIMESTAMP - 86400, start_time: DEMO_TIMESTAMP - 86390, end_time: DEMO_TIMESTAMP - 86000, schedule: '0 0 3 * * *', done_task_count: 20, task_count: 20, host_list: ['203.0.113.42', '203.0.113.78'], cidr_list: [], port_list: DEFAULT_SCAN_PORTS, result_count: 4, has_results: true },
+    { id: 'scan_001', status: 'completed', created_at: epoch - 10800, start_time: epoch - 10790, end_time: epoch - 10200, schedule: '', done_task_count: 30, task_count: 30, host_list: ['192.0.2.10'], cidr_list: ['203.0.113.0/28'], port_list: [80, 443], result_count: 4, has_results: true },
+    { id: 'scan_002', status: 'running', created_at: epoch - 900, start_time: epoch - 890, end_time: 0, schedule: '', done_task_count: 4, task_count: 10, host_list: ['198.51.100.24'], cidr_list: [], port_list: DEFAULT_SCAN_PORTS, result_count: 4, has_results: true },
+    { id: 'scan_003', status: 'completed', created_at: epoch - 86400, start_time: epoch - 86390, end_time: epoch - 86000, schedule: '0 0 3 * * *', done_task_count: 20, task_count: 20, host_list: ['203.0.113.42', '203.0.113.78'], cidr_list: [], port_list: DEFAULT_SCAN_PORTS, result_count: 4, has_results: true },
   ];
 }
 export function seedPlanning(): PlanningTask[] {
@@ -87,16 +88,16 @@ export function seedBuckets(): DemoBucket[] {
     size_mb: [1.2, 0.01, 2.5, 15.8, 48.3, 0.12, 0, 3.7][index], product_name: index % 3 === 0 ? 'azureblobstorage' : index % 3 === 1 ? 'amazons3' : 'googlecloudstorage',
   }));
 }
-export function seedSavedQueries(): SavedQuery[] {
+export function seedSavedQueries(epoch = DEMO_TIMESTAMP): SavedQuery[] {
   return [
-    { id: '000000000000000000000001', query: JSON.stringify({ full_text_search: 'nginx', page: 1, docs_per_page: 20, sort_field: 'uts', sort_direction: 'desc' }), created_at: DEMO_TIMESTAMP - 7200, updated_at: DEMO_TIMESTAMP - 7200 },
-    { id: '000000000000000000000002', query: JSON.stringify({ simple_search_filters: [{ field: 'country_name', value: 'Germany' }, { field: 'port', value: '443' }], page: 1, docs_per_page: 20 }), created_at: DEMO_TIMESTAMP - 3600, updated_at: DEMO_TIMESTAMP - 3600 },
-    { id: '000000000000000000000003', query: JSON.stringify({ task_ids: ['scan_001'], page: 1, docs_per_page: 20 }), created_at: DEMO_TIMESTAMP - 1800, updated_at: DEMO_TIMESTAMP - 1800 },
+    { id: '000000000000000000000001', query: JSON.stringify({ full_text_search: 'nginx', page: 1, docs_per_page: 20, sort_field: 'uts', sort_direction: 'desc' }), created_at: epoch - 7200, updated_at: epoch - 7200 },
+    { id: '000000000000000000000002', query: JSON.stringify({ simple_search_filters: [{ field: 'country_name', value: 'Germany' }, { field: 'port', value: '443' }], page: 1, docs_per_page: 20 }), created_at: epoch - 3600, updated_at: epoch - 3600 },
+    { id: '000000000000000000000003', query: JSON.stringify({ task_ids: ['scan_001'], page: 1, docs_per_page: 20 }), created_at: epoch - 1800, updated_at: epoch - 1800 },
   ];
 }
-export function seedPricing(): PricingData {
+export function seedPricing(epoch = DEMO_TIMESTAMP): PricingData {
   return {
-    timestamp: DEMO_TIMESTAMP,
+    timestamp: epoch,
     subscriptions: [
       { type: 'Free', name: 'Free', monthly_price: 0, annually_price: 0, credits: 500, scan_credits: 0, search_pages: 2, users: 1, duration: '30d', api_access: false, cve: false, buckets: false, leak_data: false, bulk_data: false, private_scanning: false, support: 'community' },
       { type: 'Plus', name: 'Plus', monthly_price: 50, annually_price: 480, credits: 25000, scan_credits: 0, search_pages: 25, users: 1, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: false, bulk_data: false, private_scanning: false, support: 'email' },
@@ -114,32 +115,32 @@ export function seedPricing(): PricingData {
     ],
   };
 }
-export function seedSessions(): SessionData {
+export function seedSessions(epoch = DEMO_TIMESTAMP): SessionData {
   return { total: 3, limit: 10, sessions: [
-    { session_id: 'session_current', ip_address: '192.0.2.100', user_agent: 'Chrome', device_info: 'Desktop', browser: 'Chrome', os: 'macOS', location: 'Amsterdam, Netherlands', last_activity: DEMO_TIMESTAMP, is_active: true, is_current: true, created_at: DEMO_TIMESTAMP - 7200, authenticated_at: DEMO_TIMESTAMP - 7200 },
-    { session_id: 'session_mobile', ip_address: '198.51.100.100', device_info: 'Mobile', browser: 'Safari', os: 'iOS', location: 'Amsterdam, Netherlands', last_activity: DEMO_TIMESTAMP - 900, is_active: true, is_current: false, created_at: DEMO_TIMESTAMP - 86400 },
-    { session_id: 'session_desktop', ip_address: '203.0.113.100', device_info: 'Desktop', browser: 'Firefox', os: 'Windows', location: 'Berlin, Germany', last_activity: DEMO_TIMESTAMP - 3600, is_active: false, is_current: false, created_at: DEMO_TIMESTAMP - 86400 * 2 },
+    { session_id: 'session_current', ip_address: '192.0.2.100', user_agent: 'Chrome', device_info: 'Desktop', browser: 'Chrome', os: 'macOS', location: 'Amsterdam, Netherlands', last_activity: epoch, is_active: true, is_current: true, created_at: epoch - 7200, authenticated_at: epoch - 7200 },
+    { session_id: 'session_mobile', ip_address: '198.51.100.100', device_info: 'Mobile', browser: 'Safari', os: 'iOS', location: 'Amsterdam, Netherlands', last_activity: epoch - 900, is_active: true, is_current: false, created_at: epoch - 86400 },
+    { session_id: 'session_desktop', ip_address: '203.0.113.100', device_info: 'Desktop', browser: 'Firefox', os: 'Windows', location: 'Berlin, Germany', last_activity: epoch - 3600, is_active: false, is_current: false, created_at: epoch - 86400 * 2 },
   ] };
 }
-export function seedNotifications(): NotificationsData {
-  return { total: 3, unread_count: 2, timestamp: DEMO_TIMESTAMP, notifications: [
-    { id: 'notification_001', notification_type: 'team_member_added', message: 'Maya joined your organization.', payload: { owner_name: 'alex_research' }, is_read: false, created_at: DEMO_TIMESTAMP - 600 },
-    { id: 'notification_002', notification_type: 'subscription_expiring', message: 'Your Business subscription is approaching its renewal date.', payload: {}, is_read: false, created_at: DEMO_TIMESTAMP - 3600 },
-    { id: 'notification_003', notification_type: 'subscription_activated', message: 'Your Business plan is active.', payload: {}, is_read: true, created_at: DEMO_TIMESTAMP - 86400 * 4 },
+export function seedNotifications(epoch = DEMO_TIMESTAMP): NotificationsData {
+  return { total: 3, unread_count: 2, timestamp: epoch, notifications: [
+    { id: 'notification_001', notification_type: 'team_member_added', message: 'Maya joined your organization.', payload: { owner_name: 'alex_research' }, is_read: false, created_at: epoch - 600 },
+    { id: 'notification_002', notification_type: 'subscription_expiring', message: 'Your Business subscription is approaching its renewal date.', payload: {}, is_read: false, created_at: epoch - 3600 },
+    { id: 'notification_003', notification_type: 'subscription_activated', message: 'Your Business plan is active.', payload: {}, is_read: true, created_at: epoch - 86400 * 4 },
   ] };
 }
-export function seedPayments(): BillingPayment[] {
-  return [{ payment_id: 'pay_001', subscription: 'Plus', amount: 50, amount_usd: 50, status: 'pending', network: 'demo-network', coin: 'DEMO', address: DEMO_PAYMENT_ADDRESS, created_at: DEMO_TIMESTAMP, updated_at: DEMO_TIMESTAMP, expires_at: DEMO_TIMESTAMP + 3600 }];
+export function seedPayments(epoch = DEMO_TIMESTAMP): BillingPayment[] {
+  return [{ payment_id: 'pay_001', subscription: 'Plus', amount: 50, amount_usd: 50, status: 'pending', network: 'demo-network', coin: 'DEMO', address: DEMO_PAYMENT_ADDRESS, created_at: epoch, updated_at: epoch, expires_at: epoch + 3600 }];
 }
 
 /** Read-only precision fixtures. They do not settle an invoice or grant entitlement. */
-export function seedTrackedAddresses(): TrackedAddress[] {
+export function seedTrackedAddresses(epoch = DEMO_TIMESTAMP): TrackedAddress[] {
   return [{ network: 'demo-network', coin: 'DEMO', address: DEMO_PAYMENT_ADDRESS, is_active: false,
-    last_checked_at: DEMO_TIMESTAMP, last_tx_timestamp: DEMO_TIMESTAMP - 3600,
+    last_checked_at: epoch, last_tx_timestamp: epoch - 3600,
     total_received: '900719925474099312345678901', total_received_readable: '900719925.474099312345678901' }];
 }
-export function seedAddressTransactions(): AddressTransaction[] {
+export function seedAddressTransactions(epoch = DEMO_TIMESTAMP): AddressTransaction[] {
   return [{ tx_hash: 'DEMO_TX_NOT_ON_CHAIN_001', from_address: 'DEMO_ONLY_NOT_A_SENDER_ADDRESS',
     amount: '900719925474099312345678901', decimals: 18, block_number: '9007199254740993',
-    timestamp: DEMO_TIMESTAMP - 3600, status: 'received', created_at: DEMO_TIMESTAMP - 3590 }];
+    timestamp: epoch - 3600, status: 'received', created_at: epoch - 3590 }];
 }
