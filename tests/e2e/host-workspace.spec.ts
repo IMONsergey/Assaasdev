@@ -47,7 +47,7 @@ test('classifying and returning to a thousand-service list retains local context
   expect(requests.filter(type => type === 'hostinfo')).toHaveLength(1);
 });
 
-test('rapid service filters and nested tabs compose the current URL without losing search context', async ({ page }) => {
+test('rapid service filters and nested tabs compose the current URL without losing search context', async ({ page }, testInfo) => {
   const requests: string[] = [];
   await hostWorkspaceFixture(page, requests);
   await page.goto('/hosts/192.0.2.44?tab=http&q=retained&run=1&back=%2Fsearch%3Fq%3Dretained%26run%3D1');
@@ -73,6 +73,8 @@ test('rapid service filters and nested tabs compose the current URL without losi
   await expect(list.locator('.host-service-row')).toHaveCount(20);
   await expect(list.locator('.host-service-window')).toContainText('20 matching');
 
+  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('host-filters-desktop.png') });
+
   // A parent tab must retain a service subtab selected in the same task.
   await page.getByRole('tab', { name: 'TLS', exact: true }).evaluate(element => {
     const dns = document.querySelector<HTMLButtonElement>('#host-workspace-tab-dns');
@@ -94,6 +96,11 @@ test('rapid service filters and nested tabs compose the current URL without losi
   await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
   await expect(list.getByRole('textbox', { name: 'Port or range', exact: true })).toHaveValue('10800-10999');
   await expect(list.locator('.host-service-row')).toHaveCount(20);
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.getByRole('button', { name: 'Back to service list', exact: true }).click();
+  await expect(list).toBeVisible();
+  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
+  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('host-filters-mobile.png') });
   expect(requests.filter(type => type === 'hostinfo')).toHaveLength(1);
 });
 
