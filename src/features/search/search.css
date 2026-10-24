@@ -76,6 +76,8 @@
 .search-result-row p { margin: 3px 0 0; }
 .search-result-ip { display: inline-flex; gap: 8px; align-items: center; font: 500 1.142857rem/1.6 var(--font-mono); letter-spacing: -.025em; color: var(--accent-text); text-decoration: none; }
 .search-result-ip > .icon { opacity: 0; flex-shrink: 0; transition: opacity 160ms ease; }
+.search-result-ip { max-width: 100%; }
+.search-result-ip > span { min-width: 0; overflow-wrap: anywhere; }
 .search-result-row:hover .search-result-ip > .icon, .search-result-ip:focus > .icon { opacity: .7; }
 .search-result-ip:hover { text-decoration: underline; text-underline-offset: 3px; }
 .search-row-meta { color: var(--muted); font-size: .785714rem; line-height: 1.6; }
@@ -97,7 +99,8 @@
 .search-facets-heading h2 { margin: 0; font: 550 1.142857rem/1.4 var(--font-ui); }
 .search-facets-heading p { margin: 5px 0 0; color: var(--muted); font-size: .857143rem; }
 .search-facets-heading .cluster { gap: 6px; flex-shrink: 0; }
-.search-facet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.search-facet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.search-facet-grid:has(.search-facet--browsing) { align-items: start; }
 .search-facet { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 11px; background: var(--bg); }
 .search-facet-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .search-facet-title h3 { margin: 0; font: 550 1rem/1.5 var(--font-ui); }
@@ -337,6 +340,20 @@
 .search-suggestions-footer { display: flex; align-items: center; justify-content: space-between; flex: none; gap: 12px; margin-top: 4px; padding: 9px 10px 5px; border-top: 1px solid var(--line); color: var(--muted); font-size: .714286rem; }
 .search-suggestion-keys { display: flex; align-items: center; gap: 4px; }
 .search-suggestion-keys kbd { font-size: .85em; }
+.search-result-identity { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.search-result-identity > div { min-width: 0; }
+.search-network-mark { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; margin-top: 2px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: var(--bg); }
+.search-result-org { font-weight: 400; color: var(--muted); font-size: .857143rem; line-height: 1.5; }
+.search-result-address .search-labels { gap: 6px; margin-top: 11px; }
+.search-os { display: inline-flex; align-items: center; gap: 5px; }
+.search-labels .badge { display: inline-flex; align-items: center; gap: 4px; }
+.search-protocols { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 9px; color: var(--muted); font-size: .714286rem; text-transform: uppercase; }
+.search-protocols > span { display: inline-flex; align-items: center; gap: 4px; }
+.search-port-overflow { gap: 3px; padding-inline: 3px; font-variant-numeric: tabular-nums; }
+.search-result-observation { display: flex; align-items: flex-start; gap: 7px; color: var(--muted); }
+.search-result-observation > .icon { flex: none; margin-top: 3px; }
+.search-result-observation time { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+.search-result-observation time > small { font: inherit; font-size: .714286rem; }
 .search-result-location > p:first-child { display: flex; align-items: center; gap: 8px; }
 .country-flag { display: inline-block; width: 20px; height: 15px; object-fit: contain; border-radius: 2px; box-shadow: 0 0 0 1px rgb(12 30 40 / 10%); vertical-align: -2px; flex: none; }
 .search-results-columns { padding-inline: 16px; font-size: .857143rem; }
@@ -391,7 +408,25 @@
 @container search-workspace (max-width: 650px) {
   .search-page-results .search-composer { display: flex; }
   .search-page-results .search-query-controls { padding: 0; }
-  .search-result-location > p:first-child { justify-content: flex-end; }
+  .search-result-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 16px; padding: 22px 4px; }
+  .search-result-address { grid-column: 1 / -1; grid-row: 1; margin-bottom: 0; }
+  .search-result-services { grid-column: 1 / -1; grid-row: 2; }
+  .search-result-location { grid-column: 1; grid-row: 3; text-align: left; }
+  .search-result-location > p:first-child { justify-content: flex-start; margin-top: 0; }
+  .search-result-observation { grid-column: 2; grid-row: 3; justify-content: flex-end; text-align: right; padding: 0; }
+  .search-port-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 40px; padding: 8px; }
+  .search-port-overflow { min-height: 44px; padding-inline: 6px; }
+  .search-protocols { margin-top: 8px; }
+  .search-result-location .search-row-meta { font-size: .714286rem; }
+  .search-network-mark { width: 40px; height: 40px; flex-basis: 40px; }
+  .search-result-ip { font-size: 1.142857rem; }
+  .search-result-ip > .icon { opacity: .65; }
+}
+@container search-workspace (max-width: 370px) {
+  .search-workspace-heading { gap: 8px; }
+  .search-workspace-heading > .tabs [role='tab'] { padding-inline: 8px; font-size: .928571rem; }
+  .search-workspace-heading > .tabs .icon { display: none; }
+  .search-result-actions .button, .search-action-link { width: 40px; padding-inline: 8px; }
 }
 @media (max-width: 760px) {
   .search-page-home:not(.search-page-editing) { padding-block: 40px 80px; }
@@ -404,6 +439,11 @@
   .search-condition-leaf { grid-template-columns: minmax(0,1fr) 36px; gap: 10px; }
   .search-condition-leaf > .search-suggestion-field { grid-column: 1; }
   .search-remove-condition.button { grid-column: 2; grid-row: 2; }
+  .search-facet-item button { min-height: 44px; }
+  .search-result-actions .button, .search-action-link { min-height: 44px; min-width: 40px; justify-content: center; }
+  .search-result-controls { gap: 10px; }
+  .search-result-controls label { gap: 6px; }
+  .search-result-controls label:first-child select { min-width: 0; }
 }
 @media (max-width: 520px) {
   .search-submit-button .double-button__label { display: none; }

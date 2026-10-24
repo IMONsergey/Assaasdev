@@ -163,3 +163,35 @@
 @media(max-width:600px) { .settings-legal-card { padding:18px; gap:12px; }.settings-legal-symbol { width:34px; height:34px; }.settings-legal-copy strong { font-size:.92rem; }.settings-legal-copy>span { font-size:.81rem; }.settings-legal-source { align-items:flex-start; font-size:.76rem; }.settings-legal-source .icon { margin-top:3px; flex:none; } }
 @media(max-width:1050px) { .settings-workspace { grid-template-columns:160px minmax(0,1fr); gap:24px; }.settings-panel .account-facts { grid-template-columns:1fr; }.settings-navigation button { padding-inline:10px; } }
 @media(max-width:760px) { .settings-workspace { grid-template-columns:1fr; gap:24px; }.settings-navigation { position:static; flex-direction:row; overflow-x:auto; gap:4px; padding:0 0 8px; scrollbar-width:thin; }.settings-navigation button { white-space:nowrap; flex:0 0 auto; padding:10px 12px; }.settings-page>.page-heading { margin-bottom:20px; }.settings-navigation button .icon { width:16px!important; height:16px!important; }.settings-panel .account-facts { grid-template-columns:1fr; }.settings-signout { align-items:flex-start; }.settings-row { padding-block:20px; }.settings-group-heading { margin-bottom:18px; } }
+
+/* One category at a time on phones; the full list lives in a compact sheet. */
+.settings-content { container:settings / inline-size; }
+.settings-navigation { top:92px; }
+.settings-navigation button { min-height:46px; }
+.settings-section-picker { width:100%; display:flex; align-items:center; gap:12px; min-height:54px; padding:8px 14px 8px 10px; margin-bottom:24px; border:1px solid var(--line); border-radius:12px; background:var(--bg); color:var(--text); text-align:left; font:550 .98rem/1.4 var(--font-ui); }
+.settings-section-picker>.icon:last-child { margin-left:auto; color:var(--muted); flex:none; }
+.settings-section-symbol,.settings-category-icon { width:34px; height:34px; display:grid; place-items:center; flex:none; border-radius:9px; background:var(--surface); color:var(--muted); }
+.settings-section-symbol { background:var(--tint); color:var(--accent-text); }
+.settings-category-list { display:flex; flex-direction:column; gap:4px; }
+.settings-category-list button { display:flex; align-items:center; gap:12px; width:100%; min-height:56px; padding:9px 12px; border:0; border-radius:10px; background:transparent; color:var(--text); text-align:left; font:500 .95rem var(--font-ui); }
+.settings-category-list button>.icon:last-child { margin-left:auto; color:var(--muted); }
+.settings-category-list button:hover { background:var(--surface); }
+.settings-category-list button[aria-current=page] { background:var(--tint); color:var(--accent-text); }
+.settings-category-list button[aria-current=page]>.icon:last-child { color:var(--accent-text); }
+.settings-category-list button[aria-current=page] .settings-category-icon { background:var(--bg); color:var(--accent-text); }
+.settings-panel .profile-details-card.card { padding:0; border:0; }
+.settings-panel .profile-details-card .section-title { font:550 1.08rem/1.45 var(--font-ui); margin-bottom:8px; }
+.settings-panel .profile-details-card form.stack { max-width:none; }
+.settings-panel .profile-details-card .form-actions { margin-top:4px; justify-content:flex-start; }
+.settings-panel .profile-details-card .form-actions>.button { width:auto; }
+.settings-panel .profile-identity { margin-bottom:28px; }
+.settings-panel .settings-account-panel .account-page { gap:28px; }
+.settings-signout { padding-block:24px 8px; border-top:1px solid var(--line); }
+.settings-switch { width:44px; height:26px; }
+.settings-switch>span::after { width:20px; height:20px; }
+.settings-switch input:checked+span::after { transform:translateX(18px); }
+.settings-row-control select { min-height:44px; }
+@media(max-width:760px) { .settings-navigation { display:none; }.settings-workspace { gap:0; }.settings-panel .profile-identity { margin-bottom:24px; }.settings-signout { gap:16px; }.settings-signout p { font-size:.83rem; line-height:1.5; }.settings-signout .button { min-height:44px; padding-inline:12px; } }
+@media(max-width:360px) { .settings-signout { align-items:stretch; flex-direction:column; }.settings-signout .button { align-self:flex-start; }.settings-section-picker { margin-bottom:20px; } }
+
+@media(max-width:600px) { .settings-panel form.stack>.form-actions .button { width:100%; }.settings-panel .account-card-heading { gap:10px; } }

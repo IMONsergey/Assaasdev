@@ -1,8 +1,8 @@
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ApiError } from '../../api';
 import { useApp } from '../../app/AppProvider';
-import { Alert, Button, ConfirmDialog, EmptyState, Icon, PageHeader, Skeleton } from '../../components/ui';
+import { Alert, Button, ConfirmDialog, Dialog, EmptyState, Icon, PageHeader, Skeleton } from '../../components/ui';
 import { errorMessage } from '../../lib/format';
 import { useTabOverflow } from '../../lib/tab-overflow';
 import { ProfilePanel, SecurityPanel, SessionsPanel, TeamPanel } from '../account/AccountPage';
@@ -41,10 +41,19 @@ export function SettingsPage() {
   const requested = params.get('section') === 'account' ? 'profile' : params.get('section');
   const section: SettingsSection = sections.find(item => item.id === requested)?.id ?? 'appearance';
   const { ref: navigation, overflow } = useTabOverflow(section);
+  const activeSection = sections.find(item => item.id === section)!;
+  const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
+  const sectionChoices = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sectionPickerOpen) return;
+    let active = true;
+    queueMicrotask(() => { if (active) sectionChoices.current?.querySelector<HTMLButtonElement>('[aria-current="page"]')?.focus({ preventScroll: true }); });
+    return () => { active = false; };
+  }, [sectionPickerOpen]);
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 760px)');
-    const update = () => setMobile(query.matches);
+    const update = () => { setMobile(query.matches); if (!query.matches) setSectionPickerOpen(false); };
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
@@ -65,20 +74,22 @@ export function SettingsPage() {
   }
   return <div className="settings-page">
     <PageHeader title="Settings" />
+    {mobile && <button type="button" className="settings-section-picker" data-onboarding="settings-sections" aria-label={`Choose settings section: ${activeSection.label}`} aria-haspopup="dialog" aria-expanded={sectionPickerOpen} onClick={() => setSectionPickerOpen(true)}><span className="settings-section-symbol"><Icon name={activeSection.icon} size={20} /></span><span>{activeSection.label}</span><Icon name="chevron-down" size={18} /></button>}
+    <Dialog open={sectionPickerOpen} onClose={() => setSectionPickerOpen(false)} title="Settings categories" size="sm" className="settings-category-dialog"><div ref={sectionChoices} className="settings-category-list">{sections.map(item => <button key={item.id} type="button" aria-current={section === item.id ? 'page' : undefined} onClick={() => { selectSection(item.id); setSectionPickerOpen(false); }}><span className="settings-category-icon"><Icon name={item.icon} size={20} /></span><span>{item.label}</span><Icon name={section === item.id ? 'check' : 'chevron-right'} size={18} /></button>)}</div></Dialog>
     <div className="settings-workspace">
-      <div ref={navigation} data-tab-overflow={overflow} className="settings-navigation" role="tablist" aria-label="Settings categories" aria-orientation={mobile ? 'horizontal' : 'vertical'} onKeyDown={navigateTabs}>{sections.map(item => <button key={item.id} id={`settings-tab-${item.id}`} type="button" role="tab" aria-selected={section === item.id} aria-controls={`settings-panel-${item.id}`} tabIndex={section === item.id ? 0 : -1} onClick={() => selectSection(item.id)}><Icon name={item.icon} size={18} />{item.label}</button>)}</div>
+      <div ref={navigation} data-tab-overflow={overflow} className="settings-navigation" role="tablist" aria-label="Settings categories" aria-orientation="vertical" onKeyDown={navigateTabs}>{sections.map(item => <button key={item.id} id={`settings-tab-${item.id}`} type="button" role="tab" aria-selected={section === item.id} aria-controls={`settings-panel-${item.id}`} tabIndex={section === item.id ? 0 : -1} onClick={() => selectSection(item.id)}><Icon name={item.icon} size={18} />{item.label}</button>)}</div>
       <div className="settings-content">
         <section className="settings-panel" id="settings-panel-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance" hidden={section !== 'appearance'}>
       <div className="settings-group settings-theme-group">
         <div className="settings-group-heading"><h2>Color theme</h2></div>
-        <div className="theme-options" role="group" aria-label="Color theme">
+        <div className="theme-options" data-onboarding="theme-options" role="group" aria-label="Color theme">
           {themes.map(theme => <button key={theme.id} type="button" className={`theme-option${preferences.theme === theme.id ? ' is-selected' : ''}`} aria-label={`${theme.label} theme`} aria-pressed={preferences.theme === theme.id} onClick={() => setPreferences({ theme: theme.id })}>
             <span className={`theme-preview theme-preview--${theme.id}`} aria-hidden="true">
               <span className="theme-preview-nav"><i /><i /><i /></span>
               <span className="theme-preview-body"><i /><i /><span><b /></span></span>
             </span>
             <span className="theme-option-heading">{theme.label}<span className="theme-radio">{preferences.theme === theme.id && <Icon name="check" size={12} />}</span></span>
-            <small>{theme.description}</small>
+
           </button>)}
         </div>
       </div>
@@ -94,13 +105,13 @@ export function SettingsPage() {
           <label className="settings-switch"><input id="settings-reduce-motion" type="checkbox" role="switch" aria-describedby="settings-reduce-motion-description" checked={preferences.reducedMotion} onChange={event => setPreferences({ reducedMotion: event.target.checked })} /><span aria-hidden="true" /></label>
         </SettingsRow>
       </div>
-      <footer className="settings-footer"><p>Saved automatically on this device.</p><Button variant="ghost" size="sm" onClick={() => { setPreferences({ theme: 'light', density: 'comfortable', fontScale: 100, reducedMotion: false }); toast('Default appearance restored.'); }}>Restore defaults</Button></footer>
+      <footer className="settings-footer"><p>Saved on this device.</p><Button variant="ghost" size="sm" onClick={() => { setPreferences({ theme: 'light', density: 'comfortable', fontScale: 100, reducedMotion: false, navigationCollapsed: false }); toast('Default appearance restored.'); }}>Restore defaults</Button></footer>
         </section>
         {(['profile', 'security', 'sessions', 'team'] as const).map(id => <section key={id} className="settings-panel settings-account-panel" id={`settings-panel-${id}`} role="tabpanel" aria-labelledby={`settings-tab-${id}`} hidden={section !== id}>
           {(visited.has(id) || section === id) && (session.status === 'loading' ? <Skeleton rows={3} /> : session.status !== 'authenticated' || !user ? <EmptyState title="Account settings" icon={<Icon name="user" size={26} />} description="Sign in to manage your profile and access." actions={<Link className="button" to={`/auth/login?returnTo=${encodeURIComponent('/settings?section=' + id)}`}>Sign in</Link>} /> : <div className="account-page stack">{id === 'profile' ? <><ProfilePanel user={user} /><SignOut /></> : id === 'security' ? <SecurityPanel user={user} /> : id === 'sessions' ? <SessionsPanel /> : <TeamPanel user={user} />}</div>)}
         </section>)}
         <section className="settings-panel" id="settings-panel-workspace" role="tabpanel" aria-labelledby="settings-tab-workspace" hidden={section !== 'workspace'}>
-          <div className="settings-group-heading"><h2>Workspace</h2></div>
+          <div className="settings-group-heading"><h2>Preferences & connections</h2></div>
           <div className="settings-controls-group">
             <SettingsRow title="Language"><span className="settings-static-value">English</span></SettingsRow>
             <SettingsRow title="Connection"><div className="settings-connection-actions"><span className={`settings-connection-state${connectionStatus === 'open' ? ' is-connected' : ''}`}>{connectionStatus === 'open' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting' : 'Offline'}</span><Button variant="secondary" size="sm" loading={checkingConnection} onClick={async () => { setCheckingConnection(true); try { await refreshSession(); toast('Connection checked.', 'success'); } catch (error) { toast(errorMessage(error), 'error'); } finally { setCheckingConnection(false); } }}>Check connection</Button></div></SettingsRow>

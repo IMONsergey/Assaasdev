@@ -50,7 +50,7 @@ test('tracked crypto activity preserves exact amounts and never grants access fr
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect(await page.locator('.billing-metric').allTextContents()).toEqual(before);
-  await expect(page.locator('.page-description')).toContainText('Current plan: Business');
+  await expect(page.locator('.billing-current-plan')).toHaveText('Business');
   expect(frames.filter(type => ['confirm_payment', 'init_checkout', 'get_address', 'pay_with_balance'].includes(type))).toEqual([]);
   expect(errors).toEqual([]);
 });

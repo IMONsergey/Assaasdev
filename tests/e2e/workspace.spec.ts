@@ -142,7 +142,8 @@ test('view preferences survive reload and leave no account data in local storage
   await expect(page.getByLabel('Text size')).toHaveValue('125');
   await expect(page.getByRole('switch', { name: 'Reduce interface motion', exact: true })).toBeChecked();
   const storage = await page.evaluate(() => ({ keys: Object.keys(localStorage), values: Object.values(localStorage).join('') }));
-  expect(storage.keys).toEqual(['apcosys.view.v1']);
+  expect(storage.keys).toContain('apcosys.view.v1');
+  expect(storage.keys.every(key => key === 'apcosys.view.v1' || /^apcosys\.avatar\.v1:[a-f0-9]{16}$/.test(key))).toBe(true);
   expect(storage.values).not.toMatch(/alex|api_key|session_id|backup|password|full_text_search/i);
   await page.screenshot({ path: test.info().outputPath('settings-dark-large-text-1440.png'), fullPage: false });
   await page.setViewportSize({ width: 390, height: 844 });

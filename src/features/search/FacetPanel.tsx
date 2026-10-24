@@ -6,10 +6,21 @@ import { useApp } from '../../app/AppProvider';
 import { Alert, Button, Checkbox, Dialog, EmptyState, Field, Icon, Skeleton } from '../../components/ui';
 import { FACET_NAMES, facetTitle, facetUnit } from './model';
 import { CountryFlag } from '../../components/CountryFlag';
-import { TechnologyMark } from '../../components/TechnologyMark';
+import { ProtocolMark, TechnologyMark } from '../../components/TechnologyMark';
 
 const FACET_PAGE_SIZE = 50;
 const FACET_OVERVIEW_SIZE = 5;
+
+function FacetMark({ field, value }: { field: string; value: string }) {
+  if (field === 'country_name') return <CountryFlag name={value} />;
+  if (field === 'country_code') return <CountryFlag code={value} />;
+  if (field === 'products' || field === 'vendors') return <TechnologyMark name={value} size={18} />;
+  if (field === 'os') return <TechnologyMark name={value} kind="os" size={18} />;
+  if (field === 'org') return <TechnologyMark name={value} kind="provider" size={18} />;
+  if (field === 'protocol') return <ProtocolMark protocol={value} size={16} />;
+  if (field === 'type') return <Icon name={value.toLowerCase() === 'domain' ? 'globe' : 'server'} size={16} />;
+  return null;
+}
 
 function FacetValues({ facet, selected, disabled, shared, onSelect }: { facet: FacetData; selected: string[]; disabled: boolean; shared: boolean; onSelect: (field: string, value: string) => void }) {
   const headingId = useId();
@@ -40,13 +51,13 @@ function FacetValues({ facet, selected, disabled, shared, onSelect }: { facet: F
   const start = (currentPage - 1) * pageSize;
   const shown = filtered.slice(start, start + pageSize);
   const max = values.reduce((highest, value) => Math.max(highest, value.count || 0), 0);
-  return <section className="search-facet" aria-labelledby={headingId}>
+  return <section className={`search-facet${browsing ? ' search-facet--browsing' : ''}`} aria-labelledby={headingId}>
     <div className="search-facet-title"><h3 id={headingId}><Icon name={facet.facet_name.includes('country') ? 'globe' : facet.facet_name === 'org' ? 'users' : facet.facet_name.includes('product') || facet.facet_name.includes('vendor') ? 'package' : facet.facet_name === 'port' ? 'server' : 'chart'} size={17} />{title}</h3><span>{facetUnit(facet.facet_name)}</span></div>
     {(values.length > 10 || query) && <Field className="search-facet-search" type="search" label={`Search ${title.toLowerCase()} values`} value={query} placeholder={`Search ${values.length.toLocaleString()} values`} onChange={event => { setQuery(event.target.value); setPage(1); setExpanded(true); }} />}
     {selected.length > 0 && <button type="button" className="search-facet-selection" aria-pressed={selectedOnly} onClick={() => { setSelectedOnly(!selectedOnly); setPage(1); }}>Selected ({selected.length.toLocaleString()})</button>}
     <div className="search-facet-values">
       {shown.map(value => <div key={value.key} className="search-facet-item">
-        <button type="button" disabled={disabled} aria-pressed={selection.has(value.key)} title={shared ? 'This shared search is fixed. Start your own search to change it.' : `${selection.has(value.key) ? 'Remove' : 'Add'} ${value.key} filter`} onClick={() => onSelect(facet.facet_name, value.key)}><span>{selection.has(value.key) && <Icon name="check" size={13} />}{facet.facet_name === 'country_name' && <CountryFlag name={value.key} />}{facet.facet_name === 'country_code' && <CountryFlag code={value.key} />}{(facet.facet_name === 'products' || facet.facet_name === 'vendors') && <TechnologyMark name={value.key} size={18} />}{value.key}</span><strong title={value.count === null ? 'Count not returned' : undefined}>{value.count === null ? '—' : value.count.toLocaleString()}</strong></button>
+        <button type="button" disabled={disabled} aria-pressed={selection.has(value.key)} title={shared ? 'This shared search is fixed. Start your own search to change it.' : `${selection.has(value.key) ? 'Remove' : 'Add'} ${value.key} filter`} onClick={() => onSelect(facet.facet_name, value.key)}><span>{selection.has(value.key) && <Icon name="check" size={13} />}<FacetMark field={facet.facet_name} value={value.key} />{value.key}</span><strong title={value.count === null ? 'Count not returned' : undefined}>{value.count === null ? '—' : value.count.toLocaleString()}</strong></button>
         <div className="search-facet-track" aria-hidden="true"><span style={{ width: `${max && value.count !== null ? value.count / max * 100 : 0}%` }} /></div>
       </div>)}
     </div>
@@ -105,7 +116,7 @@ export function FacetPanel({ facets, pending, error, onSelect, onRetry, disabled
   async function reconcile() { try { await refreshSession(); save.reset(); setSettingsOpen(false); toast('Settings refreshed. Review them before another change.', 'info'); } catch (cause) { toast(cause instanceof Error ? cause.message : 'Account settings could not be refreshed.', 'error'); } }
   return <aside className="search-facets" aria-label="Result analytics">
     <div className="search-facets-heading">
-      <div><h2>{loaded ? 'Search breakdown' : 'Analytics'}</h2>{loaded && <p>Applied search</p>}</div>
+      <div><h2>{loaded ? 'Search breakdown' : 'Explore your results'}</h2></div>
       <div ref={analyticsActions} className="cluster">{!shared && <Button className="search-analytics-settings" variant="ghost" size="sm" aria-label="Analytics settings" onClick={openSettings}><Icon name="settings" size={16} /><span className="search-analytics-settings-label">Settings</span></Button>}{loaded && <Button variant="secondary" size="sm" loading={pending} disabled={loadDisabled} aria-label="Reload analytics" title={loadDisabled ? 'Apply or cancel changes first' : shared ? 'Uses another link use' : 'Uses analytics credits'} onClick={onRetry}><Icon name="refresh" size={16} />Reload</Button>}</div>
     </div>
     {!loaded && !pending && !error && <div className="search-analytics-start"><span className="search-analytics-symbol"><Icon name="chart" size={30} /></span><h3>Understand the matching hosts</h3><p>Compare countries, networks, ports and products.</p><Button disabled={loadDisabled} onClick={event => { initialLoadFocus.current = document.activeElement === event.currentTarget ? requestKey : null; onLoad(); }} title={loadDisabled ? 'Apply or cancel changes first' : undefined}>Load analytics</Button><small>{loadDisabled ? 'Apply or cancel your changes to continue.' : shared ? 'Uses one link use and the creator’s access.' : 'Uses analytics credits.'}</small></div>}

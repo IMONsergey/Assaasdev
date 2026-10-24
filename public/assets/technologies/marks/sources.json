@@ -1,0 +1,247 @@
+{
+  "collection": "Simple Icons",
+  "version": "16.35.0",
+  "commit": "ed9a5192b24ad2f169bf1009931da0df27d5a49a",
+  "source": "https://github.com/simple-icons/simple-icons/tree/ed9a5192b24ad2f169bf1009931da0df27d5a49a",
+  "icons": [
+    {
+      "slug": "linux",
+      "title": "Linux",
+      "hex": "FCC624",
+      "source": "https://www.linuxfoundation.org/the-linux-mark/"
+    },
+    {
+      "slug": "ubuntu",
+      "title": "Ubuntu",
+      "hex": "E95420",
+      "source": "https://design.ubuntu.com/resources",
+      "guidelines": "https://design.ubuntu.com/brand"
+    },
+    {
+      "slug": "debian",
+      "title": "Debian",
+      "hex": "A81D33",
+      "source": "https://www.debian.org/logos",
+      "guidelines": "https://www.debian.org/logos/",
+      "license": {
+        "type": "CC-BY-SA-3.0"
+      }
+    },
+    {
+      "slug": "freebsd",
+      "title": "FreeBSD",
+      "hex": "AB2B28",
+      "source": "https://www.freebsdfoundation.org/about/project/"
+    },
+    {
+      "slug": "alpinelinux",
+      "title": "Alpine Linux",
+      "hex": "0D597F",
+      "source": "https://alpinelinux.org"
+    },
+    {
+      "slug": "cloudflare",
+      "title": "Cloudflare",
+      "hex": "F38020",
+      "source": "https://www.cloudflare.com/logo/",
+      "guidelines": "https://www.cloudflare.com/trademark/"
+    },
+    {
+      "slug": "googlecloud",
+      "title": "Google Cloud",
+      "hex": "4285F4",
+      "source": "https://cloud.google.com"
+    },
+    {
+      "slug": "googlecloudstorage",
+      "title": "Google Cloud Storage",
+      "hex": "AECBFA",
+      "source": "https://cloud.google.com/icons",
+      "guidelines": "https://about.google/brand-resource-center"
+    },
+    {
+      "slug": "digitalocean",
+      "title": "DigitalOcean",
+      "hex": "0080FF",
+      "source": "https://www.digitalocean.com/press/",
+      "guidelines": "https://www.digitalocean.com/press/"
+    },
+    {
+      "slug": "hetzner",
+      "title": "Hetzner",
+      "hex": "D50C2D",
+      "source": "https://www.hetzner.com"
+    },
+    {
+      "slug": "akamai",
+      "title": "Akamai",
+      "hex": "0096D6",
+      "source": "https://www.akamai.com"
+    },
+    {
+      "slug": "cisco",
+      "title": "Cisco",
+      "hex": "1BA0D7",
+      "source": "https://www.cisco.com"
+    },
+    {
+      "slug": "caddy",
+      "title": "Caddy",
+      "hex": "1F88C0",
+      "source": "https://caddyserver.com"
+    },
+    {
+      "slug": "mysql",
+      "title": "MySQL",
+      "hex": "4479A1",
+      "source": "https://www.mysql.com/about/legal/logos.html",
+      "guidelines": "https://www.mysql.com/about/legal/logos.html"
+    },
+    {
+      "slug": "mariadb",
+      "title": "MariaDB",
+      "hex": "003545",
+      "source": "https://mariadb.com/about-us/logos/",
+      "guidelines": "https://mariadb.com/about-us/logos/"
+    },
+    {
+      "slug": "mongodb",
+      "title": "MongoDB",
+      "hex": "47A248",
+      "source": "https://www.mongodb.com/pressroom"
+    },
+    {
+      "slug": "redis",
+      "title": "Redis",
+      "hex": "FF4438",
+      "source": "https://redis.io/brand-guidelines",
+      "guidelines": "https://redis.io/brand-guidelines"
+    },
+    {
+      "slug": "elasticsearch",
+      "title": "Elasticsearch",
+      "hex": "005571",
+      "source": "https://www.elastic.co/brand"
+    },
+    {
+      "slug": "docker",
+      "title": "Docker",
+      "hex": "2496ED",
+      "source": "https://www.docker.com/company/newsroom/media-resources"
+    },
+    {
+      "slug": "kubernetes",
+      "title": "Kubernetes",
+      "hex": "326CE5",
+      "source": "https://github.com/kubernetes/kubernetes/tree/cac53883f4714452f3084a22e4be20d042a9df33/logo"
+    },
+    {
+      "slug": "grafana",
+      "title": "Grafana",
+      "hex": "F46800",
+      "source": "https://grafana.com"
+    },
+    {
+      "slug": "gitlab",
+      "title": "GitLab",
+      "hex": "FC6D26",
+      "source": "https://about.gitlab.com/press/press-kit/",
+      "guidelines": "https://about.gitlab.com/handbook/marketing/corporate-marketing/brand-activation/trademark-guidelines/"
+    },
+    {
+      "slug": "wordpress",
+      "title": "WordPress",
+      "hex": "21759B",
+      "source": "https://wordpress.org/about/logos",
+      "guidelines": "https://wordpressfoundation.org/trademark-policy"
+    },
+    {
+      "slug": "php",
+      "title": "PHP",
+      "hex": "777BB4",
+      "source": "https://php.net/download-logos.php",
+      "license": {
+        "type": "CC-BY-SA-4.0"
+      }
+    },
+    {
+      "slug": "nodedotjs",
+      "title": "Node.js",
+      "hex": "5FA04E",
+      "source": "https://nodejs.org/en/about/branding",
+      "guidelines": "https://nodejs.org/en/about/branding"
+    },
+    {
+      "slug": "python",
+      "title": "Python",
+      "hex": "3776AB",
+      "source": "https://www.python.org/community/logos/",
+      "guidelines": "https://www.python.org/community/logos/"
+    },
+    {
+      "slug": "openssl",
+      "title": "OpenSSL",
+      "hex": "721412",
+      "source": "https://www.openssl.org"
+    },
+    {
+      "slug": "openvpn",
+      "title": "OpenVPN",
+      "hex": "EA7E20",
+      "source": "https://openvpn.net",
+      "guidelines": "https://openvpn.net/legal"
+    },
+    {
+      "slug": "apachetomcat",
+      "title": "Apache Tomcat",
+      "hex": "F8DC75",
+      "source": "https://apache.org/logos",
+      "guidelines": "https://www.apache.org/foundation/marks",
+      "license": {
+        "type": "Apache-2.0"
+      }
+    },
+    {
+      "slug": "rabbitmq",
+      "title": "RabbitMQ",
+      "hex": "FF6600",
+      "source": "https://www.rabbitmq.com",
+      "guidelines": "https://www.rabbitmq.com/trademark-guidelines.html"
+    },
+    {
+      "slug": "centos",
+      "title": "CentOS",
+      "hex": "262577",
+      "source": "https://wiki.centos.org/ArtWork/Brand/Logo"
+    },
+    {
+      "slug": "redhat",
+      "title": "Red Hat",
+      "hex": "EE0000",
+      "source": "https://www.redhat.com/en/about/brand/new-brand/details"
+    },
+    {
+      "slug": "fedora",
+      "title": "Fedora",
+      "hex": "51A2DA",
+      "source": "https://docs.fedoraproject.org/en-US/project/brand/",
+      "guidelines": "https://fedoraproject.org/wiki/Legal:Trademark_guidelines",
+      "license": {
+        "type": "custom",
+        "url": "https://docs.fedoraproject.org/en-US/project/brand/"
+      }
+    },
+    {
+      "slug": "google",
+      "title": "Google",
+      "hex": "4285F4",
+      "source": "https://partnermarketinghub.withgoogle.com",
+      "guidelines": "https://about.google/brand-resource-center/brand-elements/",
+      "aliases": {
+        "loc": {
+          "ko-KR": "\uad6c\uae00"
+        }
+      }
+    }
+  ]
+}

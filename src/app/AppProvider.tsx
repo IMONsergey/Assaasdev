@@ -8,7 +8,7 @@ import { ToastRegion } from '../components/ToastRegion';
 
 export type SessionStatus = 'loading' | 'anonymous' | 'guest' | 'authenticated' | 'pending-2fa' | 'error';
 export interface Session { status: SessionStatus; user: Profile | null; error?: string }
-export interface Preferences { theme: 'light' | 'dark' | 'system'; density: 'comfortable' | 'compact'; language: 'en' | 'ru'; fontScale: 100 | 112 | 125; reducedMotion: boolean }
+export interface Preferences { theme: 'light' | 'dark' | 'system'; density: 'comfortable' | 'compact'; language: 'en' | 'ru'; fontScale: 100 | 112 | 125; reducedMotion: boolean; navigationCollapsed: boolean }
 interface Toast { id: string; message: string; tone: 'success' | 'error' | 'info' }
 interface AppContextValue {
   api: ApiClient; session: Session; user: Profile | null; refreshSession: () => Promise<void>; setPending2fa: () => void;
@@ -19,14 +19,14 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 const api = config.dataMode === 'demo' ? createDemoApi() : createApiClient({ apiBaseUrl: config.apiBaseUrl, wsUrl: config.wsUrl });
 const PREFS_KEY = 'apcosys.view.v1';
-const defaults: Preferences = { theme: 'light', density: 'comfortable', language: 'en', fontScale: 100, reducedMotion: false };
+const defaults: Preferences = { theme: 'light', density: 'comfortable', language: 'en', fontScale: 100, reducedMotion: false, navigationCollapsed: false };
 function readPreferences(): Preferences {
   try {
     const value = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
     const savedTheme = ['light', 'dark', 'system'].includes(value.theme) ? value.theme : defaults.theme;
     // The previous default was automatically persisted as System. Migrate that legacy default once.
     const theme = savedTheme === 'system' && value.appearanceVersion !== 2 ? defaults.theme : savedTheme;
-    return { theme, density: value.density === 'compact' ? 'compact' : 'comfortable', language: 'en', fontScale: [100, 112, 125].includes(value.fontScale) ? value.fontScale : 100, reducedMotion: value.reducedMotion === true };
+    return { theme, density: value.density === 'compact' ? 'compact' : 'comfortable', language: 'en', fontScale: [100, 112, 125].includes(value.fontScale) ? value.fontScale : 100, reducedMotion: value.reducedMotion === true, navigationCollapsed: value.navigationCollapsed === true };
   } catch { return defaults; }
 }
 export function AppProvider({ children }: { children: ReactNode }) {

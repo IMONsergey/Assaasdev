@@ -1,6 +1,7 @@
 import { findScenario, type ScenarioTarget } from './catalog';
 
-export interface GuideState { id: string; index: number; minimized: boolean; finished: boolean }
+export type StepOutcome = 'observed' | 'reviewed' | 'skipped';
+export interface GuideState { id: string; index: number; minimized: boolean; finished: boolean; progress?: (StepOutcome | null)[] }
 export type RememberedLocations = Partial<Record<'search' | 'host' | 'files', string>>;
 
 export function parseGuideState(value: unknown): GuideState | null {
@@ -8,7 +9,16 @@ export function parseGuideState(value: unknown): GuideState | null {
   const state = value as Partial<GuideState>;
   const scenario = findScenario(state.id);
   if (!scenario || !Number.isInteger(state.index) || state.index! < 0 || state.index! >= scenario.steps.length) return null;
-  return { id: scenario.id, index: state.index!, minimized: state.minimized === true, finished: state.finished === true };
+  const progress = Array.isArray(state.progress) && state.progress.length === scenario.steps.length && state.progress.every(item => item === null || ['observed','reviewed','skipped'].includes(item)) ? state.progress : Array.from({length:scenario.steps.length},(_,index)=>state.finished === true || index < state.index! ? 'skipped' as const : null);
+  // The previous hint-only guide had no observed actions. Preserve its place,
+  // but never promote legacy Next clicks to verified walkthrough completion.
+  return { id: scenario.id, index: state.index!, minimized: state.minimized === true, finished: state.finished === true, progress };
+}
+export function recordStepOutcome(state: GuideState, count: number, outcome: StepOutcome): GuideState {
+  const progress = Array.from({length:count},(_,index)=>state.progress?.[index] ?? null);
+  // Revisiting a verified action must not downgrade its actual observation.
+  progress[state.index] = progress[state.index] === 'observed' ? 'observed' : outcome;
+  return {...state,progress};
 }
 export function scenarioArea(pathname: string): keyof RememberedLocations | null {
   if (/^\/(?:private\/)?hosts\//.test(pathname)) return 'host';

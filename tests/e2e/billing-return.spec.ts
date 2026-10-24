@@ -59,7 +59,7 @@ test('annual Plus selection survives login and opens review without starting a p
   await expect(review.getByLabel('Payment method', { exact: true })).toHaveValue('card');
   await expect(review.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
   await expect.poll(() => frames.some(frame => frame.type === 'user_billing')).toBe(true);
-  await expect(page.locator('.page-description')).toContainText('Current plan: Free');
+  await expect(page.locator('.billing-current-plan')).toHaveText('Free');
   expect(writes).toEqual(expectedLogin());
   expect(frames.filter(frame => frame.type !== 'user_billing')).toEqual([]);
 });
@@ -87,7 +87,7 @@ test('credit pack selection survives login as the same one-off review without st
   await expect(review.getByLabel('Payment method', { exact: true })).toHaveValue('card');
   await expect(review.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
   await expect.poll(() => frames.some(frame => frame.type === 'user_billing')).toBe(true);
-  await expect(page.locator('.page-description')).toContainText('Current plan: Free');
+  await expect(page.locator('.billing-current-plan')).toHaveText('Free');
   expect(writes).toEqual(expectedLogin());
   expect(frames.filter(frame => frame.type !== 'user_billing')).toEqual([]);
 });
@@ -133,7 +133,7 @@ test('browser Back restores the plan review without reusing a different order ch
   await expect(planReview.getByLabel('Apply an eligible automatic discount', { exact: true })).not.toBeChecked();
   await expect(planReview.getByLabel('Payment method', { exact: true })).toHaveValue('card');
   await expect(planReview.getByRole('button', { name: 'Create secure checkout', exact: true })).toBeEnabled();
-  await expect(page.locator('.page-description')).toContainText('Current plan: Free');
+  await expect(page.locator('.billing-current-plan')).toHaveText('Free');
   expect(writes).toEqual([]);
   expect(frames.filter(frame => frame.type !== 'user_billing')).toEqual(operations);
 });

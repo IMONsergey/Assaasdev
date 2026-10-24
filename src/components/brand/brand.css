@@ -17,13 +17,13 @@
 .price-digit__reel > span { display:block; height:1.15em; line-height:1.15em; }
 .price-symbol::before,.price-digit__reel > span::before { content:attr(data-numeral); }
 
-.double-button { --double-height:var(--control-height,44px); --double-bg:var(--accent-text); --double-hover:#037a8f; --double-color:#fff; display:inline-flex; align-items:stretch; justify-content:flex-start; gap:2px; padding:0; border:0; background:transparent; color:var(--double-color); min-height:var(--double-height); max-width:100%; font:inherit; font-size:14px; line-height:20px; font-weight:500; text-align:left; text-decoration:none; border-radius:8px; cursor:pointer; transition:filter 180ms ease,box-shadow 180ms ease; }
+.double-button { --double-height:var(--control-height,44px); --double-bg:var(--accent-text); --double-hover:#037a8f; --double-color:#fff; display:inline-flex; align-items:stretch; justify-content:flex-start; gap:0; padding:0; border:0; background:transparent; color:var(--double-color); min-height:var(--double-height); max-width:100%; font:inherit; font-size:14px; line-height:20px; font-weight:500; text-align:left; text-decoration:none; border-radius:8px; cursor:pointer; transition:filter 180ms ease,box-shadow 180ms ease,transform 180ms ease; }
 .double-button__label,.double-button__icon { display:flex; align-items:center; justify-content:center; background:var(--double-bg); border-radius:8px; transition:background-color 180ms ease,color 180ms ease; }
 .double-button__label { min-height:var(--double-height); min-width:0; flex:1; padding:11px 16px; text-align:center; }
 .double-button__icon { width:var(--double-height); flex:0 0 var(--double-height); }
 .double-button__icon > svg { flex:none; transition:transform 220ms cubic-bezier(.2,.7,.3,1); }
 .double-button--full { width:100%; }
-.double-button--compact { --double-height:42px; }
+.double-button--compact { --double-height:44px; }
 .double-button--compact .double-button__label { padding-block:10px; }
 .double-button--secondary { --double-bg:var(--surface); --double-hover:var(--surface-hover); --double-color:var(--text); }
 .double-button:disabled { opacity:.5; cursor:not-allowed; }

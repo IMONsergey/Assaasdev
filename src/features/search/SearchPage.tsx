@@ -10,6 +10,8 @@ import { FacetPanel } from './FacetPanel';
 import { SearchAutocomplete } from './SearchAutocomplete';
 import { DotCascade, DoubleButton, OrbCubeLoader } from '../../components/brand';
 import { CountryFlag } from '../../components/CountryFlag';
+import { ProtocolMark, TechnologyMark } from '../../components/TechnologyMark';
+import { labelGlyph } from '../../components/technology-marks';
 import { useFacets } from './useFacets';
 import { activeFacetValues, analyticsRequest, dateLabel, decodeSearch, encodeSearch, filterSummary, isShared, PAGE_CAPS, parseHostRows, searchPath, selectedType, searchAccessIssues, validateSearchRequest, withoutShareToken, withType, toggleFacet } from './model';
 import type { Dataset } from './model';
@@ -39,20 +41,24 @@ function ResultRow({ host, request, dataset, backTo }: { host: HostCard; request
   const path = `${dataset === 'private' ? '/private' : ''}/hosts/${encodeURIComponent(host.ip)}`;
   const href = `${path}?${params}`;
   const portHref = (port: number, protocol?: string) => { const next = new URLSearchParams(params); next.set('port', String(port)); if (protocol) next.set('protocol', protocol); return `${path}?${next}`; };
+  const servicesParams = new URLSearchParams(params); servicesParams.set('tab', 'services'); servicesParams.set('panel', 'list');
   const ports = host.open_ports;
   const observed = typeof host.uts === 'number' && Number.isFinite(host.uts) && !Number.isNaN(new Date(host.uts * 1000).getTime());
+  const protocols = [...new Set(ports?.map(port => port.protocol?.trim().toLowerCase()).filter((protocol): protocol is string => Boolean(protocol)))];
+  const date = observed ? new Date(host.uts! * 1000) : undefined;
+  const dateText = date?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  const timeText = date?.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
   return <article className="search-result-row" onClick={event => { if (event.defaultPrevented || (event.target as HTMLElement).closest('a,button,input,select,summary') || window.getSelection()?.toString()) return; if (event.metaKey || event.ctrlKey) window.open(href, '_blank', 'noopener'); else navigate(href); }}>
     <div className="search-result-address">
-      <Link className="search-result-ip" to={href}>{host.ip}<Icon name="arrow-up-right" size={15} /></Link>
-      <p>{host.org || <span className="muted" title="Organization not provided">—</span>}</p>
-      {(host.os || host.labels_list?.length) ? <div className="search-labels">{host.os && <span className="search-row-meta">{host.os}</span>}{host.labels_list?.slice(0, 2).map(label => <Badge key={label}>{label}</Badge>)}{host.labels_list && host.labels_list.length > 2 && <span className="muted" title={host.labels_list.slice(2).join(', ')}>+{host.labels_list.length - 2}</span>}</div> : null}
+      <div className="search-result-identity"><span className="search-network-mark"><TechnologyMark kind="provider" name={host.org} size={21} /></span><div><Link className="search-result-ip" to={href}><span>{host.ip}</span><Icon name="arrow-up-right" size={15} /></Link><p className="search-result-org">{host.org || <span className="muted" title="Organization not provided">—</span>}</p></div></div>
+      {(host.os || host.labels_list?.length) ? <div className="search-labels">{host.os && <span className="search-row-meta search-os"><TechnologyMark kind="os" name={host.os} size={15} />{host.os}</span>}{host.labels_list?.slice(0, 2).map(label => <Badge key={label}>{labelGlyph(label) && <Icon name={labelGlyph(label)!} size={12} />}{label}</Badge>)}{host.labels_list && host.labels_list.length > 2 && <span className="muted" title={host.labels_list.slice(2).join(', ')}>+{host.labels_list.length - 2}</span>}</div> : null}
     </div>
     <div className="search-result-services">
-      <div className="search-port-chips">{ports?.slice(0, 6).map((port, index) => <Link className="search-port-chip" key={`${port.port}-${port.protocol}-${index}`} to={portHref(port.port, port.protocol)} title={`View ${port.port}${port.protocol ? ` / ${port.protocol}` : ''}${shared ? ' using your own access' : ''}`}>{port.port}</Link>)}{ports && ports.length > 6 && <Link className="search-port-overflow" to={`${path}?${params}`}>+{ports.length - 6}</Link>}</div>
-      <p className="search-row-meta" title={ports === undefined ? 'Service list not provided' : undefined}>{ports === undefined ? '—' : ports.length === 0 ? '0 observed ports' : [...new Set(ports.map(port => port.protocol).filter(Boolean))].join(' · ') || `${ports.length} observed ports`}</p>
+      <div className="search-port-chips">{ports?.slice(0, 4).map((port, index) => <Link className="search-port-chip" key={`${port.port}-${port.protocol}-${index}`} to={portHref(port.port, port.protocol)} title={`View ${port.port}${port.protocol ? ` / ${port.protocol}` : ''}${shared ? ' using your own access' : ''}`}>{port.port}</Link>)}{ports && ports.length > 4 && <Link className="search-port-overflow" to={`${path}?${servicesParams}`} title={`View all ${ports.length.toLocaleString()} observed ports`}>+{ports.length - 4}<Icon name="chevron-right" size={12} /></Link>}</div>
+      {protocols.length ? <div className="search-protocols">{protocols.slice(0, 3).map(protocol => <span key={protocol}><ProtocolMark protocol={protocol} size={13} />{protocol}</span>)}{protocols.length > 3 && <span title={protocols.slice(3).join(', ')}>+{protocols.length - 3}</span>}</div> : <p className="search-row-meta" title={ports === undefined ? 'Service list not provided' : undefined}>{ports === undefined ? '—' : `${ports.length} observed ports`}</p>}
     </div>
     <div className="search-result-location"><p title={!host.country_code ? 'Location not provided' : undefined}><CountryFlag code={host.country_code} />{countryName(host.country_code)}</p>{(host.city_name || host.region) && <p className="search-row-meta">{[host.city_name, host.region].filter((value, index, list) => value && list.indexOf(value) === index).join(' · ')}</p>}</div>
-    <div className="search-result-observation"><time className="search-row-meta" dateTime={observed ? new Date(host.uts! * 1000).toISOString() : undefined} title={observed ? undefined : 'Observation time not provided'}>{observed ? dateLabel(host.uts) : '—'}</time></div>
+    <div className="search-result-observation"><Icon name="clock" size={14} /><time className="search-row-meta" dateTime={date?.toISOString()} title={observed ? dateLabel(host.uts) : 'Observation time not provided'}>{date ? <><span>{dateText}</span><small>{timeText} UTC</small></> : '—'}</time></div>
   </article>;
 }
 
@@ -65,6 +71,9 @@ export function SearchPage() {
   const dataset: Dataset = location.pathname.startsWith('/private/') || params.get('dataset') === 'private' ? 'private' : 'public';
   const scannerBack = /^\/scanner(?:\?|$)/.test(params.get('scanner_back') || '') ? params.get('scanner_back')! : '/scanner';
   const view = params.get('view') === 'analytics' ? 'analytics' : 'results';
+  // Guided navigation can restore a query without silently spending another credit.
+  // This intent lives only in router memory; the URL remains a normal shareable query.
+  const previewOnly = location.state?.onboardingPreviewOnly === true;
   const applied = parsed.request, appliedKey = JSON.stringify(applied), shared = isShared(applied);
   const [draft, setDraft] = useState<SearchRequest>(applied);
   const beforeEditor = useRef<SearchRequest>(applied);
@@ -95,7 +104,7 @@ export function SearchPage() {
   const pageLimitReached = hasAccess && !shared && page > maxPage;
   const canRequest = hasAccess && parsed.hasSearch && !parsed.error && !pageLimitReached && accessIssues.length === 0;
   const facetRequest = useMemo(() => analyticsRequest(applied), [appliedKey]);
-  const results = useQuery({ queryKey: ['search', principal, dataset, applied], enabled: canRequest, staleTime: Infinity, placeholderData: keepPreviousData, queryFn: async ({ signal }) => {
+  const results = useQuery({ queryKey: ['search', principal, dataset, applied], enabled: canRequest && !previewOnly, staleTime: Infinity, placeholderData: keepPreviousData, queryFn: async ({ signal }) => {
     const frame = await api.request<unknown>(dataset === 'private' ? 'private_hosts' : 'hosts', applied, { signal });
     return { ...parseHostRows(frame.data), metadata: frame.metadata, request: applied };
   } });
@@ -121,7 +130,7 @@ export function SearchPage() {
   function changeView(nextView: string) {
     const next = new URLSearchParams(window.location.search);
     if (nextView === 'analytics') next.set('view', 'analytics'); else next.delete('view');
-    navigate(`${location.pathname}?${next}`, { replace: true, state: { preserveTabFocus: true } });
+    navigate(`${location.pathname}?${next}`, { replace: true, state: { ...location.state, preserveTabFocus: true } });
   }
   function run(next: SearchRequest) {
     if (shared || isShared(next)) { setInputError('Start your own search to change this shared query.'); return; }
@@ -133,6 +142,11 @@ export function SearchPage() {
       setEditorOpen(false); setInputError('');
       if (editorOpen) requestAnimationFrame(() => document.getElementById('main-search-query')?.focus({ preventScroll: true }));
       if (JSON.stringify(normalized) === appliedKey && parsed.hasSearch) {
+        if (previewOnly) {
+          const state = { ...location.state }; delete state.onboardingPreviewOnly;
+          navigate(searchHref(normalized), { replace: true, state: { ...state, preserveTabFocus: true } });
+          return;
+        }
         if (view !== 'results') changeView('results');
         if (!results.isFetching) void results.refetch();
       } else navigate(searchHref(normalized));
@@ -182,10 +196,10 @@ export function SearchPage() {
     {canRequest && <>
       <div className="search-workspace-heading">
         <Tabs idPrefix="search-view" ariaLabel="Search views" items={[{ id: 'results', label: 'Results', icon: 'list' }, { id: 'analytics', label: 'Analytics', icon: 'chart' }]} value={view} onChange={changeView} />
-        <div className="search-result-actions"><Link className="search-action-link" to={relatedHref('/search/saved')}><Icon name="bookmark" size={17} /><span>Save</span></Link><Link className="search-action-link" to={relatedHref('/search/share')}><Icon name="link" size={17} /><span>Share</span></Link><Button variant="ghost" size="sm" disabled={shared || results.isFetching || !results.data?.hosts.length} onClick={() => setExportOpen(true)}><Icon name="download" size={17} /><span>Export</span></Button></div>
+        <div className="search-result-actions"><Link className="search-action-link" data-onboarding="save-query" to={relatedHref('/search/saved')}><Icon name="bookmark" size={17} /><span>Save</span></Link><Link className="search-action-link" data-onboarding="share-search" to={relatedHref('/search/share')}><Icon name="link" size={17} /><span>Share</span></Link><Button variant="ghost" size="sm" data-onboarding="export-search" disabled={shared || results.isFetching || !results.data?.hosts.length} onClick={() => setExportOpen(true)}><Icon name="download" size={17} /><span>Export</span></Button></div>
       </div>
       <TabPanel idPrefix="search-view" value="results" hidden={view !== 'results'} className="search-results-panel">
-        <div className="search-result-toolbar"><div className="search-result-count"><h1>{results.data ? `${results.data.hosts.length.toLocaleString()} hosts returned` : results.isPending ? 'Searching hosts' : 'Search results'}</h1><span>{results.isFetching && results.data ? <Spinner label="Updating results" /> : `Page ${page}`}</span></div><div className="search-result-controls">
+        <div className="search-result-toolbar"><div className="search-result-count"><h1>{results.data ? `${results.data.hosts.length.toLocaleString()} hosts returned` : previewOnly ? 'Search results' : results.isPending ? 'Searching hosts' : 'Search results'}</h1><span>{results.isFetching && results.data ? <Spinner label="Updating results" /> : `Page ${page}`}</span></div><div className="search-result-controls">
           <label>Sort <select value={sortValue} disabled={shared || results.isFetching || queryDirty} title={queryDirty ? 'Apply or cancel changes first' : undefined} onChange={event => { const [sort_field, sort_direction] = event.target.value.split(':'); run({ ...applied, sort_field, sort_direction, page: 1 }); }}><option value="uts:desc">Newest observation</option><option value="uts:asc">Oldest observation</option><option value="ip:asc">Address ascending</option><option value="ip:desc">Address descending</option>{!['uts:desc', 'uts:asc', 'ip:asc', 'ip:desc'].includes(sortValue) && <option value={sortValue}>{applied.sort_field} · {applied.sort_direction || 'desc'}</option>}</select></label>
           <label>Rows <select value={pageSize} disabled={shared || results.isFetching || queryDirty} title={queryDirty ? 'Apply or cancel changes first' : undefined} onChange={event => run({ ...applied, docs_per_page: Number(event.target.value), page: 1 })}>{[10, 20, 25, 50].map(size => <option key={size} value={size}>{size}</option>)}{![10, 20, 25, 50].includes(pageSize) && <option value={pageSize}>{pageSize}</option>}</select></label>
         </div></div>
@@ -193,11 +207,11 @@ export function SearchPage() {
         {results.error && <Alert tone="error" title={results.data ? 'Results could not be refreshed' : 'Search could not be completed'} actions={<Button variant="secondary" onClick={() => void results.refetch()}>Try again</Button>}>{results.error.message}</Alert>}
         {Boolean(results.data && (results.data.omittedCount || results.data.incompleteCount)) && <details className="search-data-note"><summary>Some returned data is incomplete</summary><p>{results.data!.omittedCount ? `${results.data!.omittedCount} records without a usable address could not be shown. ` : ''}{results.data!.incompleteCount ? 'Invalid fields have been left blank.' : ''}</p></details>}
         {Boolean(restriction?.hidden_fields?.length || restriction?.hidden_labels?.length) && <details className="search-data-note"><summary>Some details require a different plan</summary><p>{restriction?.hidden_fields?.length ? `Fields: ${restriction.hidden_fields.join(', ')}. ` : ''}{restriction?.hidden_labels?.length ? `Labels: ${restriction.hidden_labels.join(', ')}. ` : ''}<Link to="/billing">View plans</Link></p></details>}
-        <div className="search-results-list" aria-busy={results.isFetching}>
+        <div className="search-results-list" data-onboarding="search-results" data-ready={results.isSuccess && !results.isFetching && !previewOnly && !queryDirty ? 'true' : 'false'} aria-busy={results.isFetching}>
           <div className="search-results-columns" aria-hidden="true"><span>Host / network</span><span>Services</span><span>Location</span><span>Last observed</span></div>
           {results.data?.hosts.map((host, index) => <ResultRow key={`${host.ip}-${index}`} host={host} request={bodyRequest} dataset={dataset} backTo={results.isPlaceholderData ? searchHref(bodyRequest) : location.pathname + location.search} />)}
           {results.isSuccess && !results.data.hosts.length && <EmptyState title={results.data.omittedCount ? 'No usable host records' : 'No matching hosts'} description={results.data.omittedCount ? 'Try another page or refine the search.' : page > 1 ? 'No records were returned on this page.' : 'Try a different query or remove a filter.'} actions={<Button variant="secondary" disabled={shared} onClick={() => { if (page > 1) run({ ...applied, page: page - 1 }); else openEditor(); }}>{page > 1 ? 'Previous page' : 'Edit filters'}</Button>} />}
-          {results.isPending && !results.data && <Skeleton rows={5} className="search-results-skeleton" label="Loading hosts" />}
+          {previewOnly && !results.data ? <EmptyState title="Run this search" description="Your conditions are ready. Run the search to load current results using your access." icon={<Icon name="search" size={26} />} actions={<Button onClick={() => run({ ...draft, page })}>Run search<Icon name="arrow" size={16} /></Button>} /> : results.isPending && !results.data && <Skeleton rows={5} className="search-results-skeleton" label="Loading hosts" />}
         </div>
         {results.data && !shared && <div className="search-results-footer"><Pagination page={page} pageSize={pageSize} count={results.data.receivedCount} maxPage={maxPage} disabled={results.isFetching || queryDirty} onPageChange={next => run({ ...applied, page: next })} />{page >= maxPage && <span className="search-plan-limit">{maxPage}-page plan limit · <Link to="/billing">View plans</Link></span>}</div>}
       </TabPanel>

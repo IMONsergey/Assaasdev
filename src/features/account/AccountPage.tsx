@@ -6,6 +6,8 @@ import { useApp } from '../../app/AppProvider';
 import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, Spinner, Skeleton, Tabs, Icon } from '../../components/ui';
 import { copyText, formatDate, formatNumber, OperationNotice, responseData, useOperation } from './operation';
 import { normalizeOneTimeCode } from '../auth/auth-state';
+import { UserAvatar } from '../../components/UserAvatar';
+import { AvatarPicker } from './AvatarPicker';
 import './account.css';
 
 const accountTabs = [{ id: 'profile', label: 'Profile', icon: 'user' }, { id: 'security', label: 'Security', icon: 'shield' }, { id: 'sessions', label: 'Sessions', icon: 'desktop' }, { id: 'team', label: 'Organization', icon: 'users' }];
@@ -41,20 +43,22 @@ export function ProfilePanel({ user }: { user: Profile }) {
   const [requested, setRequested] = useState<{ email: string; user_name: string } | null>(null);
   const [profileNotice, setProfileNotice] = useState('');
   const [checkingProfile, setCheckingProfile] = useState(false);
+  const [profileConfirmed, setProfileConfirmed] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const next = { email: String(form.get('email')).trim(), user_name: String(form.get('user_name')).trim() };
     if (!next.user_name) { setProfileNotice('Enter a username. Spaces alone cannot identify an account.'); event.currentTarget.querySelector<HTMLInputElement>('[name="user_name"]')?.focus(); return; }
-    setRequested(next); setProfileNotice('');
+    setRequested(next); setProfileNotice(''); setProfileConfirmed(false);
     const result = await update.run(() => api.http('/profile/update', { method: 'POST', mutation: true, body: { ...next, password: String(form.get('password')), ...(user.totp_active ? { totp_code: normalizeOneTimeCode(String(form.get('totp_code'))) } : {}) } }), 'A verification code has been sent. Verify it to apply your changes.');
     if (result.ok) { setPending(true); setVerifyCode(''); verify.reset(); setUntil(Date.now() + 15 * 60_000); }
   }
   async function confirmProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = await verify.run(() => api.http('/profile/verify', { method: 'POST', mutation: true, body: { code: verifyCode.trim() } }), 'Your profile changes have been verified.');
-    if (result.ok) { setPending(false); setVerifyCode(''); setRequested(null); setUntil(null); update.reset(); await refreshSession().catch(() => undefined); }
+    if (result.ok) { setProfileConfirmed(true); setPending(false); setVerifyCode(''); setRequested(null); setUntil(null); update.reset(); await refreshSession().catch(() => undefined); }
   }
 
   async function checkProfile() {
@@ -64,6 +68,7 @@ export function ProfilePanel({ user }: { user: Profile }) {
       await refreshSession();
       if (requested && current.email === requested.email && current.user_name === requested.user_name) {
         setPending(false); setVerifyCode(''); setRequested(null); setUntil(null); update.reset(); verify.reset();
+        setProfileConfirmed(true);
         setProfileNotice('Profile changes confirmed.');
       } else {
         setProfileNotice('The requested profile changes are not confirmed yet. Your current verified profile remains active. If a code arrived and is still valid, you can enter it below.');
@@ -74,24 +79,31 @@ export function ProfilePanel({ user }: { user: Profile }) {
     finally { setCheckingProfile(false); }
   }
 
-  return <div className="account-columns">
-    <div className="stack">
-      <Card className="account-identity"><div className="account-avatar" aria-hidden="true">{(user.user_name || user.email || 'A').slice(0, 2).toUpperCase()}</div><div><h2>{user.user_name || 'Your account'}</h2><p className="muted">{user.email || 'No email linked'}</p><Badge tone="accent">{user.subscription?.type ?? 'Account'}</Badge></div></Card>
-      <Card><h2 className="section-title">Profile details</h2><p className="muted">Changes are applied after email verification. The code expires after 15 minutes.</p><OperationNotice state={update.state} onCheck={() => void checkProfile()} />{profileNotice && <Alert tone="info">{profileNotice}</Alert>}{checkingProfile && <Spinner label="Checking your current profile" />}
-        <form key={(user.email ?? '') + (user.user_name ?? '')} className="stack" onSubmit={(event) => void saveProfile(event)}>
+  return <div className="profile-workspace" data-onboarding-state={profileConfirmed ? 'success' : update.state.status === 'unknown' || verify.state.status === 'unknown' ? 'unknown' : update.busy || verify.busy ? 'pending' : pending ? 'verification' : 'idle'}>
+    <div className="profile-identity">
+      <button type="button" className="profile-avatar-button" aria-label="Change avatar" onClick={() => setAvatarOpen(true)} disabled={!user.user_id}><UserAvatar principal={user.user_id} size={72} /><span aria-hidden="true"><Icon name="edit" size={14} /></span></button>
+      <div className="profile-identity-copy"><h2>{user.user_name || 'Your account'}</h2><p>{user.email || 'No email linked'}</p></div>
+      <Button variant="secondary" data-onboarding="avatar-picker" className="profile-avatar-action" onClick={() => setAvatarOpen(true)} disabled={!user.user_id}>Choose avatar</Button>
+    </div>
+    <div className="profile-details-grid">
+      <Card className="profile-details-card"><h2 className="section-title">Personal information</h2><p className="muted">Verify changes with the code sent to your email.</p><OperationNotice state={update.state} onCheck={() => void checkProfile()} />{profileNotice && <Alert tone="info">{profileNotice}</Alert>}{checkingProfile && <Spinner label="Checking your current profile" />}
+        <form key={(user.email ?? '') + (user.user_name ?? '')} className="stack" data-onboarding="profile-form" onSubmit={(event) => void saveProfile(event)}>
           <Field label="Username" name="user_name" defaultValue={user.user_name} required autoComplete="username" disabled={update.busy || verify.busy || checkingProfile} />
           <Field label="Email address" type="email" name="email" defaultValue={user.email} required autoComplete="email" disabled={update.busy || verify.busy || checkingProfile} />
           <Field label={user.email ? 'Current password' : 'Create a password'} type="password" name="password" required minLength={6} autoComplete={user.email ? 'current-password' : 'new-password'} disabled={update.busy || verify.busy || checkingProfile} hint={user.email ? 'Required to authorize this change.' : 'Use at least 6 characters to add an email to this account.'} />
           {user.totp_active && <Field label="Authenticator code" name="totp_code" autoComplete="one-time-code" inputMode="numeric" required minLength={6} maxLength={64} pattern="[0-9]{6}" onChange={event => { event.currentTarget.value = normalizeOneTimeCode(event.currentTarget.value); }} hint="Enter all 6 digits. Paste spacing is removed." />}
           <div className="form-actions"><Button type="submit" loading={update.busy} disabled={update.blocked || verify.busy || checkingProfile}>Request profile change</Button></div>
         </form>
-        {(pending || update.state.status === 'unknown') && <form className="account-verification stack" onSubmit={(event) => void confirmProfile(event)}><h3>Verify your changes</h3>{requested && <p className="muted account-break">Requested profile: {requested.user_name} · {requested.email}</p>}<p className="muted">{until ? `The verification window ends at approximately ${new Date(until).toLocaleTimeString()}.` : 'If a verification code arrived, you can confirm it here.'}</p><OperationNotice state={verify.state} onCheck={() => void checkProfile()} /><Field label="Email verification code" value={verifyCode} onChange={(event) => setVerifyCode(normalizeOneTimeCode(event.target.value))} autoComplete="one-time-code" inputMode="numeric" required minLength={6} maxLength={64} pattern="[0-9]{6}" disabled={verify.busy || checkingProfile} hint="Enter all 6 digits. You can paste a code with spaces." /><Button type="submit" loading={verify.busy} disabled={verify.blocked || checkingProfile}>Verify changes</Button></form>}
+        {(pending || update.state.status === 'unknown') && <form className="account-verification stack" data-onboarding="profile-verification" onSubmit={(event) => void confirmProfile(event)}><h3>Verify your changes</h3>{requested && <p className="muted account-break">Requested profile: {requested.user_name} · {requested.email}</p>}<p className="muted">{until ? `The verification window ends at approximately ${new Date(until).toLocaleTimeString()}.` : 'If a verification code arrived, you can confirm it here.'}</p><OperationNotice state={verify.state} onCheck={() => void checkProfile()} /><Field label="Email verification code" value={verifyCode} onChange={(event) => setVerifyCode(normalizeOneTimeCode(event.target.value))} autoComplete="one-time-code" inputMode="numeric" required minLength={6} maxLength={64} pattern="[0-9]{6}" disabled={verify.busy || checkingProfile} hint="Enter all 6 digits. You can paste a code with spaces." /><Button type="submit" loading={verify.busy} disabled={verify.blocked || checkingProfile}>Verify changes</Button></form>}
       </Card>
+      <aside className="profile-account-summary" aria-label="Account overview">
+        <div className="profile-plan-heading"><span className="profile-plan-icon"><Icon name="card" size={20} /></span><div><span className="profile-plan-label">Current plan</span><strong>{user.subscription?.type ?? 'Not available'}</strong></div></div>
+        <dl className="profile-credit-grid"><div><dt><Icon name="search" size={14} />Search credits</dt><dd>{formatNumber(user.credits)}</dd></div><div><dt><Icon name="scan" size={14} />Scan credits</dt><dd>{formatNumber(user.scan_credits)}</dd></div></dl>
+        <Link to="/billing" className="button button--secondary profile-subscription-link">Manage subscription<Icon name="arrow-up-right" size={16} /></Link>
+        <div className="profile-account-reference"><span>User ID</span><code>{user.user_id ?? '—'}</code></div>
+      </aside>
     </div>
-    <div className="stack">
-      <Card><h2 className="section-title">Account</h2><dl className="account-facts"><div><dt>Current plan</dt><dd>{user.subscription?.type ?? '—'}</dd></div><div><dt>Search credits</dt><dd>{formatNumber(user.credits)}</dd></div><div><dt>Scan credits</dt><dd>{formatNumber(user.scan_credits)}</dd></div><div><dt>User ID</dt><dd className="mono account-break">{user.user_id ?? '—'}</dd></div></dl><Link to="/billing" className="inline-link">View subscription →</Link></Card>
-
-    </div>
+    {avatarOpen && user.user_id && <AvatarPicker principal={user.user_id} onClose={() => setAvatarOpen(false)} />}
   </div>;
 }
 
@@ -167,7 +179,7 @@ export function SecurityPanel({ user }: { user: Profile }) {
   }
 
   return <div className="account-columns">
-    <Card><h2 className="section-title">Password</h2><p className="muted">Update your account password.</p><OperationNotice state={password.state} />
+    <Card><h2 className="section-title">Password</h2><OperationNotice state={password.state} />
       <form className="stack" onSubmit={(event) => void changePassword(event)}><Field label="Current password" name="old_password" type="password" autoComplete="current-password" minLength={6} required disabled={password.busy} /><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} hint="At least 6 characters. A longer passphrase is recommended." /><Field label="Confirm new password" error={notice || undefined} name="confirm_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} /><div className="form-actions"><Button type="submit" loading={password.busy} disabled={password.blocked}>Update password</Button></div></form>
       {password.state.status === 'unknown' && <p className="muted">The password may have changed. Verify sign-in with the new password before requesting another change.</p>}
     </Card>
@@ -202,7 +214,7 @@ export function SessionsPanel() {
     if (result.ok) await queryClient.invalidateQueries({ queryKey: ['account-sessions'] });
   }
   return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Active sessions</h2><p className="muted">{sessions.data ? `${sessions.data.total} of ${sessions.data.limit} sessions in use` : 'Review where your account is signed in.'}</p></div><Button variant="secondary" onClick={() => setTarget('others')} disabled={operation.blocked || !sessions.data?.sessions.some((item) => !item.is_current)}>End other sessions</Button></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
-      {sessions.isPending ? <Skeleton rows={3} label="Loading sessions" /> : sessions.isError ? <Alert tone="error" actions={<Button onClick={() => void sessions.refetch()}>Try again</Button>}>{sessions.error.message}</Alert> : sessions.data.sessions.length === 0 ? <EmptyState title="No sessions returned" description="Refresh to check the latest session state." actions={<Button onClick={() => void sessions.refetch()}>Refresh</Button>} /> : <div className="account-session-list">{sessions.data.sessions.map((item) => <article key={item.session_id} className="account-session"><div className="account-session-symbol" aria-hidden="true"><Icon name={/mobile|phone|tablet/i.test(item.device_info ?? '') ? 'mobile' : 'desktop'} size={21} /></div><div className="account-session-body"><div className="cluster"><h3>{item.device_info || item.browser || 'Device'}</h3>{item.is_current && <Badge tone="accent">This session</Badge>}</div><p className="muted">{[item.browser, item.os, item.location].filter(Boolean).join(' · ') || 'Device details unavailable'}</p><p className="mono muted">{item.ip_address ?? 'IP unavailable'}</p><p className="muted">Last active {formatDate(item.last_activity)}</p></div><Button variant="ghost" size="sm" disabled={item.is_current || operation.blocked} onClick={() => setTarget(item)}>{item.is_current ? 'Current' : 'End session'}</Button></article>)}</div>}
+      {sessions.isPending ? <Skeleton rows={3} label="Loading sessions" /> : sessions.isError ? <Alert tone="error" actions={<Button onClick={() => void sessions.refetch()}>Try again</Button>}>{sessions.error.message}</Alert> : sessions.data.sessions.length === 0 ? <EmptyState title="No sessions returned" description="Refresh to check the latest session state." actions={<Button onClick={() => void sessions.refetch()}>Refresh</Button>} /> : <div className="account-session-list">{sessions.data.sessions.map((item) => <article key={item.session_id} className="account-session"><div className="account-session-symbol" aria-hidden="true"><Icon name={/mobile|phone|tablet/i.test(item.device_info ?? '') ? 'mobile' : 'desktop'} size={21} /></div><div className="account-session-body"><div className="cluster"><h3>{item.device_info || item.browser || 'Device'}</h3>{item.is_current && <Badge tone="accent">This session</Badge>}</div><p className="muted">{[item.browser, item.os, item.location].filter(Boolean).join(' · ') || 'Device details unavailable'}</p><p className="mono muted">{item.ip_address ?? 'IP unavailable'}</p><p className="muted">Last active {formatDate(item.last_activity)}</p></div>{!item.is_current && <Button variant="ghost" size="sm" disabled={operation.blocked} onClick={() => setTarget(item)}>End session</Button>}</article>)}</div>}
     </Card><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void terminate()} title={target === 'others' ? 'End all other sessions?' : 'End this session?'} description={target === 'others' ? 'Other devices will need to sign in again. This session will stay active.' : 'The selected device will need to sign in again.'} confirmLabel="End session" danger busy={operation.busy} /></div>;
 }
 
@@ -234,7 +246,7 @@ export function TeamPanel({ user }: { user: Profile }) {
     setTarget(null);
     if (result.ok) await refreshSession().catch(() => undefined);
   }
-  return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Organization</h2><p className="muted">Share the account owner’s plan and credit balance with existing APCOSYS users.</p></div><Badge tone="accent">{isMember ? 'Member' : canManage ? 'Owner access' : 'Organization access'}</Badge></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
+  return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Team access</h2><p className="muted">Share your plan and credit balance with existing APCOSYS users.</p></div><Badge tone="accent">{isMember ? 'Member' : canManage ? 'Owner access' : 'Organization access'}</Badge></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
       {user.team?.team_owner_name && <p>Owner: <strong>{user.team.team_owner_name}</strong>{user.team.team_owner_email ? ` · ${user.team.team_owner_email}` : ''}</p>}
       {canManage ? <><form className="account-member-form" onSubmit={(event) => void add(event)}><Field label="Member user ID" value={memberId} onChange={(event) => { setMemberId(event.target.value); setMemberError(''); }} error={memberError} disabled={operation.busy} required hint="Enter an existing APCOSYS user ID. This does not send an email invitation." /><Button type="submit" loading={operation.busy} disabled={operation.blocked || !memberId.trim()}>Add member</Button></form>{members.length ? <div className="table-wrap account-team-table-wrap"><table className="data-table account-team-table" aria-label="Organization members"><thead><tr><th>Member</th><th>Added</th><th><span className="muted">Action</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.user_id}><td><strong>{member.user_name || member.user_id}</strong><div className="muted">{member.email || 'No email'}</div></td><td data-label="Added">{formatDate(member.added_at)}</td><td><Button variant="ghost" size="sm" disabled={operation.blocked} onClick={() => setTarget({ id: member.user_id, name: member.user_name || member.user_id })}>Remove</Button></td></tr>)}</tbody></table></div> : <EmptyState title="No members yet" description="Add an existing user by their APCOSYS user ID." />}</> : isMember ? <><p className="muted">The owner manages membership. You can leave the organization at any time.</p><Button variant="secondary" disabled={operation.blocked} onClick={() => setTarget('leave')}>Leave organization</Button></> : <Alert tone="info" actions={<Link className="inline-link" to="/billing">View plans →</Link>}>Organization membership is managed by a Business account owner.</Alert>}
     </Card><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void remove()} title={target === 'leave' ? 'Leave this organization?' : 'Remove this member?'} description={target === 'leave' ? 'You will stop using the owner’s shared plan and credits.' : `Remove ${target && typeof target !== 'string' ? target.name : 'this member'} from the shared plan?`} confirmLabel={target === 'leave' ? 'Leave organization' : 'Remove member'} danger busy={operation.busy} /></div>;

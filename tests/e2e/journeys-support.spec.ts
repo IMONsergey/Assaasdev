@@ -24,7 +24,7 @@ test('scenario directory filters real workflows and guides a host investigation 
   const before=new URL(page.url());
   expect(before.searchParams.get('request')).toBeTruthy();
   expect(before.searchParams.get('back')).toBeTruthy();
-  await guide.getByRole('button',{name:'Next step',exact:true}).click();
+  await expect(guide).toContainText('Step 2 of 4');
   await expect(page.getByRole('tab',{name:/^Services/})).toHaveAttribute('aria-selected','true');
   const after=new URL(page.url());
   expect(after.searchParams.get('request')).toBe(before.searchParams.get('request'));
@@ -37,7 +37,8 @@ test('scenario directory filters real workflows and guides a host investigation 
   await guide.getByRole('button',{name:'Expand scenario guide'}).click();
   await expect(guide).toContainText('Open the catalog');
   const stored=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('apcosys.scenario-guide.v1')!));
-  expect(Object.keys(stored).sort()).toEqual(['finished','id','index','minimized']);
+  expect(Object.keys(stored).sort()).toEqual(['finished','id','index','minimized','progress']);
+  expect(stored.progress[0]).toBe('observed');
   await page.screenshot({path:testInfo.outputPath('host-guided-scenario.png'),fullPage:true});
   await guide.getByRole('button',{name:'Close scenario guide'}).click();
   await expect(guide).toHaveCount(0);
@@ -52,14 +53,15 @@ test('a filter guide opens the mounted search editor without changing the applie
   const request=new URL(page.url()).searchParams.get('request');
   expect(request).toBeTruthy();
   const guide=page.getByRole('complementary',{name:'Scenario guide'});
-  await guide.getByRole('button',{name:'Next step',exact:true}).click();
+  await expect(guide).toContainText('Step 2 of 3');
   const filters=page.getByRole('dialog',{name:'Filters',exact:true});
   await expect(filters).toBeVisible();
   expect(new URL(page.url()).searchParams.get('request')).toBe(request);
   await filters.getByRole('button',{name:'Cancel',exact:true}).click();
   await expect(filters).not.toBeVisible();
   expect(new URL(page.url()).searchParams.get('conditions')).toBeNull();
-  await guide.getByRole('button',{name:'Open this step',exact:true}).click();
+  await expect(guide).toContainText('Step 3 of 3');
+  await guide.getByRole('button',{name:'Previous guide step',exact:true}).click();
   await expect(filters).toBeVisible();
   expect(new URL(page.url()).searchParams.get('request')).toBe(request);
 });
@@ -101,12 +103,13 @@ for (const width of [1440,390,320]) {
     await page.getByRole('button',{name:'View scenario: Run your first search'}).click();
     await page.getByRole('dialog').getByRole('button',{name:'Start scenario',exact:true}).click();
     const guide=page.getByRole('complementary',{name:'Scenario guide'});
-    await expect(guide.getByRole('button',{name:'Next step',exact:true})).toBeVisible();
+    await expect(guide.getByRole('button',{name:'Show me',exact:true})).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
     await page.screenshot({path:testInfo.outputPath(`guide-${width}.png`),fullPage:true});
     await guide.getByRole('button',{name:'Close scenario guide'}).click();
     await page.goto('/settings?section=legal');
-    await expect(page.getByRole('tab',{name:'Legal',exact:true})).toBeInViewport();
+    if(width<=760) await expect(page.getByRole('button',{name:'Choose settings section: Legal'})).toBeInViewport();
+    else await expect(page.getByRole('tab',{name:'Legal',exact:true})).toBeInViewport();
     const legal=page.getByRole('tabpanel',{name:'Legal',exact:true});
     await expect(legal.locator('a')).toHaveCount(6);
     for (const link of await legal.locator('a').all()) {expect(await link.getAttribute('href')).toMatch(/^https:\/\/apcosys.net\/legal\//);expect(await link.getAttribute('rel')).toContain('noopener');}

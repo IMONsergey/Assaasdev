@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useState, type ErrorInfo, type ReactNode } from 'react';
+import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router';
 import { AppShell } from './AppShell';
 import { NavigationEffects } from './NavigationEffects';
@@ -40,8 +40,7 @@ function WorkspaceView() {
 
 export function App() {
   const location = useLocation();
-  const { session } = useApp();
-  const [navigationCollapsed, setNavigationCollapsed] = useState(false);
+  const { session, preferences, setPreferences } = useApp();
   if (session.status === 'pending-2fa' && location.pathname !== '/auth/totp') {
     const authEntry = location.pathname === '/auth' || location.pathname.startsWith('/auth/') || location.pathname === '/login';
     const params = new URLSearchParams(location.search);
@@ -52,7 +51,7 @@ export function App() {
   if (location.pathname === '/login') return <Navigate to={`/auth/login${location.search}`} state={location.state} replace />;
   return <><NavigationEffects /><Routes>
     <Route path="/auth/*" element={<div className="auth-scenario-shell"><ScenarioGuide /><ScreenBoundary key={location.pathname}><Suspense fallback={<RouteLoading />}><AuthPage /></Suspense></ScreenBoundary></div>} />
-    <Route element={<AppShell collapsed={navigationCollapsed} onCollapsedChange={setNavigationCollapsed} />}>
+    <Route element={<AppShell collapsed={preferences.navigationCollapsed} onCollapsedChange={value => setPreferences({ navigationCollapsed: value })} />}>
       <Route element={<WorkspaceView />}>
         <Route index element={<Navigate to="/search" replace />} />
         <Route path="/search" element={<SearchPage />} />

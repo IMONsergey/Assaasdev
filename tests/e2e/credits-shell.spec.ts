@@ -93,7 +93,7 @@ test('mobile navigation stays isolated, reaches account actions in landscape and
   await menu.click();
   await expect(page.locator('main')).toHaveAttribute('inert', '');
   await expect(page.locator('.app-topbar')).toHaveAttribute('inert', '');
-  const account = sidebar.getByRole('link', { name: 'Account settings', exact: true });
+  const account = sidebar.getByRole('button', { name: 'Account menu', exact: true });
   const support = sidebar.getByRole('button', { name: 'Support', exact: true });
   await account.focus();
   await expect(account).toBeInViewport();

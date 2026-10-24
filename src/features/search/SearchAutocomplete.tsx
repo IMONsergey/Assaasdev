@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { AutocompleteData } from '../../api';
 import { useApp } from '../../app/AppProvider';
 import { Icon } from '../../components/ui';
+import { TechnologyMark, ProtocolMark } from '../../components/TechnologyMark';
+import { CountryFlag } from '../../components/CountryFlag';
 
 const fields = [
   { key: 'ip', label: 'IP address', icon: 'server' },
@@ -18,6 +20,16 @@ const fields = [
   { key: 'title', label: 'Page title', icon: 'file' },
 ];
 type Suggestion = { id: string; label: string; detail: string; icon: string; field?: string; value?: string };
+
+function SuggestionMark({ option }: { option: Suggestion }) {
+  if (!option.value) return <Icon name={option.icon} size={18} />;
+  if (option.field === 'country_name') return <CountryFlag name={option.value} />;
+  if (option.field === 'country_code') return <CountryFlag code={option.value} />;
+  if (option.field === 'products' || option.field === 'vendors') return <TechnologyMark name={option.value} size={18} />;
+  if (option.field === 'org') return <TechnologyMark name={option.value} kind="provider" size={18} />;
+  if (option.field === 'protocol') return <ProtocolMark protocol={option.value} size={18} />;
+  return <Icon name={option.icon} size={18} />;
+}
 
 /** Field/value completions use the documented autocomplete method, never hosts. */
 export function SearchAutocomplete({ value, onChange, onSearch, onFilter, readOnly, invalid, describedBy }: {
@@ -101,7 +113,7 @@ export function SearchAutocomplete({ value, onChange, onSearch, onFilter, readOn
       else if (event.key === 'Tab') { setDismissed(true); setActive(-1); }
     }} placeholder="Search an IP, domain or service" readOnly={readOnly} spellCheck={false} autoComplete="off" />
     {visible && <div className={`search-suggestions${placement.above ? ' is-above' : ''}`} style={{ '--suggestions-height': `${placement.height}px` } as CSSProperties}>
-      <div id={listId} role="listbox" aria-label="Search suggestions">{suggestions.map((option, index) => <div key={option.id} id={`${listId}-${index}`} role="option" aria-selected={active === index} className="search-suggestion" onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)}><span className="search-suggestion-icon"><Icon name={option.icon} size={18} /></span><span className="search-suggestion-copy"><strong>{option.label}</strong><small>{option.detail}</small></span><Icon name={option.field ? 'plus' : 'arrow'} size={16} /></div>)}</div>
+      <div id={listId} role="listbox" aria-label="Search suggestions">{suggestions.map((option, index) => <div key={option.id} id={`${listId}-${index}`} role="option" aria-selected={active === index} className="search-suggestion" onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)}><span className="search-suggestion-icon"><SuggestionMark option={option} /></span><span className="search-suggestion-copy"><strong>{option.label}</strong><small>{option.detail}</small></span><Icon name={option.field ? 'plus' : 'arrow'} size={16} /></div>)}</div>
       <div className="search-suggestions-footer"><span>{results.isError ? 'Suggestions unavailable. You can still run your search.' : results.isFetching ? 'Finding matching values…' : 'Choose a suggestion or continue typing'}</span><span className="search-suggestion-keys"><kbd>↑</kbd><kbd>↓</kbd><kbd>Enter</kbd></span></div>
     </div>}
   </div>;

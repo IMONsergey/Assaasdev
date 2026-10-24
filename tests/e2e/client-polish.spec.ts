@@ -110,8 +110,12 @@ test('registration guidance stays available through auth forms at desktop and mo
     await expect(guide).toContainText('Enter your account details');
     await expect(page.getByRole('heading', { name: 'Create account', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await guide.getByRole('button', { name: 'Next step', exact: true }).click();
+    if(await guide.getByRole('button', {name:'Expand scenario guide'}).isVisible()) await guide.getByRole('button', {name:'Expand scenario guide'}).click();
+    await expect(guide.getByRole('button', { name: 'Show me', exact: true })).toBeVisible();
+    await expect(guide).not.toContainText('Verify your email');
+    await guide.getByRole('button', { name: 'Skip this step', exact: true }).click();
     await expect(guide).toContainText('Verify your email');
+    expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('apcosys.scenario-guide.v1')!).progress[0])).toBe('skipped');
     await expect(page).toHaveURL(/\/auth\/signup$/);
     await page.screenshot({ path: testInfo.outputPath(`auth-guide-${width}.png`), fullPage: true, animations: 'disabled' });
     await guide.getByRole('button', { name: 'Close scenario guide' }).click();

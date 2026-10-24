@@ -32,18 +32,18 @@ test('legacy account tabs retain an unsaved profile', async ({ page }) => {
 test('mobile settings reveal deep-linked sections and close the menu on account navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/settings?section=workspace');
-  const categories = page.getByRole('tablist', { name: 'Settings categories' });
-  await expect(categories).toHaveAttribute('aria-orientation', 'horizontal');
-  await expect(page.getByRole('tab', { name: 'Workspace', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Choose settings section: Workspace', exact: true })).toBeInViewport();
+  await expect(page.getByRole('tabpanel', { name: 'Workspace', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
   const navigation = page.getByRole('complementary', { name: 'Workspace navigation' });
   await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
-  await navigation.getByRole('link', { name: 'Account settings', exact: true }).click();
+  await navigation.getByRole('button', { name: 'Account menu', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Profile & avatar', exact: true }).click();
   await expect(page).toHaveURL(/\/settings\?section=profile$/);
   await expect(page.getByRole('button', { name: 'Open navigation', exact: true })).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('main')).not.toHaveAttribute('inert', '');
   await expect(page.getByRole('textbox', { name: 'Username', exact: true })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Choose settings section: Profile', exact: true })).toBeInViewport();
 });
 
 test('API usage action transfers keyboard focus to the selected tab', async ({ page }) => {
@@ -62,8 +62,14 @@ for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: width > 760 ? 960 : 844 });
     await page.goto('/settings');
     for (const name of ['Appearance', 'Profile', 'Security', 'Sessions', 'Organization', 'Workspace']) {
-      await page.getByRole('tab', { name, exact: true }).click();
-      await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true');
+      if (width <= 760) {
+        await page.getByRole('button', { name: /^Choose settings section:/ }).click();
+        await page.getByRole('dialog', { name: 'Settings categories', exact: true }).getByRole('button', { name, exact: true }).click();
+        await expect(page.getByRole('button', { name: `Choose settings section: ${name}`, exact: true })).toBeFocused();
+      } else {
+        await page.getByRole('tab', { name, exact: true }).click();
+        await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true');
+      }
       await expect(page.locator('.settings-panel:not([hidden])')).toBeVisible();
       await expect(page.locator('main')).not.toContainText(/This view could not be displayed|Demo workspace|Sample data/);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

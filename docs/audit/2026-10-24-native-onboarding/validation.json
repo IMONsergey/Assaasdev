@@ -1,0 +1,237 @@
+{
+  "date_utc": "2026-10-24",
+  "base_commit": "7716d5e332368111af297fdf0546fe24e41c6a58",
+  "unit_tests": {
+    "passed": 132,
+    "files": 19
+  },
+  "typescript": "passed",
+  "production_build": "passed",
+  "public_build": "passed",
+  "e2e": [
+    {
+      "suite": "chrome-full",
+      "stats": {
+        "startTime": "2026-10-24T07:59:58.427Z",
+        "duration": 212290.80800000002,
+        "expected": 155,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "report_sha256": "34b51e39ee9831c9aedf1724493108442aeca8db40521b3014f98192876d2e87"
+    },
+    {
+      "suite": "firefox-focused",
+      "stats": {
+        "startTime": "2026-10-24T08:00:14.294Z",
+        "duration": 104743.991,
+        "expected": 35,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "report_sha256": "76ce750ddeffc7a7576a7153c47bd098ef8b3d151b900295b21916fafe91d55d"
+    },
+    {
+      "suite": "chrome-final-billing",
+      "stats": {
+        "startTime": "2026-10-24T08:02:36.328Z",
+        "duration": 14139.528,
+        "expected": 7,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "report_sha256": "c9ca48c337370a2da52190d67bd5d7d2d1a47e82dbd0c888a6b4c1aa969b76d9"
+    }
+  ],
+  "source_file_count": 579,
+  "source_sha256": "72ee08ef7a74238f751c95c230ed02e21557718fe827b4a6d511347a1981f98f",
+  "final_review_build_assets": [
+    {
+      "path": "assets/AccountPage-DkyNH6p9.js",
+      "sha256": "81026905315c4668eda1e4de0a61b36c9ce17df764c5bf5b4aafedbaf3d4531a",
+      "bytes": 24992
+    },
+    {
+      "path": "assets/ApiPage-Dc7LQkWa.js",
+      "sha256": "3be9af302cb70c5657f9323e39de6a20d3c91d94a57353fe821cbd4a00b8f47d",
+      "bytes": 7702
+    },
+    {
+      "path": "assets/AppProvider-BMNfm4W7.js",
+      "sha256": "f73b746db2d84e6c16a4bff6073bb3ecda3f35f741a3f4788c6076002281c337",
+      "bytes": 148650
+    },
+    {
+      "path": "assets/AppProvider-gPHUbOpe.css",
+      "sha256": "0a06646d16bdd598a950197ba2abd9aab43b27f97d263c2c9acc496b349930c4",
+      "bytes": 3665
+    },
+    {
+      "path": "assets/AuthPage-CGmgxUHL.css",
+      "sha256": "c3bc78e9b0080ef0f9f5d60e76de286e13f8c87f902e8cee659fc2b18e16ffba",
+      "bytes": 4923
+    },
+    {
+      "path": "assets/AuthPage-DP70O7rf.js",
+      "sha256": "00c58de1d40a7e147002e2fdf69aabe0c67e6df6afc559e58ac88fefbcddc809",
+      "bytes": 11782
+    },
+    {
+      "path": "assets/BillingPage-B8iG0nPN.js",
+      "sha256": "59d62785b059af380581d7282d775416643590ff07477c90f0684d7efeb91aae",
+      "bytes": 41828
+    },
+    {
+      "path": "assets/BillingPage-C-aJCzPL.css",
+      "sha256": "e58c840965d1a3f97e80352295b79f0440b13aaf78f558e147213c5806a0b2bd",
+      "bytes": 13090
+    },
+    {
+      "path": "assets/CodeCanvas-NG-4G5_U.js",
+      "sha256": "5f9f6d124820aec8e06446a131c2e30de8ea6ab79087a05d4e321bf4f510d960",
+      "bytes": 5068
+    },
+    {
+      "path": "assets/CodeCanvas-tbwd5etp.css",
+      "sha256": "ee3967d8b909976605f0d9996ec1dd65dbd42de476432cecdd2ea649deeac5eb",
+      "bytes": 4190
+    },
+    {
+      "path": "assets/FilesPage-BYx2X8tv.css",
+      "sha256": "039887455c5539aa28c8adaf47736cce60daf88b8857f000fd6e3935d17b9784",
+      "bytes": 16084
+    },
+    {
+      "path": "assets/FilesPage-DaQCnspf.js",
+      "sha256": "295f02eaa2c71aaca02dd7a0af854641e759a9e4b9dd906c0e43de440ca84a64",
+      "bytes": 27126
+    },
+    {
+      "path": "assets/HostPage-6T9uoNV8.js",
+      "sha256": "40a3fda1df0a60225f949d0c3bf13006800e7992547d5450003a92f8a9146a79",
+      "bytes": 56324
+    },
+    {
+      "path": "assets/HostPage-DXupGHf2.css",
+      "sha256": "119fccbf2d0b9d0f21041788fb6e91a1c2e94dd599f2bdc9fd4ba190db4bef40",
+      "bytes": 32892
+    },
+    {
+      "path": "assets/NotificationsPage-CvVOsBoV.css",
+      "sha256": "23f90995d220e645e5d92f6ded6d1f48b8f743339eeab964ffc764635a5452a7",
+      "bytes": 3013
+    },
+    {
+      "path": "assets/NotificationsPage-DME_e22P.js",
+      "sha256": "4394cd8586da901e8a92e084b4a41f31ae9a4d823d2d86244d1353463164440b",
+      "bytes": 8904
+    },
+    {
+      "path": "assets/SavedQueriesPage-BVxLLYEd.js",
+      "sha256": "b78b127bd889a45b0ccee0683b0b0ce9f02f15a3e650efa273ea31de3a59e126",
+      "bytes": 8040
+    },
+    {
+      "path": "assets/ScannerPage-BnUowcg6.css",
+      "sha256": "63aeaab532eec96d0a3a757cdb066aab3c9ab1695447db14369d45f4bf77c8aa",
+      "bytes": 17845
+    },
+    {
+      "path": "assets/ScannerPage-Nu2P3KYI.js",
+      "sha256": "fb1e275691b8bc2c0e368e52870056cce73e015d468c7eb1c370f06f728e2da1",
+      "bytes": 41392
+    },
+    {
+      "path": "assets/ScenariosPage-CfuHCDwf.js",
+      "sha256": "4732779cdf2fbdd208d0901590ccf59a5a211f7f50dcf63b21e378abeccb64e1",
+      "bytes": 3849
+    },
+    {
+      "path": "assets/SettingsPage-C5zRVJ56.css",
+      "sha256": "5a08b939dcb63974b308ed73a48f14841d522768c947d5909e3b6ccf9fcbb03b",
+      "bytes": 17771
+    },
+    {
+      "path": "assets/SettingsPage-ZXpM2hBA.js",
+      "sha256": "1676b2fdeee366d3291409235e6337dd915b62a1834d6e4256a5fa4f9821e056",
+      "bytes": 13970
+    },
+    {
+      "path": "assets/ShareSearchPage-D45wj38V.js",
+      "sha256": "01d5852f2bbc3fc980a8a39c3d86af25e986ea0525fa736d6e2d1f02459fc003",
+      "bytes": 6278
+    },
+    {
+      "path": "assets/account-Be578xID.css",
+      "sha256": "bb4fd4dc585f1935232976875dc355b33646f328dd3f299065d475d473504526",
+      "bytes": 13081
+    },
+    {
+      "path": "assets/browser-COyxp469.js",
+      "sha256": "0ca12be68ae74f5ee63b4f1871da9f8ef83b3f519df9c20af3f5f9e2f7fd1707",
+      "bytes": 23467
+    },
+    {
+      "path": "assets/format-D_slL4b1.js",
+      "sha256": "e4a53cb31b8c71772426cc51f12bad1a73e1ac3d278b5e51e8ff3ef2b0334af0",
+      "bytes": 534
+    },
+    {
+      "path": "assets/index-CFII31sB.css",
+      "sha256": "5f9349e63c19677aee5434c251e0d8b4b4cbed11729d7df68cf65411d0d83753",
+      "bytes": 103017
+    },
+    {
+      "path": "assets/index-DUxA-tjN.js",
+      "sha256": "156bd2a2ef7d4f445663447f2fbc53d4cb636367b42e899f73f344936e4216cb",
+      "bytes": 395214
+    },
+    {
+      "path": "assets/rolldown-runtime-WkwZ5CU-.js",
+      "sha256": "2629f2ad3cb75a57d98de697127f5af7d777ef572bbcdfa6e3ce8f438cd4527e",
+      "bytes": 599
+    },
+    {
+      "path": "assets/useQuery-DgTL5OTG.js",
+      "sha256": "2109604e2fffd89ec99a80a2135b41cf521ba2d8c3259683958452aea20e517f",
+      "bytes": 22498
+    },
+    {
+      "path": "index.html",
+      "sha256": "954a25b4996e09410c4ade1efde3670580335a3f35580223155bff2f580f3d50",
+      "bytes": 1181
+    },
+    {
+      "path": "runtime-config.js",
+      "sha256": "ca16b5c52fd90e2b0b5370a44ec0e7363aa84f90a0a6ec421d5470eb068694d8",
+      "bytes": 101
+    }
+  ],
+  "scope": {
+    "routes": 17,
+    "route_widths": [
+      1440,
+      390,
+      320
+    ],
+    "scenarios": 46,
+    "scenario_entry_widths": [
+      1440,
+      320
+    ],
+    "browsers": [
+      "Chrome",
+      "Firefox"
+    ]
+  },
+  "last_delta": "After the full immutable browser runs, only redundant generic credit-pack copy was removed. Seven existing Billing/button checks passed on the rebuilt final candidate. Exact-commit CI re-runs the full suite on publication.",
+  "limitations": [
+    "Public review uses the existing in-memory adapter.",
+    "Avatar selection persists on this device; no backend avatar field exists.",
+    "Mobile checks use browser viewport simulation, not physical iOS/Android devices.",
+    "No external payments, scans, emails or account writes performed."
+  ]
+}

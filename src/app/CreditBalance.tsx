@@ -55,7 +55,7 @@ export function CreditBalance() {
         {teamMember && <p className="credit-context">Your team shares the owner’s credit balance.</p>}
         <div className={`credit-balance-grid${guest ? ' credit-balance-grid--guest' : ''}`}>
         <section className="credit-detail">
-          <div className="credit-detail-heading"><h3>{guest ? 'Daily searches' : 'Search credits'}</h3><span className="credit-plan">{guest ? 'Guest' : user?.subscription?.type ?? 'Your plan'}</span></div>
+          <div className="credit-detail-heading"><h3>{guest ? 'Daily searches' : 'Search credits'}</h3><Icon name="search" size={18} /></div>
           <p className="credit-detail-value">{number(search.available ?? undefined)}<span>{search.available === null ? 'Balance unavailable' : 'available'}</span></p>
           <UsageMeter usage={unrestricted ? { ...search, low: false } : search} label={guest ? 'Daily searches available' : 'Search credits relative to included allocation'} />
           <p className="credit-allocation">{search.allocation === null ? 'Allocation is currently unavailable.' : `${guest ? 'Daily allowance' : 'Included plan allocation'}: ${number(search.allocation)}`}</p>

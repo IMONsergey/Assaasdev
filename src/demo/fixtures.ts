@@ -26,20 +26,20 @@ export function seedHosts(): DemoHost[] {
     const ports: PortRecord[] = Array.from({ length: count }, (_, position) => {
       const port = position === 0 ? 443 : position === 1 ? 80 : position === 2 ? 22 : 10_000 + position;
       const protocol = port === 22 ? 'ssh' : port === 80 ? 'http' : 'https';
-      const product = index % 3 === 0 ? 'nginx' : index % 3 === 1 ? 'Apache httpd' : 'Caddy';
+      const product = protocol === 'ssh' ? 'OpenSSH' : index % 3 === 0 ? 'nginx' : index % 3 === 1 ? 'Apache httpd' : 'Caddy';
       return {
         port, protocol, transport: 'tcp', status: 'open', uts: DEMO_TIMESTAMP - index * 3600 - position,
-        title: `${position === 0 ? 'Research portal' : 'Documentation service'} · ${host}`,
+        title: `${protocol === 'ssh' ? 'Secure shell' : position === 0 ? 'Research portal' : 'Documentation service'} · ${host}`,
         status_code: port === 22 ? undefined : position % 7 === 6 ? 404 : 200,
         banner: port === 22 ? 'SSH-2.0-OpenSSH_9.6' : `HTTP/1.1 200 OK\r\nServer: ${product}`,
         body: port === 22 ? '' : `<html><title>Service ${position + 1}</title><body>Service response for ${host}</body></html>`,
-        headers: { server: [product], 'content-type': ['text/html; charset=utf-8'] },
-        cert_domains: [host], header_domains: ['assets.example.com'], redirects: position % 5 === 0 ? ['https://example.com/docs'] : [],
-        link: `https://${host}/`,
-        tls_info: { server_name: host, tls_version: 'TLS 1.3', cipher_suite: 'TLS_AES_128_GCM_SHA256', issuer: 'CN=Example Certificate Authority', subject: `CN=${host}`, is_ca: false, not_before: '2026-10-01T00:00:00Z', not_after: '2027-01-01T00:00:00Z', dns_names: [host], ext_key_usage: [1] },
-        security_txt: { is_security_txt: true, body: 'Contact: mailto:security@example.com', contacts: ['mailto:security@example.com'], url: `https://${host}/.well-known/security.txt`, endpoint: '/.well-known/security.txt' },
-        robots_txt: { status_code: 200, body: 'User-agent: *\nDisallow: /internal/' },
-        detected_products: [{ product, version: '1.0', vendor: index % 3 === 0 ? 'nginx' : 'Example vendor', labels: ['web'], cve_list: [], exposed_data: index === 0 && position === 0 ? { field_headers: ['email'], field_value: [['research@example.com']] } : undefined }],
+        headers: protocol === 'ssh' ? undefined : { server: [product], 'content-type': ['text/html; charset=utf-8'] },
+        cert_domains: protocol === 'https' ? [host] : undefined, header_domains: protocol === 'ssh' ? undefined : ['assets.example.com'], redirects: protocol !== 'ssh' && position % 5 === 0 ? ['https://example.com/docs'] : [],
+        link: protocol === 'ssh' ? undefined : `${protocol}://${host}/`,
+        tls_info: protocol !== 'https' ? undefined : { server_name: host, tls_version: 'TLS 1.3', cipher_suite: 'TLS_AES_128_GCM_SHA256', issuer: 'CN=Example Certificate Authority', subject: `CN=${host}`, is_ca: false, not_before: '2026-10-01T00:00:00Z', not_after: '2027-01-01T00:00:00Z', dns_names: [host], ext_key_usage: [1] },
+        security_txt: protocol === 'ssh' ? undefined : { is_security_txt: true, body: 'Contact: mailto:security@example.com', contacts: ['mailto:security@example.com'], url: `${protocol}://${host}/.well-known/security.txt`, endpoint: '/.well-known/security.txt' },
+        robots_txt: protocol === 'ssh' ? undefined : { status_code: 200, body: 'User-agent: *\nDisallow: /internal/' },
+        detected_products: [{ product, version: protocol === 'ssh' ? '9.6' : '1.0', vendor: protocol === 'ssh' ? 'OpenBSD' : index % 3 === 0 ? 'nginx' : 'Example vendor', labels: [protocol === 'ssh' ? 'remote access' : 'web'], cve_list: [], exposed_data: index === 0 && position === 0 ? { field_headers: ['email'], field_value: [['research@example.com']] } : undefined }],
       };
     });
     const card: HostCard = {

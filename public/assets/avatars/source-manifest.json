@@ -1,0 +1,105 @@
+{
+  "source": "Apcosys (8).zip \u2014 supplied by the client on 2026-10-24",
+  "assets": [
+    {
+      "id": "avatar-01",
+      "source": "Frame.svg",
+      "sha256": "3fefb5bce083d79437fc148b500eb2d5faf6567022d691d6ddbd51b620bbb627"
+    },
+    {
+      "id": "avatar-02",
+      "source": "Group 2131328691.svg",
+      "sha256": "2c48abecdc2fc676eee2f3edc60be18eece2555c17f9f8b8bdd937299fe1f502"
+    },
+    {
+      "id": "avatar-03",
+      "source": "Group 2131328692.svg",
+      "sha256": "e54b826d169ffe77ae6def2b730a8aab866ad13d141d724e2bf30e9fca5aa80c"
+    },
+    {
+      "id": "avatar-04",
+      "source": "Group 2131328693.svg",
+      "sha256": "c475281a14a145b483ddfae7d341fa58cc2c2f6617debe9d019df32cf0916537"
+    },
+    {
+      "id": "avatar-05",
+      "source": "Group 2131328694.svg",
+      "sha256": "76b034d929c61b22ec311258b68cb8b39ec52a93f91b8d5ea0fc3610b2c61572"
+    },
+    {
+      "id": "avatar-06",
+      "source": "Group 2131328695.svg",
+      "sha256": "a0ca64e9d411c9676a28fd5a3b2866eaf14fc49124da27656d2b59304a94742b"
+    },
+    {
+      "id": "avatar-07",
+      "source": "Group 2131328696.svg",
+      "sha256": "9cdf87c56c3b53e2fd64129c418102e48806e9980840ec576a989d32a2920d6e"
+    },
+    {
+      "id": "avatar-08",
+      "source": "Group 2131328697.svg",
+      "sha256": "8fd15abf475794c8626bd3a9f328b868e4409355153607c12c6fe281179f0d6b"
+    },
+    {
+      "id": "avatar-09",
+      "source": "Group 2131328699.svg",
+      "sha256": "1b7f1cd49c3b9f723ea5e2d0937fe23fa09ee457f2e64c505d688aaf58eed5d1"
+    },
+    {
+      "id": "avatar-10",
+      "source": "Group 2131328700.svg",
+      "sha256": "073199108fbeb32702c1b79cc27f4b2b95cbab9484b292d3020172bd0e32db15"
+    },
+    {
+      "id": "avatar-11",
+      "source": "Group 2131328701.svg",
+      "sha256": "dadb54ff1fe7007181515e7f802efb6980a0229da4f8753ef5cfa164c9991d4c"
+    },
+    {
+      "id": "avatar-12",
+      "source": "Group 2131328702.svg",
+      "sha256": "656e473ae0f1a01c4ed51364d9b101290b7e28809805e40b10d14034ca800c6b"
+    },
+    {
+      "id": "avatar-13",
+      "source": "Group 2131328703.svg",
+      "sha256": "2f7aa95765cf8710349a0810d3efbf6280dfd4a4583c1974cd9950ecc60d6592"
+    },
+    {
+      "id": "avatar-14",
+      "source": "Group 2131328704.svg",
+      "sha256": "adffef9038aa18d3d0c97af64616086d1910f9d52c087768981dd789883f7567"
+    },
+    {
+      "id": "avatar-15",
+      "source": "Group 2131328705.svg",
+      "sha256": "6cc845c0206d059ee4734847033ce73176f4262e8387c9877bdbc536b500b6db"
+    },
+    {
+      "id": "avatar-16",
+      "source": "Group 2131328706.svg",
+      "sha256": "8f667aad34a9530a940f3de6fb0a2d29caa1d14561f09b3b7f6adb72b9ca49b5"
+    },
+    {
+      "id": "avatar-17",
+      "source": "Group 2131328707.svg",
+      "sha256": "7143f0e36563928322b180e22970ee7686ff872599122c304c9b9c3990a3bf7d"
+    },
+    {
+      "id": "avatar-18",
+      "source": "Group 2131328708.svg",
+      "sha256": "e09c1e6d7c8235a8349d89062ffb27cf965867583d723e85a35171f93031f599"
+    },
+    {
+      "id": "avatar-19",
+      "source": "Group 2131328709.svg",
+      "sha256": "f9c0c71f0c83e832cebe024cc938c5d746d4399048ff02bd2a84d00a389e25a8"
+    },
+    {
+      "id": "avatar-20",
+      "source": "Group 2131328710.svg",
+      "sha256": "1037cb465a8fc3308efa951f1479adae6c10ec4d4559129f595c8d9db1663935"
+    }
+  ]
+}

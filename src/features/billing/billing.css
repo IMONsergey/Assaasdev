@@ -16,6 +16,9 @@
 .billing-metric > strong { font-size:calc(28px * var(--font-scale,1)); line-height:1.2; font-weight:600; letter-spacing:-.025em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .billing-metric > p { color:var(--muted); font-size:12px; margin:-6px 0 0; }
 .billing-current { padding:var(--card-padding,24px); }
+.billing-current-identity { display:grid; gap:6px; min-width:0; }
+.billing-current-identity .section-title { font:400 .86rem/1.5 var(--font-ui); color:var(--muted); }
+.billing-current-plan { font:550 1.75rem/1.25 var(--font-display); letter-spacing:-.025em; overflow-wrap:anywhere; }
 .billing-current > .alert { margin-block:16px; }
 .billing-subscription-body { display:flex; align-items:center; justify-content:space-between; gap:24px; }
 .billing-subscription-body dl { display:grid; gap:14px; margin:0; min-width:250px; }

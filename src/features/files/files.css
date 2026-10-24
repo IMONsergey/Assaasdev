@@ -1,6 +1,5 @@
 .files-page.stack { min-width: 0; gap: 18px; }
 .files-page .page-heading { margin-bottom: 0; }
-.files-page .page-heading h1 { font: 500 2.142857rem/2.428571rem var(--font-display); letter-spacing: -.6px; }
 .files-page .page-description { margin-top: 6px; font-size: .928571rem; line-height: 1.428571rem; }
 .files-page > .tabs { border-bottom: 0; gap: 32px; background: transparent; padding: 0; border-radius: 0; }
 .files-page > .tabs button { padding: 8px 0 10px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; font-size: 1.071429rem; }
@@ -75,7 +74,6 @@
 }
 @media (max-width: 700px) {
   .files-page.stack { gap: 16px; }
-  .files-page .page-heading h1 { font-size: 1.857143rem; line-height: 2.142857rem; }
   .files-filter-surface { padding: 16px; }
   .files-primary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
   .files-primary-grid > :first-child { grid-column: 1 / -1; }
@@ -129,7 +127,6 @@
 
 /* Search command and independent filter groups. */
 .files-page .page-heading { margin-bottom:0; }
-.files-page .page-heading h1 { font-size:calc(28px * var(--font-scale,1)); line-height:1.25; letter-spacing:-.025em; }
 .files-workspace { min-width:0; gap:20px; }
 .files-search-toolbar { display:grid; grid-template-columns:minmax(180px,1fr) auto auto; align-items:end; gap:12px; padding:0; border:0; border-radius:0; }
 .files-command-field { min-width:0; }
