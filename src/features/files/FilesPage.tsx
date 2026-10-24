@@ -31,7 +31,10 @@ export function FilesPage() {
   const [view, setView] = useState<FilesView>(restored.view), [advanced, setAdvanced] = useState(false);
   const [job, setJob] = useState<Job | null>(null), [paused, setPaused] = useState(false), [formError, setFormError] = useState('');
   const [exportOpen, setExportOpen] = useState(false), [selected, setSelected] = useState<BucketFile | null>(null);
-  const nextSequence = useRef(0), lastWritten = useRef(''), filterPanel = useRef<HTMLDivElement>(null);
+  const nextSequence = useRef(0), lastWritten = useRef('');
+  const beforeFilters = useRef<FileDraft>(draft);
+  const filterError = useRef<HTMLDivElement>(null);
+  const filterForm = useRef<HTMLFormElement>(null);
   const [instanceId] = useState(() => crypto.randomUUID());
   const principal = user?.user_id || user?.session_id || session.status;
   const plan = user?.subscription?.type || metadata?.subscription_type || 'Free';
@@ -53,7 +56,7 @@ export function FilesPage() {
   useEffect(() => {
     if (lastWritten.current === serialized) { lastWritten.current = ''; return; }
     setDraft(draftFromFilter(restored.filter)); setView(restored.view); setFormError('');
-    setSelected(null); setExportOpen(false); setPaused(false);
+    setSelected(null); setExportOpen(false); setPaused(false); setAdvanced(false);
     // Back/forward restores a completed response without silently billing another search.
     const canonical = fileParams(restored.filter, restored.view).toString();
     const cached = queryClient.getQueryCache().findAll({ queryKey: ['bucket-results', principal, instanceId] })
@@ -64,6 +67,15 @@ export function FilesPage() {
     setJob(cached ?? null);
   }, [serialized, restored, principal, instanceId, queryClient]);
   useEffect(() => { setJob(null); setPaused(false); setSelected(null); setExportOpen(false); }, [principal]);
+  useEffect(() => {
+    if (!advanced) return;
+    const frame = requestAnimationFrame(() => {
+      const input = filterForm.current?.querySelector<HTMLInputElement>('input');
+      input?.focus({ preventScroll: true });
+      input?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [advanced]);
   useEffect(() => {
     // At most six completed result snapshots; no data survives a principal change.
     const entries = queryClient.getQueryCache().findAll({ queryKey: ['bucket-results', principal], type: 'inactive' }).sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt);
@@ -86,24 +98,28 @@ export function FilesPage() {
   function run(filter: BucketFilter, targetView = view, updateDraft = false) {
     try {
       const normalized = normalizeBucketFilter(filter);
-      if (!permitted) { setFormError(hasAccount ? 'Files and bucket analytics require Plus access or higher. Your filters have been kept.' : 'Sign in to an account with file search access. Your filters have been kept.'); return; }
-      if (maxPage && (normalized.page ?? 1) > maxPage) { setFormError(`Your current plan supports up to ${maxPage} pages.`); return; }
+      if (!permitted) { setFormError(hasAccount ? 'Files and bucket analytics require Plus access or higher. Your filters have been kept.' : 'Sign in to an account with file search access. Your filters have been kept.'); return false; }
+      if (maxPage && (normalized.page ?? 1) > maxPage) { setFormError(`Your current plan supports up to ${maxPage} pages.`); return false; }
       setFormError(''); setPaused(false); setView(targetView);
       setJob({ filter: normalized, view: targetView, principal, sequence: ++nextSequence.current });
       if (updateDraft) setDraft(draftFromFilter(normalized));
       const next = fileParams(normalized, targetView); lastWritten.current = next.toString(); setParams(next, { replace: false });
+      return true;
     } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Check the search filters.'); }
   }
   function submit(event: FormEvent) {
     event.preventDefault();
-    try { run(filterFromDraft(draft)); } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Check the search filters.'); }
+    try { if (run(filterFromDraft(draft))) { setAdvanced(false); return; } } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Check the search filters.'); }
+    requestAnimationFrame(() => {
+      filterError.current?.focus({ preventScroll: true });
+      filterError.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    });
   }
   async function stop() { setPaused(true); await queryClient.cancelQueries({ queryKey, exact: true }); }
   async function copy(value: string) { try { await navigator.clipboard.writeText(value); toast('Copied to clipboard.', 'success'); } catch { toast('Copy was blocked by the browser. Select the text and copy it manually.', 'error'); } }
-  function openFilters() {
-    setAdvanced(true);
-    requestAnimationFrame(() => filterPanel.current?.querySelector<HTMLElement>('select, input')?.focus());
-  }
+  function openFilters() { beforeFilters.current = { ...draft }; setAdvanced(true); setFormError(''); }
+  function cancelFilters() { setDraft(beforeFilters.current); setFormError(''); setAdvanced(false); }
+  function runCurrent() { try { run(filterFromDraft(draft)); } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Check your filters.'); } }
 
   return <div className="files-page stack">
     <PageHeader title="Find files in cloud storage" description="Search indexed file records and inspect their metadata." />
@@ -111,7 +127,16 @@ export function FilesPage() {
     {restored.error && <Alert tone="error" title="These file filters could not be restored" actions={<Button variant="secondary" onClick={() => { lastWritten.current = ''; setParams({}); }}>Start a new search</Button>}>{restored.error}</Alert>}
     {!permitted && session.status !== 'loading' && <Alert tone="info" title={hasAccount ? 'File search is available on Plus and above' : 'Sign in to search files'} actions={<Link className="inline-link" to={hasAccount ? '/billing' : '/auth/login?returnTo=%2Ffiles'}>{hasAccount ? 'Compare plans' : 'Continue to sign in'} →</Link>}>Prepare your filters below. Files and bucket analytics use your account’s search access.</Alert>}
 
-    <form className="files-filter-surface" onSubmit={submit} aria-label="File search filters">
+    <div className="files-search-toolbar">
+      <Button id="files-filter-toggle" variant="secondary" onClick={openFilters} aria-haspopup="dialog" aria-expanded={advanced}><Icon name="filter" size={18} />Filters</Button>
+      <p className="files-query-summary">{draft.host || 'All hosts'}{draft.keywords ? ` · ${draft.keywords}` : ''}{draft.extensions ? ` · ${draft.extensions}` : ''}</p>
+      <Button loading={loading} disabled={!permitted} onClick={runCurrent}>{view === 'files' ? 'Search files' : 'Search buckets'}<Icon name="search" size={18} /></Button>
+      <span className="files-request-cost">1 search credit per request</span>
+    </div>
+    {formError && !advanced && <Alert tone="error" title="Check your filters" actions={<Button variant="secondary" onClick={openFilters}>Edit filters</Button>}>{formError}</Alert>}
+    <Dialog open={advanced} onClose={cancelFilters} title="File filters" placement="left" className="files-filter-drawer" footer={<><Button variant="secondary" onClick={cancelFilters}>Cancel</Button><Button type="submit" form="files-filter-form" loading={loading} disabled={!permitted}>Apply filters</Button></>}>
+      <form ref={filterForm} id="files-filter-form" className="files-filter-surface" onSubmit={submit} aria-label="File search filters">
+        <p className="muted">Refine the next search. Results stay unchanged until you apply. Separate list values with commas.</p>
       <div className="files-primary-grid">
         <Field autoComplete="off" spellCheck={false} label="Hostname" placeholder="Any hostname" value={draft.host} onChange={event => edit('host', event.target.value)} />
         <Field label="Keywords" placeholder="documentation, report" value={draft.keywords} onChange={event => edit('keywords', event.target.value)} />
@@ -120,15 +145,8 @@ export function FilesPage() {
         <Field label="Size from · MB" type="number" min="0" step="any" placeholder="Any size" value={draft.minSize} onChange={event => edit('minSize', event.target.value)} />
         <Field label="Size to · MB" type="number" min="0" step="any" placeholder="No upper limit" value={draft.maxSize} onChange={event => edit('maxSize', event.target.value)} />
       </div>
-      <div className="files-filter-actions">
-        <Button type="submit" loading={loading} disabled={!permitted}>{view === 'files' ? 'Search files' : 'Search buckets'}<Icon name="search" size={20} /></Button>
-        <Button variant="secondary" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced} aria-controls="files-more-filters">{advanced ? 'Fewer filters' : 'More filters'}<Icon name="filter" size={20} /></Button>
-        {draft.products && <Badge>Products · {draft.products.split(',').filter(part => part.trim()).length}</Badge>}
-        {draft.alphabets && <Badge>Alphabets · {draft.alphabets}</Badge>}
-        <span className="files-request-cost">1 search credit per request</span>
-      </div>
-      {advanced && <div id="files-more-filters" ref={filterPanel} className="files-advanced-panel">
-        <div className="files-advanced-heading"><div><h2>Refine your search</h2><p>List values are separated by commas. Filters apply when you run a search.</p></div><Button variant="ghost" size="sm" onClick={() => { setDraft({ ...DEFAULT_FILE_DRAFT }); setFormError(''); }}>Clear filters</Button></div>
+
+        <div className="files-drawer-divider" />
         <div className="files-primary-grid">
           <SelectField label="Extension matching" value={draft.excludeExtensions ? 'exclude' : 'include'} onChange={event => edit('excludeExtensions', event.target.value === 'exclude')}><option value="include">Include these extensions</option><option value="exclude">Exclude these extensions</option></SelectField>
           <Field label="Storage products" placeholder="azureblobstorage" hint="Product identifiers returned by the service." value={draft.products} onChange={event => edit('products', event.target.value)} />
@@ -139,10 +157,11 @@ export function FilesPage() {
           <fieldset><legend>Last updated · UTC</legend><Field label="From, inclusive" type="datetime-local" step="1" value={draft.updatedFrom} onChange={event => edit('updatedFrom', event.target.value)} /><Field label="To, inclusive" type="datetime-local" step="1" value={draft.updatedTo} onChange={event => edit('updatedTo', event.target.value)} /></fieldset>
         </div>
         <div className="files-sorting-grid"><SelectField label="Sort order" value={draft.sort} onChange={event => edit('sort', event.target.value)}><option value="uts:desc">Most recently updated</option><option value="uts:asc">Least recently updated</option><option value="cts:desc">Most recently discovered</option><option value="cts:asc">Earliest discovered</option><option value="size_mb:desc">Largest first</option><option value="size_mb:asc">Smallest first</option></SelectField><SelectField label="Rows per page" value={draft.pageSize} onChange={event => edit('pageSize', event.target.value)}>{[10, 20, 25, 50].map(size => <option key={size} value={size}>{size}</option>)}{![10, 20, 25, 50].includes(Number(draft.pageSize)) && <option value={draft.pageSize}>{draft.pageSize}</option>}</SelectField></div>
-        <div className="files-advanced-actions"><Button type="submit" loading={loading} disabled={!permitted}>Apply filters</Button><Button variant="ghost" onClick={() => setAdvanced(false)}>Close filters</Button></div>
-      </div>}
-      {formError && <Alert tone="error" title="Check your filters">{formError}</Alert>}
-    </form>
+
+        <Button variant="ghost" onClick={() => { setDraft({ ...DEFAULT_FILE_DRAFT }); setFormError(''); }}>Clear filters</Button>
+        {formError && <div ref={filterError} id="files-filter-error" className="alert alert--error" role="alert" tabIndex={-1}><div><strong className="alert-title">Check your filters</strong><p>{formError}</p></div></div>}
+      </form>
+    </Dialog>
 
     {changed && <p className="files-draft-notice">Filters have changed. Run a search to update these results.</p>}
     {!job && restored.restored && <p className="files-draft-notice">Filters restored from this link. Run a search when you’re ready.</p>}

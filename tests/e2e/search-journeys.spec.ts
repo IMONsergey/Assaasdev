@@ -6,19 +6,21 @@ test('editing result type keeps condition drafts uncommitted and Escape restores
   await expect(page.getByRole('heading', { name: '4 hosts returned' })).toBeVisible();
   const before = page.url();
   await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
-  const editor = page.getByRole('region', { name: 'Conditions', exact: true });
-  await expect(editor.getByRole('heading', { name: 'Conditions', exact: true })).toBeFocused();
+  const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
+  await expect(editor).toBeVisible();
   await editor.getByRole('button', { name: 'Add condition', exact: true }).click();
   await editor.getByLabel('Field', { exact: true }).fill('country_name');
   await editor.getByLabel('Value', { exact: true }).fill('Germany');
-  await page.getByLabel('Result type').selectOption('ipv4');
+  await editor.getByRole('combobox', { name: 'Result type', exact: true }).selectOption('ipv4');
   await expect(editor).toBeVisible();
   expect(page.url()).toBe(before);
-  await editor.getByLabel('Value', { exact: true }).first().focus();
+  // Move out of the native suggestions popup: its first Escape dismisses
+  // suggestions, while this check exercises the dialog's own dismissal.
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).focus();
   await page.keyboard.press('Escape');
-  await expect(editor).toHaveCount(0);
+  await expect(editor).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'Add Filter', exact: true })).toBeFocused();
-  await expect(page.getByLabel('Result type')).toHaveValue('');
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('');
   expect(page.url()).toBe(before);
 });
 
@@ -93,7 +95,8 @@ test('result and 1000-service layouts fit intermediate widths with large text', 
   }
 });
 
-async function mockSearchApi(page: Page, requests: Array<{ type: string; data: Record<string, unknown> }>) {
+async function mockSearchApi(page: Page, requests: Array<{ type: string; data: Record<string, unknown> }>, options: { holdHosts?: boolean; facetCount?: number; malformedHosts?: boolean } = {}) {
+  const held: Array<() => void> = [];
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__ = {dataMode:"live", apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user_id: 'search-contract', user_name: 'search_contract', user_type: 'USER', credits: 5000, subscription: { type: 'Business', credits: 5000 } }) }));
   await page.routeWebSocket('**/backend/ws', socket => {
@@ -103,9 +106,11 @@ async function mockSearchApi(page: Page, requests: Array<{ type: string; data: R
       const send = (type: string, data: unknown) => socket.send(JSON.stringify({ type, id: request.id, data, metadata: { subscription_type: 'Business' } }));
       if (request.type === 'hosts') {
         const count = Number(request.data.docs_per_page) || 20;
-        send('hosts', Array.from({ length: count }, (_, index) => ({ ip: `192.0.2.${index + 1}`, org: 'Contract fixture', open_ports: [{ port: 443, protocol: 'https' }] })));
+        const hosts: unknown[] = Array.from({ length: count }, (_, index) => ({ ip: `192.0.2.${index + 1}`, org: 'Contract fixture', open_ports: [{ port: 443, protocol: 'https' }] }));
+        if (options.malformedHosts) { hosts[0] = null; hosts[1] = { ip: '192.0.2.2', org: { invalid: true }, labels_list: [null, 'verified'], open_ports: [null, { port: 443 }, { port: '80' }] }; }
+        if (options.holdHosts) held.push(() => send('hosts', hosts)); else send('hosts', hosts);
       } else if (request.type === 'analytics') {
-        send('analytics', { facet_name: 'country_name', facet_values: [{ key: 'Germany', doc_count: 100 }] });
+        send('analytics', options.facetCount ? { facet_name: 'org', facet_values: Array.from({ length: options.facetCount }, (_, index) => ({ key: `Organization ${String(index).padStart(4, '0')}`, doc_count: index + 1 })) } : { facet_name: 'country_name', facet_values: [{ key: 'Germany', doc_count: 100 }] });
         send('analytics', { complete: true });
       } else if (request.type === 'hostinfo') {
         send('hostinfo', { ip: '192.0.2.10', ports: [{ port: 443, protocol: 'https', detected_products: [{ product: 'Large fixture', exposed_data: { field_headers: ['record'], field_value: Array.from({ length: 10000 }, (_, index) => [`record-${String(index).padStart(5, '0')}`]) } }] }] });
@@ -113,6 +118,7 @@ async function mockSearchApi(page: Page, requests: Array<{ type: string; data: R
       } else send(request.type, { unread_count: 0 });
     });
   });
+  return { releaseHosts: () => { for (const send of held.splice(0)) send(); } };
 }
 
 test('pagination, sorting and row count reuse analytics instead of spending another analytics request', async ({ page }) => {
@@ -171,4 +177,162 @@ test('hidden mobile analytics waits for an explicit open and then reuses its res
   await toggle.click();
   await expect(page.getByRole('complementary', { name: 'Result analytics' }).getByRole('button', { name: /^Germany/ })).toBeVisible();
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
+});
+
+
+test('filters open from the left without moving the home search and keep actions visible', async ({ page }) => {
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/search');
+    const search = page.locator('.search-entry');
+    const before = await search.boundingBox();
+    await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+    const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
+    await expect(editor).toBeVisible();
+    const during = await search.boundingBox();
+    expect(Math.abs(before!.x - during!.x)).toBeLessThan(1);
+    expect(Math.abs(before!.y - during!.y)).toBeLessThan(1);
+    expect(Math.abs(before!.width - during!.width)).toBeLessThan(1);
+    expect((await editor.boundingBox())!.x).toBe(0);
+    await editor.getByRole('button', { name: 'Add AND / OR / NOT group', exact: true }).click();
+    await editor.getByRole('button', { name: 'Add group', exact: true }).click();
+    await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
+    await expect(editor.getByRole('button', { name: 'Cancel', exact: true })).toBeInViewport();
+    expect(await editor.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(editor).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add Filter', exact: true })).toBeFocused();
+  }
+});
+
+test('a slow search does not lock filter cancellation or applying a changed query', async ({ page }) => {
+  const requests: Array<{ type: string; data: Record<string, unknown> }> = [];
+  const control = await mockSearchApi(page, requests, { holdHosts: true });
+  await page.goto('/search?q=example&run=1');
+  await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(1);
+  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
+  await editor.getByRole('textbox', { name: 'Search text', exact: true }).fill('discard this');
+  await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeEnabled();
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('example');
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
+  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await editor.getByRole('textbox', { name: 'Search text', exact: true }).fill('refined');
+  await editor.getByRole('button', { name: 'Apply conditions', exact: true }).click();
+  await expect(editor).not.toBeVisible();
+  await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(2);
+  expect(requests.filter(item => item.type === 'hosts')[1].data.full_text_search).toBe('refined');
+  control.releaseHosts();
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+});
+
+test('changing result type waits for explicit apply and preserves complex type rules', async ({ page }) => {
+  const requests: Array<{ type: string; data: Record<string, unknown> }> = [];
+  await mockSearchApi(page, requests);
+  await page.goto('/search?q=example&run=1');
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  const before = page.url();
+  await page.getByRole('combobox', { name: 'Result type', exact: true }).selectOption('ipv4');
+  expect(page.url()).toBe(before);
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
+  const sort = page.getByRole('combobox', { name: 'Sort', exact: true });
+  const rows = page.getByRole('combobox', { name: 'Rows', exact: true });
+  const next = page.getByRole('navigation', { name: 'Pagination', exact: true }).getByRole('button', { name: 'Next', exact: true });
+  await expect(sort).toBeDisabled();
+  await expect(rows).toBeDisabled();
+  await expect(next).toBeDisabled();
+  await page.getByRole('button', { name: 'Cancel changes', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('');
+  await expect(sort).toBeEnabled();
+  await expect(rows).toBeEnabled();
+  await expect(next).toBeEnabled();
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
+  await page.getByRole('combobox', { name: 'Result type', exact: true }).selectOption('ipv4');
+  await expect(sort).toBeDisabled();
+  await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
+  await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(2);
+  expect(requests.filter(item => item.type === 'hosts')[1].data.simple_search_filters).toEqual([{ field: 'type', value: 'ipv4' }]);
+  await expect(sort).toBeEnabled();
+  await expect(rows).toBeEnabled();
+  await expect(next).toBeEnabled();
+  const complex = { full_text_search: 'complex', simple_search_filters: [{ operator: 'OR', filters: [{ field: 'type', value: 'ipv6' }, { field: 'country_name', value: 'France' }] }, { operator: 'NOT', filters: [{ field: 'type', value: 'domain' }] }] };
+  await page.goto(`/search?request=${encodeURIComponent(JSON.stringify(complex))}&run=1`);
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('custom');
+  await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
+  await expect(editor.getByRole('combobox', { name: 'Result type', exact: true })).toBeDisabled();
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(JSON.parse(new URL(page.url()).searchParams.get('request')!)).toEqual(complex);
+});
+
+test('5000 facet values stay bounded and preserve selections across search and pages', async ({ page }) => {
+  const requests: Array<{ type: string; data: Record<string, unknown> }> = [];
+  await mockSearchApi(page, requests, { facetCount: 5000 });
+  await page.goto('/search?q=example&run=1');
+  const analytics = page.getByRole('complementary', { name: 'Result analytics' });
+  const facet = analytics.getByRole('region', { name: 'Organization · Hosts', exact: true });
+  await expect(facet.locator('.search-facet-item')).toHaveCount(10);
+  await facet.getByRole('button', { name: 'Browse all 5,000 values', exact: true }).click();
+  await expect(facet.locator('.search-facet-item')).toHaveCount(50);
+  await facet.getByRole('button', { name: /^Organization 0000 / }).click();
+  await facet.getByRole('button', { name: 'Next organization values', exact: true }).click();
+  await expect(facet.locator('.search-facet-item')).toHaveCount(50);
+  await facet.getByRole('button', { name: /^Organization 0050 / }).click();
+  await facet.getByRole('searchbox', { name: 'Search organization values', exact: true }).fill('4999');
+  await expect(facet.locator('.search-facet-item')).toHaveCount(1);
+  await facet.getByRole('button', { name: /^Organization 4999 / }).click();
+  await facet.getByRole('searchbox', { name: 'Search organization values', exact: true }).clear();
+  await facet.getByRole('button', { name: 'Selected (3)', exact: true }).click();
+  await expect(facet.locator('.search-facet-item')).toHaveCount(3);
+  await expect(facet.locator('.search-facet-item button[aria-pressed="true"]')).toHaveCount(3);
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
+  await analytics.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(2);
+  const applied = requests.filter(item => item.type === 'hosts')[1].data.simple_search_filters;
+  expect(applied).toEqual([{ operator: 'OR', filters: ['0000', '0050', '4999'].map(value => ({ field: 'org', value: `Organization ${value}` })) }]);
+});
+
+test('malformed host rows do not crash results or prematurely end pagination', async ({ page }) => {
+  const requests: Array<{ type: string; data: Record<string, unknown> }> = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await mockSearchApi(page, requests, { malformedHosts: true });
+  await page.goto('/search?q=example&run=1');
+  await expect(page.getByRole('heading', { name: '19 hosts returned', exact: true })).toBeVisible();
+  await expect(page.getByText('Some returned data is incomplete', { exact: true })).toBeVisible();
+  const row = page.locator('.search-result-row').filter({ has: page.getByRole('link', { name: '192.0.2.2', exact: true }) });
+  await expect(row.getByRole('link', { name: '443', exact: true })).toBeVisible();
+  const pages = page.getByRole('navigation', { name: 'Pagination', exact: true });
+  await expect(pages.getByRole('button', { name: 'Next', exact: true })).toBeEnabled();
+  await pages.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(pages).toContainText('Page 2');
+  expect(errors).toEqual([]);
+});
+
+test('invalid long filter drafts focus a visible error without changing the applied search', async ({ page }) => {
+  const requests: Array<{ type: string; data: Record<string, unknown> }> = [];
+  await mockSearchApi(page, requests);
+  const request = { full_text_search: 'example', simple_search_filters: [{ operator: 'AND', filters: Array.from({ length: 16 }, () => ({ field: 'country_name', value: 'Germany' })) }] };
+  await page.goto(`/search?request=${encodeURIComponent(JSON.stringify(request))}&run=1`);
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  const before = page.url();
+  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
+  await editor.getByLabel('Value', { exact: true }).first().clear();
+  await editor.getByRole('button', { name: 'Apply conditions', exact: true }).click();
+  const error = editor.getByRole('region', { name: 'Condition errors', exact: true });
+  await expect(error).toBeFocused();
+  await expect(error).toContainText('Enter a value for country_name.');
+  await expect(error).toBeInViewport();
+  const bounds = await error.boundingBox();
+  const body = await editor.locator('.dialog-body').boundingBox();
+  expect(bounds!.y).toBeGreaterThanOrEqual(body!.y);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(body!.y + body!.height + 1);
+  await expect(editor).toBeVisible();
+  expect(page.url()).toBe(before);
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
 });

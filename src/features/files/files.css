@@ -112,3 +112,17 @@
 .files-table tbody tr { transition: background-color 140ms ease; }
 @keyframes files-filter-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 360px) { .files-result-heading { flex-wrap: wrap; }.files-advanced-actions > .button { flex: 1; } }
+
+/* Filtering has its own scroll area and never moves the result workspace. */
+.files-search-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:16px; border:1px solid var(--line); border-radius:10px; }
+.files-query-summary { flex:1 1 200px; min-width:0; overflow-wrap:anywhere; color:var(--muted); }
+.files-search-toolbar .files-request-cost { flex-basis:100%; margin:0; font-size:.82rem; }
+.files-filter-drawer .files-filter-surface { display:grid; gap:22px; margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.files-filter-drawer .files-primary-grid, .files-filter-drawer .files-date-grid, .files-filter-drawer .files-sorting-grid { grid-template-columns:minmax(0,1fr); gap:18px; }
+.files-filter-drawer .files-date-grid fieldset { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; min-width:0; }
+.files-drawer-divider { border-top:1px solid var(--line); }
+.files-filter-drawer .files-filter-surface > .button { justify-self:start; }
+@media (max-width:520px) { .files-search-toolbar { padding:14px; }.files-query-summary { flex-basis:calc(100% - 120px); }.files-search-toolbar > .button:last-of-type { width:100%; } }
+
+.files-filter-drawer .field input, .files-filter-drawer .field select { min-height:44px; }
+@media (max-width:760px) { .files-filter-drawer .field input, .files-filter-drawer .field select { font-size:max(16px,1rem); } }

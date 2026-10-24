@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeFacetValues, analyticsRequest, decodeSearch, encodeSearch, facetUnit, searchAccessIssues, selectedType, validateSearchRequest, withType, withoutShareToken, toggleFacet } from './model';
+import { activeFacetValues, analyticsRequest, decodeSearch, encodeSearch, facetUnit, parseHostRows, searchAccessIssues, selectedType, validateSearchRequest, withType, withoutShareToken, toggleFacet } from './model';
 
 describe('search context', () => {
   it('round-trips the complete search body and separately restores a share token', () => {
@@ -38,6 +38,25 @@ describe('search context', () => {
     expect(selectedType(next)).toBe('ipv6');
     expect(JSON.stringify(next)).toContain('France');
     expect(JSON.stringify(next)).not.toContain('ipv4');
+  });
+  it('does not silently broaden conditional type rules through the simple selector', () => {
+    const alternatives = { simple_search_filters: [{ operator: 'OR' as const, filters: [{ field: 'type', value: 'ipv4' }, { field: 'country_name', value: 'France' }] }] };
+    const exclusion = { simple_search_filters: [{ operator: 'NOT' as const, filters: [{ field: 'type', value: 'ipv6' }] }] };
+    for (const request of [alternatives, exclusion]) {
+      expect(withType(request, 'ipv4')).toBe(request);
+      expect(withType(request, '')).toBe(request);
+      expect(selectedType(request)).toBe('custom');
+    }
+  });
+  it('retains usable hosts and page cardinality when individual response rows are malformed', () => {
+    const result = parseHostRows([null, { ip: '' }, { ip: '192.0.2.1', open_ports: [null, { port: 443, protocol: 'https' }, { port: '80' }], org: { name: 'Invalid' }, labels_list: [null, 'verified', 'verified'] }, { ip: '192.0.2.2', open_ports: [] }, { ip: '192.0.2.3', open_ports: [{ port: -1 }] }]);
+    expect(result.receivedCount).toBe(5);
+    expect(result.omittedCount).toBe(2);
+    expect(result.incompleteCount).toBe(2);
+    expect(result.hosts[0]).toEqual({ ip: '192.0.2.1', open_ports: [{ port: 443, protocol: 'https' }], labels_list: ['verified'] });
+    expect(result.hosts[1].open_ports).toEqual([]);
+    expect(result.hosts[2].open_ports).toBeUndefined();
+    expect(() => parseHostRows({ hosts: [] })).toThrow('unexpected host list');
   });
   it('rejects incomplete groups and invalid ranges instead of silently changing the search', () => {
     expect(() => validateSearchRequest({ simple_search_filters: [{ operator: 'AND', filters: [] }] })).toThrow();

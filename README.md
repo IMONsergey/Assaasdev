@@ -6,7 +6,7 @@ This repository contains the **working React application**, its website HTTP/Web
 
 **Release status:** client implementation and local browser verification are available. Acceptance against the client's actual HTTPS backend and external providers remains a separate release gate. See [release review](docs/RELEASE-2026-10-23.md), [implementation coverage](docs/IMPLEMENTATION-COVERAGE.md) and [verification evidence](docs/VERIFICATION.md).
 
-**Latest UX release:** clickable credit meters, responsive task cards, query/history restoration, request-efficient analytics, accessible navigation and expanded regression coverage. See the [UX readiness report and current screenshots](docs/audit/2026-10-23-ux-readiness.md) and [source-to-scenario review](docs/audit/2026-10-23-scenario-coverage.md).
+**Latest UX release:** left filter drawers, explicit draft application, service classification, searchable large data tables, task and payment pagination, and preserved navigation context. See the [24 October workspace review](docs/audit/2026-10-24-workspaces.md), [previous UX report and screenshots](docs/audit/2026-10-23-ux-readiness.md), and [source-to-scenario review](docs/audit/2026-10-23-scenario-coverage.md).
 
 **Public review deployment:** the committed `vercel.json` publishes the explicit demo build at a domain root and supports direct links to application routes. This hosting configuration is for interface acceptance; the live backend deployment uses the separate proxy configuration below. Demo state resets after a page reload.
 

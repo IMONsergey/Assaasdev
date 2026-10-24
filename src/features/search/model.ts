@@ -1,4 +1,4 @@
-import type { RangeFilter, ResponseMetadata, SearchFilter, SearchRequest } from '../../api';
+import type { HostCard, RangeFilter, ResponseMetadata, SearchFilter, SearchRequest } from '../../api';
 
 export type Dataset = 'public' | 'private';
 export const DEFAULT_PAGE_SIZE = 20;
@@ -139,6 +139,9 @@ function stripField(nodes: SearchFilter[], field: string): SearchFilter[] {
 }
 
 export function withType(request: SearchRequest, type: string): SearchRequest {
+  // A single selector cannot express alternatives or exclusions. Leave those
+  // rules intact so changing this shortcut cannot silently broaden a search.
+  if (selectedType(request) === 'custom') return request;
   const filters = stripField(request.simple_search_filters || [], 'type');
   if (type) filters.push({ field: 'type', value: type });
   return { ...request, simple_search_filters: filters, page: 1 };
@@ -150,6 +153,42 @@ export function selectedType(request: SearchRequest): string {
   const visit = (nodes: SearchFilter[], conditional = false) => nodes.forEach(node => { if (node.field === 'type' && node.value) { matches.push(node.value); if (conditional) complex = true; } if (node.filters) visit(node.filters, conditional || node.operator === 'OR' || node.operator === 'NOT'); });
   visit(request.simple_search_filters || []);
   return complex || matches.length > 1 ? 'custom' : matches[0] || '';
+}
+
+/** Keep valid rows usable when optional server fields are missing or malformed.
+ * receivedCount stays separate because pagination is based on the server page. */
+export function parseHostRows(value: unknown): { hosts: HostCard[]; receivedCount: number; omittedCount: number; incompleteCount: number } {
+  if (!Array.isArray(value)) throw new Error('The server returned an unexpected host list. Your search has been kept.');
+  const hosts: HostCard[] = [];
+  let omittedCount = 0, incompleteCount = 0;
+  for (const row of value) {
+    if (!record(row) || typeof row.ip !== 'string' || !row.ip.trim()) { omittedCount++; continue; }
+    const host: HostCard = { ip: row.ip.trim() };
+    let incomplete = false;
+    for (const key of ['os', 'org', 'city_name', 'country_code', 'region'] as const) {
+      if (typeof row[key] === 'string') host[key] = row[key];
+      else if (row[key] !== undefined && row[key] !== null) incomplete = true;
+    }
+    if (typeof row.uts === 'number' && Number.isFinite(row.uts)) host.uts = row.uts;
+    else if (row.uts !== undefined && row.uts !== null) incomplete = true;
+    if (Array.isArray(row.labels_list)) {
+      host.labels_list = [...new Set(row.labels_list.filter((label): label is string => typeof label === 'string' && label.length > 0))];
+      if (row.labels_list.some(label => typeof label !== 'string')) incomplete = true;
+    } else if (row.labels_list !== undefined && row.labels_list !== null) incomplete = true;
+    if (Array.isArray(row.open_ports)) {
+      const ports: NonNullable<HostCard['open_ports']> = [];
+      for (const port of row.open_ports) {
+        if (!record(port) || typeof port.port !== 'number' || !Number.isInteger(port.port) || port.port < 0 || port.port > 65535) { incomplete = true; continue; }
+        ports.push({ port: port.port, ...(typeof port.protocol === 'string' ? { protocol: port.protocol } : {}) });
+        if (port.protocol !== undefined && port.protocol !== null && typeof port.protocol !== 'string') incomplete = true;
+      }
+      // An invalid list is unknown, not evidence that no ports were observed.
+      if (ports.length || row.open_ports.length === 0) host.open_ports = ports;
+    } else if (row.open_ports !== undefined && row.open_ports !== null) incomplete = true;
+    if (incomplete) incompleteCount++;
+    hosts.push(host);
+  }
+  return { hosts, receivedCount: value.length, omittedCount, incompleteCount };
 }
 
 /** Current response restrictions prevent sending a request known to be blocked. */

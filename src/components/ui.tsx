@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { asset } from '../config';
 import { lockPageScroll } from '../lib/scroll-lock';
@@ -35,7 +35,7 @@ export function Alert({ tone = 'info', title, children, actions }: { tone?: 'err
 }
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'error'; children: ReactNode }) { return <span className={`badge badge--${tone}`}>{children}</span>; }
 export function Spinner({ label = 'Loading…' }: { label?: string }) { return <span className="loading-state" role="status"><span className="spinner" aria-hidden="true" />{label}</span>; }
-export function Dialog({ open, onClose, title, children, footer, size = 'md' }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; size?: 'sm' | 'md' | 'lg' }) {
+export function Dialog({ open, onClose, title, children, footer, size = 'md', placement = 'center', className }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; size?: 'sm' | 'md' | 'lg'; placement?: 'center' | 'left'; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null), titleId = useId();
   useEffect(() => {
     const dialog = ref.current;
@@ -50,18 +50,36 @@ export function Dialog({ open, onClose, title, children, footer, size = 'md' }: 
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, [open]);
-  return createPortal(<dialog ref={ref} className={`dialog dialog--${size}`} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const rect = e.currentTarget.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}><header className="dialog-header"><h2 id={titleId}>{title}</h2><Button variant="ghost" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></header><div className="dialog-body">{children}</div>{footer && <footer className="dialog-footer">{footer}</footer>}</dialog>, document.body);
+  return createPortal(<dialog ref={ref} className={join('dialog', `dialog--${size}`, placement === 'left' && 'dialog--left', className)} aria-labelledby={titleId} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const rect = e.currentTarget.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) onClose(); } }}><header className="dialog-header"><h2 id={titleId}>{title}</h2><Button variant="ghost" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></header><div className="dialog-body">{children}</div>{footer && <footer className="dialog-footer">{footer}</footer>}</dialog>, document.body);
 }
 export function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLabel = 'Confirm', danger, busy, confirmDisabled }: { open: boolean; onClose: () => void; onConfirm: () => void | Promise<void>; title: ReactNode; description: ReactNode; confirmLabel?: string; danger?: boolean; busy?: boolean; confirmDisabled?: boolean }) {
   return <Dialog open={open} onClose={() => { if (!busy) onClose(); }} title={title} size="sm" footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button variant={danger ? 'danger' : 'primary'} loading={busy} disabled={confirmDisabled} onClick={() => void onConfirm()}>{confirmLabel}</Button></>}><div className="confirm-description">{description}</div></Dialog>;
 }
 export function EmptyState({ title, description, icon, actions }: { title: ReactNode; description?: ReactNode; icon?: ReactNode; actions?: ReactNode }) { return <div className="empty-state">{icon && <div className="empty-state-icon">{icon}</div>}<h2>{title}</h2>{description && <p>{description}</p>}{actions && <div className="cluster">{actions}</div>}</div>; }
 export function Tabs({ items, value, onChange }: { items: { id: string; label: ReactNode; count?: number }[]; value: string; onChange: (id: string) => void }) {
-  return <div className="tabs" role="tablist" onKeyDown={e => { const index = items.findIndex(item => item.id === value); const next = e.key === 'ArrowRight' ? (index + 1) % items.length : e.key === 'ArrowLeft' ? (index + items.length - 1) % items.length : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1; if (next >= 0) { e.preventDefault(); onChange(items[next].id); (e.currentTarget.children[next] as HTMLElement).focus(); } }}>{items.map(item => <button key={item.id} type="button" role="tab" aria-selected={value === item.id} tabIndex={value === item.id ? 0 : -1} onClick={() => onChange(item.id)}>{item.label}{item.count !== undefined && <span className="tab-count">{item.count}</span>}</button>)}</div>;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = ref.current, selected = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !selected || list.scrollWidth <= list.clientWidth) return;
+    const listBox = list.getBoundingClientRect(), selectedBox = selected.getBoundingClientRect();
+    if (selectedBox.left < listBox.left) list.scrollLeft -= listBox.left - selectedBox.left + 4;
+    else if (selectedBox.right > listBox.right) list.scrollLeft += selectedBox.right - listBox.right + 4;
+  }, [value]);
+  return <div ref={ref} className="tabs" role="tablist" onKeyDown={e => { const index = items.findIndex(item => item.id === value); const next = e.key === 'ArrowRight' ? (index + 1) % items.length : e.key === 'ArrowLeft' ? (index + items.length - 1) % items.length : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1; if (next >= 0 && items[next]) { e.preventDefault(); onChange(items[next].id); (e.currentTarget.children[next] as HTMLElement).focus({ preventScroll: true }); } }}>{items.map(item => <button key={item.id} type="button" role="tab" aria-selected={value === item.id} tabIndex={value === item.id ? 0 : -1} onClick={() => onChange(item.id)}>{item.label}{item.count !== undefined && <span className="tab-count">{item.count}</span>}</button>)}</div>;
 }
 export function Pagination({ page, pageSize, count, total, maxPage, disabled = false, onPageChange }: { page: number; pageSize: number; count: number; total?: number; maxPage?: number; disabled?: boolean; onPageChange: (page: number) => void }) {
-  const hasNext = (total === undefined ? count === pageSize : page * pageSize < total) && (maxPage === undefined || page < maxPage);
-  return <nav className="pagination" aria-label="Pagination" aria-busy={disabled || undefined}><p className="muted" aria-live="polite" aria-atomic="true">{total !== undefined ? `${total.toLocaleString()} results · ` : ''}Page {page}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p><div className="cluster"><Button variant="secondary" size="sm" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}><Icon name="chevron-left" size={16} />Previous</Button><Button variant="secondary" size="sm" disabled={disabled || !hasNext} onClick={() => onPageChange(page + 1)}>Next<Icon name="chevron-right" size={16} /></Button></div></nav>;
+  const knownTotal = total !== undefined && Number.isFinite(total) && total >= 0 ? total : undefined;
+  const totalPages = knownTotal === undefined ? undefined : Math.max(1, Math.ceil(knownTotal / Math.max(1, pageSize)));
+  const lastPage = totalPages === undefined ? undefined : Math.min(totalPages, maxPage ?? totalPages);
+  const hasNext = (knownTotal === undefined ? count === pageSize : page < (lastPage ?? 1)) && (maxPage === undefined || page < maxPage);
+  const [pageDraft, setPageDraft] = useState(String(page));
+  useEffect(() => { setPageDraft(String(page)); }, [page]);
+  return <nav className="pagination" aria-label="Pagination" aria-busy={disabled || undefined}>
+    <p className="muted" aria-live="polite" aria-atomic="true">{knownTotal !== undefined ? `${knownTotal.toLocaleString()} results · ` : ''}Page {page}{lastPage !== undefined ? ` of ${lastPage}` : ''}{maxPage && page >= maxPage ? ' · Plan limit reached' : ''}</p>
+    <div className="pagination-controls"><div className="cluster"><Button variant="secondary" size="sm" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}><Icon name="chevron-left" size={16} />Previous</Button><Button variant="secondary" size="sm" disabled={disabled || !hasNext} onClick={() => onPageChange(page + 1)}>Next<Icon name="chevron-right" size={16} /></Button></div>
+      {lastPage !== undefined && lastPage > 5 && <form className="pagination-jump" onSubmit={event => { event.preventDefault(); const next = Number(pageDraft); if (!disabled && Number.isInteger(next) && next >= 1 && next <= lastPage) onPageChange(next); }}><label>Go to page<input type="number" inputMode="numeric" min={1} max={lastPage} step={1} required disabled={disabled} value={pageDraft} onChange={event => setPageDraft(event.target.value)} /></label><Button variant="secondary" size="sm" type="submit" disabled={disabled}>Go</Button></form>}
+    </div>
+  </nav>;
 }
 
 const figmaIcons: Record<string, string> = { search: 'home/imgIconSearch.svg', database: 'home/imgIconDatabase.svg', files: 'home/imgIconDatabase.svg', scan: 'home/imgIconScan.svg', code: 'home/imgIconCode.svg', api: 'home/imgIconCode.svg', card: 'home/imgIconCard.svg', bell: 'home/imgIconBell.svg', copy: 'results-heading/imgIconCopy.svg', download: 'results-heading/imgIconDownload.svg', external: 'host/imgIconExternal.svg' };

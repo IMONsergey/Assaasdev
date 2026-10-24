@@ -163,3 +163,10 @@
   .scanner-task-table tr { gap: 14px 12px; padding: 16px; }
   .scanner-review-scope > div { grid-template-columns: minmax(0,1fr); }
 }
+
+.scanner-list-controls { display:grid; grid-template-columns:minmax(200px,1fr) minmax(140px,190px) minmax(100px,140px) auto; gap:16px; }
+.scanner-list-controls > .field { width:auto; min-width:0; }
+.scanner-list-controls > .checkbox-field { max-width:175px; }
+.scanner-list-pagination > p { font-size:.85rem; margin-top:12px; }
+@container scanner (max-width:1000px) { .scanner-list-controls { grid-template-columns:minmax(0,1fr) minmax(140px,1fr); }.scanner-list-controls > .checkbox-field { max-width:none; } }
+@container scanner (max-width:420px) { .scanner-list-controls { grid-template-columns:minmax(0,1fr); gap:12px; }.scanner-list-controls .checkbox-field { margin-block:4px; }.scanner-list-heading { flex-wrap:wrap; }.scanner-list-heading > .tabs { flex-basis:100%; } }

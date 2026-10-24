@@ -26,10 +26,8 @@ for (const width of [1440, 390, 320]) {
         throw error;
       }
       await expect.poll(() => page.locator('img:visible').evaluateAll(images => images.every(node => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0))).toBe(true);
-      if (route === '/search' || route === '/settings') {
-        await page.evaluate(() => document.fonts.ready);
-        await page.screenshot({ path: test.info().outputPath(`${route.slice(1)}-${width}.png`), fullPage: false });
-      }
+      await page.evaluate(() => document.fonts.ready);
+      await page.screenshot({ path: test.info().outputPath(`route-${route.slice(1).replace(/[^a-z0-9_-]+/gi, '-')}-${width}.png`), fullPage: false });
       if (route === '/scanner' && width < 720) {
         const action = page.getByRole('button', { name: 'Delete', exact: true }).first();
         await action.scrollIntoViewIfNeeded();
@@ -81,7 +79,7 @@ test('search opens with a centered single-line title and keeps the query after c
   await conditions.getByRole('button', { name: 'Add condition', exact: true }).click();
   await conditions.getByLabel('Field', { exact: true }).fill('country_code');
   await conditions.getByLabel('Value', { exact: true }).fill('zz');
-  await conditions.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Filters', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(conditions).toHaveCount(0);
   await expect(query).toHaveValue('nginx');
   await page.getByRole('button', { name: 'Run search', exact: true }).click();

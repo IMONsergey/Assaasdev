@@ -30,7 +30,8 @@ test('scan import keeps a headerless first target, deduplicates and reviews a 1,
   await expect(review).toContainText('0 0 3 * * *');
   await review.getByRole('button', { name: 'Create scan task', exact: true }).click();
   await expect(page).toHaveURL(/\/scanner\?created=/);
-  await expect(page.getByText('queued', { exact: false }).first()).toBeVisible();
+  await expect(page.locator('.scanner-recent-task .scanner-progress')).toContainText('queued');
+  await expect(page.locator('.scanner-recent-task .scanner-progress')).toBeVisible();
   await expect(page.locator('.scanner-recent-task .scanner-target-primary')).toContainText('+2');
   await page.getByRole('tab', { name: /Scheduled/ }).click();
   await expect(page.locator('.scanner-task-table--planned')).toContainText('192.0.2.10');
@@ -93,8 +94,9 @@ test('files back and forward restore the matching response without a fresh searc
   await page.goto('/files');
   await page.getByRole('button', { name: 'Explore sample files', exact: true }).click();
   await expect(page.getByRole('heading', { name: '8 file records', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByLabel('Keywords', { exact: true }).fill('not-present-anywhere');
-  await page.getByRole('button', { name: 'Search files', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(page.getByRole('heading', { name: '0 file records', exact: true })).toBeVisible();
   const balance = page.getByRole('button', { name: /^View credits and usage\./ });
   const creditsAfterSearch = await balance.getAttribute('aria-label');
@@ -108,7 +110,7 @@ test('files back and forward restore the matching response without a fresh searc
   await expect(page.getByRole('heading', { name: '0 file records', exact: true })).toBeVisible();
   await expect(balance).toHaveAttribute('aria-label', creditsAfterSearch!);
   await page.getByRole('button', { name: 'Edit filters', exact: true }).click();
-  await expect(page.getByLabel('Extension matching', { exact: true })).toBeFocused();
+  await expect(page.getByLabel('Hostname', { exact: true })).toBeFocused();
   await expect(page.getByRole('button', { name: 'Apply filters', exact: true })).toBeVisible();
 });
 

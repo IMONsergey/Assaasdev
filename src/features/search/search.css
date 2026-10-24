@@ -255,3 +255,42 @@
   .search-result-toolbar label:nth-of-type(2) { grid-column: 2; grid-row: 1; }
   .search-result-toolbar label:nth-of-type(2) select { width: auto; min-width: 64px; }
 }
+
+.search-query-draft { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); border-radius: 8px; background: var(--tint); font-size: .928571rem; }
+.search-query-draft > div:first-child > span { color: var(--accent-text); }
+.search-query-draft p { margin: 4px 0 0; color: var(--muted); font-size: .857143rem; line-height: 1.5; }
+.search-query-draft .cluster { gap: 8px; }
+.search-filter-dialog .dialog-footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.search-filter-dialog .dialog-footer .button { min-width: 0; white-space: normal; }
+.search-filter-dialog .dialog-footer .button:first-child { grid-column: 1 / -1; }
+.search-editor--drawer { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.search-editor-intro { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+.search-editor-intro p { margin: 0; color: var(--muted); line-height: 1.5; font-size: .928571rem; }
+.search-editor-intro .search-draft-label { margin-left: auto; flex: 0 0 auto; }
+.search-editor-section-heading { border-top: 1px solid var(--line); padding-top: 20px; }
+.search-editor-section-heading h3 { margin: 0 0 6px; font: 500 1rem/1.5 var(--font-ui); }
+.search-editor-section-heading p { margin: 0; color: var(--muted); font-size: .857143rem; line-height: 1.5; }
+.search-editor--drawer .search-condition-leaf, .search-editor--drawer .search-range-row { grid-template-columns: minmax(0, 1fr); }
+.search-editor--drawer .search-remove-condition, .search-editor--drawer .search-range-row > .button { grid-column: auto; justify-self: end; margin: -4px 0 0; }
+.search-editor--drawer .search-group-toolbar { flex-wrap: wrap; gap: 8px; }
+.search-editor--drawer .search-group-toolbar .field { flex-basis: 100%; }
+.search-editor--drawer .search-group-toolbar > .button { max-width: none; margin-left: auto; }
+.search-editor--drawer .cluster { flex-wrap: wrap; gap: 8px; }
+.search-editor--drawer .cluster .button { max-width: 100%; white-space: normal; }
+.search-editor--drawer .search-condition-group.search-condition-deep { padding-inline: 4px; border-right: 0; }
+.search-condition-error { margin-top: 20px; scroll-margin-block: 8px; }
+.search-condition-error:focus { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+.search-facet-search { margin-bottom: 12px; }
+.search-facet-search label { font-size: .785714rem; color: var(--muted); }
+.search-facet-search input { min-height: 38px; padding: 8px 10px; font-size: .857143rem; }
+.search-facet-selection { display: inline-flex; align-items: center; min-height: 32px; margin: 0 0 10px; padding: 4px 8px; color: var(--accent-text); background: var(--tint); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font: inherit; font-size: .785714rem; }
+.search-facet-selection[aria-pressed="true"] { border-color: var(--accent); }
+.search-facet-browse.button { padding-inline: 0; color: var(--accent-text); font-size: .857143rem; }
+.search-facet-pagination { display: grid; gap: 8px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: .785714rem; }
+.search-facet-pagination p { margin: 0; }
+.search-facet-pagination nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.search-facet-pagination nav .button { padding: 6px; min-width: 32px; }
+.search-facet-pagination > .button { justify-self: start; padding-inline: 0; }
+.search-facet-empty { color: var(--muted); font-size: .857143rem; line-height: 1.5; }
+@media (max-width: 380px) { .search-editor--drawer .form-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (pointer: coarse) { .search-facet-selection, .search-facet-pagination nav .button { min-height: 44px; min-width: 44px; } }
