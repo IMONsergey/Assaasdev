@@ -138,7 +138,9 @@ for (const width of [820, 1024, 1280]) {
       if (route === '/billing') {
         await page.getByRole('tab', { name: 'Plans', exact: true }).click();
         await expect(page.locator('.billing-plan')).toHaveCount(4);
-        const bounds = await page.locator('.billing-plan').first().boundingBox();
+        const firstPlan = page.locator('.billing-plan').first();
+        await expect(firstPlan).toBeVisible();
+        const bounds = await firstPlan.boundingBox();
         expect(bounds!.width).toBeGreaterThan(240);
         await page.evaluate(() => document.fonts.ready);
         await page.screenshot({ path: info.outputPath(`billing-dark-large-${width}.png`) });
