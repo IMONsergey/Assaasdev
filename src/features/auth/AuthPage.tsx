@@ -72,7 +72,7 @@ export function AuthPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || state.phase === 'unknown' || cooldown?.step === state.step && cooldown.until > Date.now()) return;
+    if (inFlight.current || guestBusy || checking || state.phase === 'unknown' || cooldown?.step === state.step && cooldown.until > Date.now()) return;
     const form = new FormData(event.currentTarget);
     const value = (key: string) => String(form.get(key) ?? '');
     const password = value('password');
@@ -157,6 +157,7 @@ export function AuthPage() {
   }
 
   async function checkSession() {
+    if (inFlight.current || checking || guestBusy) return;
     setChecking(true);
     try {
       await api.http('/whoami');
@@ -174,13 +175,17 @@ export function AuthPage() {
   }
 
   async function continueAsGuest() {
+    if (inFlight.current || guestBusy || checking || state.phase === 'unknown' || state.phase === 'authenticated') return;
+    inFlight.current = true;
     setGuestBusy(true);
     try { await startGuest(); navigate(returnTo); }
     catch (error) { setNotice(error instanceof Error ? error.message : 'Guest access could not be started.'); }
-    finally { setGuestBusy(false); }
+    finally { inFlight.current = false; setGuestBusy(false); }
   }
 
   const busy = state.phase === 'submitting';
+  const controlsBusy = busy || guestBusy || checking;
+  const entryBlocked = controlsBusy || state.phase === 'unknown' || state.phase === 'authenticated';
   const hasPassword = ['login', 'register', 'reset'].includes(state.step);
   const complete = state.phase === 'complete';
   const coolingDown = cooldown?.step === state.step && cooldown.until > Date.now();
@@ -191,7 +196,7 @@ export function AuthPage() {
       <img className="auth-brand-logo" src={asset('figma/home/imgApcosysLogo.svg')} width="320" height="64" alt="APCOSYS" />
     </section>
     <section className="auth-form-region" aria-labelledby="auth-title">
-      <div className="auth-topline"><Link to="/search" className="auth-mobile-brand" aria-label="APCOSYS home"><img src={asset('figma/home/imgApcosysLogo.svg')} width="150" height="29" alt="APCOSYS" /></Link><Link to="/search" className="auth-back inline-link"><Icon name="chevron-left" size={16} />Back to search</Link><div className="auth-top-actions">{state.step === 'login' && <Button variant="ghost" size="sm" loading={guestBusy} onClick={() => void continueAsGuest()}>Explore as a guest<Icon name="arrow" size={16} /></Button>}</div></div>
+      <div className="auth-topline"><Link to="/search" className="auth-mobile-brand" aria-label="APCOSYS home"><img src={asset('figma/home/imgApcosysLogo.svg')} width="150" height="29" alt="APCOSYS" /></Link><Link to="/search" className="auth-back inline-link"><Icon name="chevron-left" size={16} />Back to search</Link><div className="auth-top-actions">{state.step === 'login' && <Button variant="ghost" size="sm" loading={guestBusy} disabled={entryBlocked} onClick={() => void continueAsGuest()}>Explore as a guest<Icon name="arrow" size={16} /></Button>}</div></div>
       <div className="auth-form-wrap">
         {state.step === 'two-factor' && <span className="auth-step-label">ACCOUNT SECURITY</span>}
         <h1 id="auth-title">{copy[state.step].title}</h1><p className="auth-description">{copy[state.step].description}</p>
@@ -200,17 +205,17 @@ export function AuthPage() {
         {coolingDown && <p className="auth-provider-note">Try again after {new Date(cooldown.until).toLocaleTimeString()}. This form will not retry automatically.</p>}
         {state.phase === 'unknown' && <Button variant="secondary" loading={checking} onClick={() => void checkSession()}>Check current session</Button>}
         {state.phase === 'authenticated' ? <div className="stack"><Spinner label="Loading your account…" />{(session.status === 'anonymous' || session.status === 'guest') && <Alert tone="warning" actions={<Button loading={checking} onClick={() => void checkSession()}>Check current session</Button>}>The sign-in response arrived, but an authenticated session has not been verified. Check your session before continuing.</Alert>}{session.status === 'error' && <Alert tone="error" actions={<Button onClick={() => void refreshSession()}>Check session again</Button>}>{session.error || 'The account could not be loaded.'}</Alert>}</div> : complete ? <Button fullWidth onClick={() => go('login')}>Continue to sign in</Button> : <form key={state.step} className="auth-form" onSubmit={(event) => void submit(event)}>
-          {(state.step === 'login' || state.step === 'recover' || state.step === 'reset') && <Field label="Email or username" name="identifier" autoComplete="username" required defaultValue={state.identifier} autoFocus disabled={busy} />}
-          {(state.step === 'register' || state.step === 'verify') && <Field label="Email address" name="email" type="email" autoComplete="email" required defaultValue={state.email} autoFocus disabled={busy} />}
-          {state.step === 'register' && <Field label="Username" name="user_name" autoComplete="username" required disabled={busy} hint="Choose the name you will use to sign in." />}
-          {hasPassword && <div className="auth-password"><Field label={state.step === 'reset' ? 'New password' : 'Password'} name="password" onChange={() => setConfirmationError('')} type={showPassword ? 'text' : 'password'} autoComplete={state.step === 'login' ? 'current-password' : 'new-password'} minLength={state.step === 'register' ? 18 : 6} required disabled={busy} hint={state.step === 'register' ? 'Use at least 18 characters.' : state.step === 'reset' ? 'Use at least 6 characters.' : undefined} /><button className="auth-password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Hide password' : 'Show password'}</button></div>}
-          {(state.step === 'register' || state.step === 'reset') && <Field label="Confirm password" name="confirmation" error={confirmationError || undefined} onChange={() => setConfirmationError('')} type={showPassword ? 'text' : 'password'} autoComplete="new-password" required disabled={busy} />}
-          {(state.step === 'verify' || state.step === 'reset' || state.step === 'two-factor') && <Field label={state.step === 'two-factor' ? backup ? 'Backup code' : 'Authenticator code' : state.step === 'reset' ? 'Reset code' : 'Verification code'} name="code" value={code} onChange={event => setCode(state.step === 'reset' ? event.target.value : normalizeOneTimeCode(event.target.value))} autoComplete="one-time-code" inputMode={backup || state.step === 'reset' ? 'text' : 'numeric'} minLength={state.step === 'reset' ? undefined : backup ? 8 : 6} maxLength={state.step === 'reset' ? undefined : 64} pattern={state.step === 'reset' ? undefined : backup ? '.{8}' : '[0-9]{6}'} autoFocus={state.step === 'two-factor'} required disabled={busy} hint={backup ? 'Each 8-character backup code can be used once.' : state.step === 'reset' ? 'Paste the complete reset code from your email.' : 'Enter all 6 digits. You can paste a code with spaces.'} />}
+          {(state.step === 'login' || state.step === 'recover' || state.step === 'reset') && <Field label="Email or username" name="identifier" autoComplete="username" required defaultValue={state.identifier} autoFocus disabled={controlsBusy} />}
+          {(state.step === 'register' || state.step === 'verify') && <Field label="Email address" name="email" type="email" autoComplete="email" required defaultValue={state.email} autoFocus disabled={controlsBusy} />}
+          {state.step === 'register' && <Field label="Username" name="user_name" autoComplete="username" required disabled={controlsBusy} hint="Choose the name you will use to sign in." />}
+          {hasPassword && <div className="auth-password"><Field label={state.step === 'reset' ? 'New password' : 'Password'} name="password" onChange={() => setConfirmationError('')} type={showPassword ? 'text' : 'password'} autoComplete={state.step === 'login' ? 'current-password' : 'new-password'} minLength={state.step === 'register' ? 18 : 6} required disabled={controlsBusy} hint={state.step === 'register' ? 'Use at least 18 characters.' : state.step === 'reset' ? 'Use at least 6 characters.' : undefined} /><button className="auth-password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Hide password' : 'Show password'}</button></div>}
+          {(state.step === 'register' || state.step === 'reset') && <Field label="Confirm password" name="confirmation" error={confirmationError || undefined} onChange={() => setConfirmationError('')} type={showPassword ? 'text' : 'password'} autoComplete="new-password" required disabled={controlsBusy} />}
+          {(state.step === 'verify' || state.step === 'reset' || state.step === 'two-factor') && <Field label={state.step === 'two-factor' ? backup ? 'Backup code' : 'Authenticator code' : state.step === 'reset' ? 'Reset code' : 'Verification code'} name="code" value={code} onChange={event => setCode(state.step === 'reset' ? event.target.value : normalizeOneTimeCode(event.target.value))} autoComplete="one-time-code" inputMode={backup || state.step === 'reset' ? 'text' : 'numeric'} minLength={state.step === 'reset' ? undefined : backup ? 8 : 6} maxLength={state.step === 'reset' ? undefined : 64} pattern={state.step === 'reset' ? undefined : backup ? '.{8}' : '[0-9]{6}'} autoFocus={state.step === 'two-factor'} required disabled={controlsBusy} hint={backup ? 'Each 8-character backup code can be used once.' : state.step === 'reset' ? 'Paste the complete reset code from your email.' : 'Enter all 6 digits. You can paste a code with spaces.'} />}
           {state.step === 'login' && <Link className="auth-forgot inline-link" to={routes.recover} state={{ returnTo }}>Forgot password?</Link>}
-          <Button fullWidth type="submit" loading={busy} disabled={state.phase === 'unknown' || coolingDown}>{copy[state.step].action}</Button>
-          {state.step === 'two-factor' && <Button type="button" variant="ghost" onClick={() => { setBackup(!backup); setCode(''); }} disabled={busy}>{backup ? 'Use an authenticator code' : 'Use a backup code'}</Button>}
+          <Button fullWidth type="submit" loading={busy} disabled={entryBlocked || coolingDown}>{copy[state.step].action}</Button>
+          {state.step === 'two-factor' && <Button type="button" variant="ghost" onClick={() => { setBackup(!backup); setCode(''); }} disabled={controlsBusy}>{backup ? 'Use an authenticator code' : 'Use a backup code'}</Button>}
         </form>}
-        {state.step === 'login' && state.phase !== 'authenticated' && <>{mode !== 'demo' && <div className="auth-social"><Button fullWidth variant="secondary" onClick={() => window.location.assign(api.url('/auth/google'))} disabled={busy}><img src={asset('figma/login/imgApcosysGoogle.svg')} width="20" height="20" alt="" aria-hidden="true" />Continue with Google</Button></div>}<p className="auth-switch">New to APCOSYS? <Link to={routes.register} state={{ returnTo }}>Create an account</Link></p></>}
+        {state.step === 'login' && state.phase !== 'authenticated' && <>{mode !== 'demo' && <div className="auth-social"><Button fullWidth variant="secondary" onClick={() => window.location.assign(api.url('/auth/google'))} disabled={entryBlocked}><img src={asset('figma/login/imgApcosysGoogle.svg')} width="20" height="20" alt="" aria-hidden="true" />Continue with Google</Button></div>}<p className="auth-switch">New to APCOSYS? <Link to={routes.register} state={{ returnTo }}>Create an account</Link></p></>}
 
         {state.step !== 'login' && !complete && <p className="auth-switch">Already have an account? <Link to={routes.login} state={{ returnTo }}>Sign in</Link></p>}
       </div>

@@ -1,0 +1,71 @@
+import { expect, test } from '@playwright/test';
+import { seedProfile } from '../../src/demo/fixtures';
+import type { PrivateTask } from '../../src/api';
+
+test('scanner load failures offer recovery without presenting an upgrade as the cause', async ({ page }) => {
+  const profile = seedProfile();
+  profile.subscription = { type: 'Custom' };
+  let unavailable = true;
+  const writes: string[] = [];
+  await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
+  await page.route('**/backend/**', route => route.fulfill({ json: profile }));
+  await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(raw => {
+    const frame = JSON.parse(String(raw));
+    const list = ['private_tasks_get', 'private_planning_tasks_get'].includes(frame.type);
+    if (/^private_.*_(add|update|remove|delete)$/.test(frame.type)) writes.push(frame.type);
+    socket.send(JSON.stringify({ id: frame.id, type: frame.type, ...(list && unavailable ? { error: 'Scanner service unavailable. Try again shortly.' } : { data: list ? [] : { unread_count: 0 } }) }));
+  }));
+  await page.goto('/scanner');
+  await expect(page.getByText('Scanner could not be loaded', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scanner service unavailable. Try again shortly.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'View plans', exact: true })).toHaveCount(0);
+  unavailable = false;
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No scan tasks yet', exact: true })).toBeVisible();
+  await expect(page.getByText('Choose targets and ports, review the estimated scan credits, then create a task. Open its results to explore the hosts it finds.', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: /^Scheduled/ }).click();
+  await expect(page.getByRole('heading', { name: 'No scheduled tasks', exact: true })).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+test('open scanner details refresh and retain the latest record if it leaves the list', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  const profile = seedProfile();
+  let tasks: PrivateTask[] = [{ id: 'task-current', status: 'running', host_list: ['current.example.test'], port_list: [443], task_count: 10, done_task_count: 2, result_count: 0 }];
+  const writes: string[] = [];
+  await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
+  await page.route('**/backend/**', route => route.fulfill({ json: profile }));
+  await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(raw => {
+    const frame = JSON.parse(String(raw));
+    if (/^private_.*_(add|update|remove|delete)$/.test(frame.type)) writes.push(frame.type);
+    const data = frame.type === 'private_tasks_get' ? tasks : frame.type === 'private_planning_tasks_get' ? [] : { unread_count: 0 };
+    socket.send(JSON.stringify({ id: frame.id, type: frame.type, data }));
+  }));
+  await page.goto('/scanner?tab=all');
+  await page.locator('.scanner-target-button').click();
+  const details = page.getByRole('dialog', { name: 'Task details', exact: true });
+  await expect(details.getByRole('progressbar')).toHaveAttribute('value', '20');
+  await expect(details.getByRole('heading', { name: 'Activity', exact: true })).toHaveCount(0);
+  tasks = [{ ...tasks[0], status: 'completed', done_task_count: 10, result_count: 4 }];
+  await details.getByRole('button', { name: 'Refresh task', exact: true }).click();
+  await expect(details.getByText('completed', { exact: true })).toBeVisible();
+  await expect(details.getByRole('progressbar')).toHaveAttribute('value', '100');
+  await expect(details.getByRole('heading', { name: 'Activity', exact: true })).toHaveCount(0);
+  const results = details.getByRole('link', { name: 'View results', exact: true });
+  await expect(results).toBeVisible();
+  const href = new URL((await results.getAttribute('href'))!, 'https://example.test');
+  expect(href.pathname).toBe('/private/search');
+  expect(JSON.parse(href.searchParams.get('request')!).task_ids).toEqual(['task-current']);
+  expect(href.searchParams.get('scanner_back')).toBe('/scanner?tab=all');
+  expect(await details.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await details.screenshot({ path: testInfo.outputPath('scanner-live-details-320.png') });
+  tasks = [];
+  await details.getByRole('button', { name: 'Refresh task', exact: true }).click();
+  await expect(details.getByText('This task is no longer in the latest loaded list. These are its last received details.', { exact: true })).toBeVisible();
+  await expect(details.getByText('completed', { exact: true })).toBeVisible();
+  await expect(details.getByRole('progressbar')).toHaveAttribute('value', '100');
+  await expect(results).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(details).toHaveCount(0);
+  expect(writes).toEqual([]);
+});

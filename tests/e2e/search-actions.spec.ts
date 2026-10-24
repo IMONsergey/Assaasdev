@@ -74,6 +74,32 @@ test('Save and Share stay over results and preserve the exact applied private qu
   await expect(share.getByLabel('Search link ready', { exact: true })).toHaveValue(normal);
   expect(fixture.requests.filter(frame => frame.type === 'short_link_create')).toHaveLength(1);
   expect(fixture.requests.filter(frame => frame.type === 'share_link_create')).toHaveLength(1);
+  await share.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await save.getByRole('link', { name: 'Saved queries', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Saved queries', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to results', exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === '/private/search' && url.searchParams.get('view') === 'analytics' && url.searchParams.get('scanner_back') === '/scanner?section=tasks');
+  expect(JSON.parse(new URL(page.url()).searchParams.get('request')!)).toEqual(request);
+  await expect(page.getByRole('tab', { name: 'Analytics', exact: true })).toHaveAttribute('aria-selected', 'true');
+  expect(fixture.requests.filter(frame => frame.type === 'private_hosts')).toHaveLength(1);
+});
+
+test('Saved queries returns a preview to its original private scope without executing it', async ({ page }) => {
+  const fixture = await actionFixture(page);
+  const request = { full_text_search: 'draft infrastructure', task_ids: ['owned-task'], page: 1, docs_per_page: 20 };
+  await page.goto(`/private/search?request=${encodeURIComponent(JSON.stringify(request))}&draft=1&view=analytics&scanner_back=${encodeURIComponent('/scanner?section=history')}`);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  const save = page.getByRole('dialog', { name: 'Save query', exact: true });
+  await save.getByRole('button', { name: 'Save current query', exact: true }).click();
+  await expect(save.locator('.search-save-confirmation')).toBeVisible();
+  await save.getByRole('link', { name: 'Saved queries', exact: true }).click();
+  await page.getByRole('link', { name: 'Back to results', exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === '/private/search' && url.searchParams.get('draft') === '1' && url.searchParams.get('view') === 'analytics' && url.searchParams.get('scanner_back') === '/scanner?section=history');
+  await expect(page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('draft infrastructure');
+  expect(fixture.requests.filter(frame => frame.type === 'hosts' || frame.type === 'private_hosts' || frame.type === 'analytics' || frame.type === 'private_analytics')).toHaveLength(0);
+  expect(fixture.requests.filter(frame => frame.type === 'query_create')).toHaveLength(1);
 });
 
 for (const resolution of ['refresh', 'reopen'] as const) test(`an uncertain save is reconciled on ${resolution} before another mutation can be sent`, async ({ page }) => {

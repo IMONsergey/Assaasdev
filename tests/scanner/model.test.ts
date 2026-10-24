@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScanRequest, DEFAULT_SCAN_PORTS, normalizeHost, parseCidr, parsePorts, taskGroup, taskProgress, taskResultsLabel, validateCron } from '../../src/features/scanner/model';
+import { buildScanRequest, DEFAULT_SCAN_PORTS, findCreatedTask, normalizeHost, parseCidr, parsePorts, sameScope, scannerAccessDenied, taskGroup, taskProgress, taskResultsLabel, validateCron } from '../../src/features/scanner/model';
+import { ApiError } from '../../src/api';
 
 describe('private scan review contract', () => {
   it('estimates IPv4 using network and broadcast exclusion and omits workers', () => {
@@ -43,5 +44,30 @@ describe('private scan review contract', () => {
     expect(taskGroup('custom_backend_status')).toBe('other');
     expect(taskProgress({ id: 't', done_task_count: 0, task_count: 4 })).toBe(0);
     expect(taskResultsLabel({ id: 't', result_count: 0 })).toBe('0');
+  });
+  it('distinguishes an explicit one-time creation from an update that keeps the existing schedule', () => {
+    const request = { host_list: ['example.com'], cidr_list: [], port_list: [443], schedule: '' };
+    const recurring = { ...request, id: 'recurring', schedule: '0 0 3 * * *' };
+    expect(sameScope(recurring, request)).toBe(false);
+    expect(sameScope({ ...recurring, schedule: undefined }, request)).toBe(false);
+    expect(sameScope(recurring, { ...request, schedule: undefined })).toBe(true);
+    expect(sameScope({ ...recurring, schedule: '' }, request)).toBe(true);
+  });
+  it('does not confirm a lost create response from an ambiguous or already-known task', () => {
+    const request = { host_list: ['example.com'], port_list: [443], schedule: '' };
+    const first = { ...request, id: 'first' }, second = { ...request, id: 'second' };
+    expect(findCreatedTask([first], request, ['first'])).toBeUndefined();
+    expect(findCreatedTask([first, second], request, [])).toBeUndefined();
+    expect(findCreatedTask([first, first], request, [])?.id).toBe('first');
+    expect(findCreatedTask([first, second], request, ['first'])?.id).toBe('second');
+    expect(findCreatedTask([{ ...first, schedule: '0 0 3 * * *' }], request, [])).toBeUndefined();
+  });
+  it('keeps network and server failures separate from an explicit scanner access denial', () => {
+    expect(scannerAccessDenied(new ApiError('server', 'Business subscription required'))).toBe(true);
+    expect(scannerAccessDenied(new ApiError('server', 'Forbidden', { status: 403 }))).toBe(true);
+    expect(scannerAccessDenied(new ApiError('transport', 'Connection closed'))).toBe(false);
+    expect(scannerAccessDenied(new ApiError('server', 'Scanner service unavailable', { status: 503 }))).toBe(false);
+    expect(scannerAccessDenied(new ApiError('rate', 'Too many requests'))).toBe(false);
+    expect(scannerAccessDenied(null)).toBe(false);
   });
 });

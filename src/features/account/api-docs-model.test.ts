@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { API_BASE_URL, API_ENDPOINTS, API_PLANS, DOC_TOPICS, buildApiExample, docHref, resolveDocTopic, searchDocTopics } from './api-docs-model';
+import { API_BASE_URL, API_ENDPOINTS, API_PLANS, DOC_TOPICS, buildApiExample, docHref, resolveDocSelection, resolveDocTopic, searchDocSelection, searchDocTopics } from './api-docs-model';
 
 describe('published HTTP API reference', () => {
   it('covers the eight official endpoints without inventing a route or duplicating the version prefix', () => {
@@ -58,5 +58,24 @@ describe('documentation navigation', () => {
     expect(searchDocTopics('private analytics')[0].id).toBe('private-analytics');
     expect(searchDocTopics('  ')).toHaveLength(DOC_TOPICS.length);
     expect(searchDocTopics('not-a-real-field-832')).toEqual([]);
+  });
+  it('takes a schema search to the matching request or nested response field', () => {
+    const host = resolveDocTopic('#get-host'), buckets = resolveDocTopic('#search-buckets');
+    expect(searchDocSelection(host, 'tls_info ja4s')).toEqual({ view: 'response', group: 'ports[].tls_info', field: 'ja4s' });
+    expect(searchDocSelection(buckets, 'exclude_extensions')).toEqual({ view: 'request', group: 'Request', field: 'exclude_extensions' });
+    expect(searchDocSelection(resolveDocTopic('#filters'), 'tls_info.ja4s')).toEqual({ view: 'request', group: 'Headers & TLS', field: 'tls_info.ja4s' });
+    expect(searchDocTopics('ports[].tls_info').some(topic => topic.id === 'get-host')).toBe(true);
+    expect(searchDocSelection(host, '')).toEqual({ view: 'request' });
+  });
+  it('round-trips a public schema destination and drops unknown field or view parameters', () => {
+    const topic = resolveDocTopic('#get-host');
+    const selection = searchDocSelection(topic, 'tls_info ja4s');
+    const url = new URL(docHref(topic.id, selection), 'https://docs.example');
+    expect(resolveDocSelection(topic, url.searchParams)).toEqual(selection);
+    expect(url.hash).toBe('#get-host');
+    expect(url.searchParams.has('q')).toBe(false);
+    expect(docHref(topic.id, { view: 'response', group: 'secret', field: 'not-a-public-field' })).toBe('/api?section=docs&view=response#get-host');
+    expect(resolveDocSelection(topic, new URLSearchParams('view=invalid&group=ports%5B%5D.tls_info&field=ja4s'))).toEqual({ view: 'request' });
+    expect(docHref('errors', selection)).toBe('/api?section=docs#errors');
   });
 });

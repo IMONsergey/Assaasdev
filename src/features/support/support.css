@@ -2,6 +2,7 @@
 @media(max-width:600px){.support-dialog .dialog-body{padding:18px}.support-form-row{grid-template-columns:1fr;gap:18px}.support-resource-list>a{padding:14px;gap:11px}.support-resource-icon{width:36px;height:36px}.support-resource-list small{font-size:.81rem}.support-copy-row{align-items:flex-start;flex-direction:column;gap:12px}.support-dialog .dialog-footer{gap:10px}.support-dialog .dialog-footer .button{font-size:.85rem;flex:1;min-width:0}.support-review-fields>div{grid-template-columns:54px minmax(0,1fr);gap:10px}.support-shortcut{font-size:.75rem;gap:6px}.support-contact-line{font-size:.8rem}.support-message-preview{padding:14px}}
 @media(prefers-reduced-motion:reduce){.support-resource-list>a{transition:none}}:root[data-reduced-motion=true] .support-resource-list>a{transition:none}
 @media(max-width:360px){.support-dialog .dialog-footer>.button{padding-inline:12px;min-height:44px}.support-dialog .dialog-footer>.button:last-child .icon{display:none}}
+:root:not([data-input-modality="pointer"]) .support-message-preview:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 
 /* A compact help hub with one clear route into guided work. */
 .dialog.support-dialog--help{width:560px;max-width:calc(100vw - 24px)}

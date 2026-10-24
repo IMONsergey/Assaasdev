@@ -1,6 +1,33 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+test('code copy only confirms clipboard success and recovers from a denied attempt',async({page},testInfo)=>{
+  await page.addInitScript(()=>{
+    let attempts=0;
+    Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{
+      attempts+=1;
+      if(attempts!==2) throw new DOMException('Clipboard access denied.','NotAllowedError');
+    }}});
+  });
+  await page.goto('/search/saved');
+  const saved=page.locator('.search-saved-query').first();
+  await saved.getByText('Query details',{exact:true}).click();
+  const canvas=saved.locator('.code-canvas');
+  const copy=canvas.getByRole('button',{name:'Copy Saved request',exact:true});
+  await copy.click();
+  await expect(canvas.getByText('Copy is unavailable. Select the code to copy it.',{exact:true})).toBeVisible();
+  await expect(copy).toHaveText('Copy');
+  await expect(canvas.getByText('Copied',{exact:true})).toHaveCount(0);
+  await copy.click();
+  await expect(copy).toHaveText('Copied');
+  await expect(canvas.locator('.code-canvas-error')).toHaveCount(0);
+  await copy.click();
+  await expect(copy).toHaveText('Copy');
+  await expect(canvas.locator('.code-canvas-error')).toBeVisible();
+  await page.screenshot({path:testInfo.outputPath('quality-code-copy-recovery.png'),animations:'disabled'});
+  await expect(page).toHaveURL(/\/search\/saved$/);
+});
+
 test('search entry, focus and workspace filters have consistent geometry', async ({ page }, testInfo) => {
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: width > 760 ? 960 : 800 });

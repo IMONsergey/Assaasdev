@@ -41,6 +41,10 @@ export function AppShell({ collapsed, onCollapsedChange }: { collapsed: boolean;
     if (entrance !== 'ready') return;
     const frame = requestAnimationFrame(() => {
       if (document.querySelector('dialog[open]')) return;
+      // A deep link or a page control may already own focus after the shell
+      // becomes interactive. Keep that more specific reading position.
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && focused !== main.current && main.current?.contains(focused) && !focused.closest('[inert], [hidden]')) return;
       // The empty search entry is ready for typing; a restored results page is
       // ready for reading and must not reopen the query's suggestion overlay.
       const target = main.current?.querySelector<HTMLElement>('.search-page-home #main-search-query') ?? main.current;

@@ -214,6 +214,18 @@ export function filterSummary(filter: SearchFilter): string {
   return `${label}: ${filter.value || 'value'}`;
 }
 
+/** Retain the return route when opening the saved-query list from a search action. */
+export function savedQueriesHref(request: SearchRequest, dataset: Dataset, search: string, previewOnly = false): string {
+  const source = new URLSearchParams(search);
+  const next = new URLSearchParams(encodeSearch(withoutShareToken(request)));
+  if (dataset === 'private') next.set('dataset', 'private');
+  if (source.get('view') === 'analytics' || source.get('return_view') === 'analytics') next.set('return_view', 'analytics');
+  if (previewOnly || source.get('draft') === '1') next.set('draft', '1');
+  const scannerBack = source.get('scanner_back');
+  if (dataset === 'private' && scannerBack && /^\/scanner(?:\?|$)/.test(scannerBack)) next.set('scanner_back', scannerBack);
+  return `/search/saved?${next}`;
+}
+
 /** The WebSocket estimate uses saved categories; backend metadata remains authoritative. */
 export function analyticsCostLabel({ dataset, shared, guest, facets }: { dataset: Dataset; shared: boolean; guest: boolean; facets?: readonly AnalyticsFacet[] | null }): string {
   if (shared) return 'Uses one link use and the creator’s access';

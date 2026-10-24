@@ -2,9 +2,10 @@ import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 import { seedPricing, seedProfile } from '../../src/demo/fixtures';
 
-async function billingApi(page: Page, options: { mismatchPayment?: boolean; unavailableCrypto?: boolean } = {}) {
+async function billingApi(page: Page, options: { mismatchPayment?: boolean; unavailableCrypto?: boolean; retryPromo?: boolean } = {}) {
   const profile = seedProfile();
   const frames: Array<{ type: string; data: Record<string, unknown> }> = [];
+  let promoReads = 0;
   const payments = Array.from({ length: 80 }, (_, index) => ({ payment_id: `payment-${String(index).padStart(4, '0')}`, amount_usd: 50, subscription: 'Plus', status: index % 2 ? 'pending' : 'completed', created_at: 1800000000 + index }));
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/pricing') ? seedPricing() : profile }));
@@ -13,6 +14,7 @@ async function billingApi(page: Page, options: { mismatchPayment?: boolean; unav
     const reply = (data: unknown) => socket.send(JSON.stringify({ id: frame.id, type: frame.type, data }));
     if (frame.type === 'user_billing') reply({ payments, subscription: profile.subscription, balance: profile.balance, credits: profile.credits, scan_credits: profile.scan_credits });
     else if (frame.type === 'confirm_payment') reply({ payment_id: options.mismatchPayment ? 'different-payment' : frame.data.payment_id, status: 'pending' });
+    else if (frame.type === 'validate_promo_code' && options.retryPromo) reply(++promoReads === 1 ? undefined : { valid: true, description: 'Test discount applied', final_amount_usd: 40 });
     else if (frame.type === 'networks') reply(options.unavailableCrypto ? [{ network: 'demo-network', coins: [{ coin: 'DEMO', name: 'Unavailable token' }] }] : []);
     else if (frame.type === 'get_user_addresses_info') reply({ addresses: [{ network: 'demo-network', coin: 'DEMO', address: 'DEMO_ONLY_NOT_A_PAYMENT_ADDRESS', is_active: false }], timestamp: 1800000000 });
     else reply({ unread_count: 0 });
@@ -207,6 +209,7 @@ test('payment return is explicit and an unknown check remains blocked through se
   await page.getByRole('button', { name: 'Check status', exact: true }).click();
   await expect(page.getByText('Payment status needs checking', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Check status', exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Payment ID', { exact: true })).toBeDisabled();
   await page.getByRole('tab', { name: 'Overview', exact: true }).click();
   await expect(page.locator('.billing-pending-strip')).toContainText('Payment status needs checking');
   await page.getByRole('tab', { name: 'Payments', exact: true }).click();
@@ -214,6 +217,87 @@ test('payment return is explicit and an unknown check remains blocked through se
   await expect(page.getByLabel('Payment ID', { exact: true })).toHaveValue('payment-0001');
   expect(frames.filter(frame => frame.type === 'confirm_payment')).toHaveLength(1);
   expect(frames.filter(frame => ['init_checkout', 'pay_with_balance', 'get_address'].includes(frame.type))).toEqual([]);
+});
+
+test('a payment result stays attached to its checked ID and clears before checking another', async ({ page }) => {
+  const profile = seedProfile();
+  const checked: string[] = [];
+  let complete: (() => void) | undefined;
+  await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
+  await page.route('**/backend/**', route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/pricing') ? seedPricing() : profile }));
+  await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(raw => {
+    const frame = JSON.parse(String(raw));
+    const reply = (data: unknown) => socket.send(JSON.stringify({ id: frame.id, type: frame.type, data }));
+    if (frame.type === 'user_billing') reply({ payments: [], subscription: profile.subscription, balance: profile.balance, credits: profile.credits, scan_credits: profile.scan_credits });
+    else if (frame.type === 'confirm_payment') {
+      checked.push(frame.data.payment_id);
+      complete = () => reply({ payment_id: frame.data.payment_id, status: 'completed' });
+    } else reply({ unread_count: 0 });
+  }));
+  await page.goto('/billing/return?payment_id=payment-a');
+  const input = page.getByLabel('Payment ID', { exact: true });
+  const panel = page.locator('.billing-payment-check');
+  const check = page.getByRole('button', { name: 'Check status', exact: true });
+  await expect(input).toHaveValue('payment-a');
+  await check.click();
+  await expect.poll(() => checked).toEqual(['payment-a']);
+  await expect(input).toBeDisabled();
+  await expect(panel).toHaveAttribute('data-payment-status', 'checking');
+  complete!();
+  await expect(panel.getByText('Payment completed', { exact: true })).toBeVisible();
+  await expect(input).toBeEnabled();
+
+  await input.fill('payment-b');
+  await expect(panel).toHaveAttribute('data-payment-status', 'idle');
+  await expect(panel.getByText('Payment completed', { exact: true })).toHaveCount(0);
+  await expect(input).toHaveValue('payment-b');
+  await expect(page).toHaveURL(/payment_id=payment-a$/);
+  expect(checked).toEqual(['payment-a']);
+  await check.click();
+  await expect.poll(() => checked).toEqual(['payment-a', 'payment-b']);
+  await expect(input).toBeDisabled();
+  await expect(input).toHaveValue('payment-b');
+  complete!();
+  await expect(panel).toHaveAttribute('data-payment-status', 'completed');
+  await expect(input).toHaveValue('payment-b');
+  await expect(input).toBeEnabled();
+
+  await check.click();
+  await expect.poll(() => checked).toEqual(['payment-a', 'payment-b', 'payment-b']);
+  // Keep the component mounted: a browser Back changes only the payment ID in the URL.
+  await page.evaluate(() => {
+    const original = location.href, state = history.state, index = Number(state?.idx ?? 0);
+    history.pushState({ ...state, idx: index + 1 }, '', '/billing/return?payment_id=payment-c');
+    history.pushState({ ...state, idx: index + 2 }, '', original);
+  });
+  await page.goBack();
+  await expect(page).toHaveURL(/payment_id=payment-c$/);
+  await expect(input).toHaveValue('payment-b');
+  await expect(input).toBeDisabled();
+  complete!();
+  await expect(panel).toHaveAttribute('data-payment-status', 'idle');
+  await expect(input).toHaveValue('payment-c');
+  await expect(input).toBeEnabled();
+  await expect(panel.getByText('Payment completed', { exact: true })).toHaveCount(0);
+  expect(checked).toEqual(['payment-a', 'payment-b', 'payment-b']);
+});
+
+test('an incomplete promo read can be retried without changing the code or starting a purchase', async ({ page }) => {
+  const frames = await billingApi(page, { retryPromo: true });
+  await page.goto('/billing?plan=Plus&cadence=monthly');
+  const review = page.getByRole('dialog', { name: 'Plus · monthly', exact: true });
+  await expect(review).toBeVisible();
+  const promo = review.getByLabel('Promo code (optional)', { exact: true });
+  const check = review.getByRole('button', { name: 'Check code', exact: true });
+  await promo.fill('RETRY');
+  await check.click();
+  await expect(page.getByText('The promo code could not be checked. Try again.', { exact: true })).toBeVisible();
+  await expect(check).toBeEnabled();
+  await expect(promo).toHaveValue('RETRY');
+  await check.click();
+  await expect(review.locator('.billing-promo-result')).toContainText('Test discount applied · $40');
+  expect(frames.filter(frame => frame.type === 'validate_promo_code')).toHaveLength(2);
+  expect(frames.filter(frame => ['init_checkout', 'pay_with_balance', 'get_address', 'confirm_payment'].includes(frame.type))).toEqual([]);
 });
 
 test('unavailable payment networks cannot produce payable instructions or new invoices', async ({ page }) => {

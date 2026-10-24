@@ -1,4 +1,5 @@
 import type { PlanningTask, PrivateTask, PrivateTaskRequest } from '../../api';
+import { isApiError } from '../../api';
 
 export const DEFAULT_SCAN_PORTS = [22, 21, 80, 443, 3306, 5601, 8080, 8443, 9200, 27017] as const;
 export interface ScanDraft { hosts: string; cidrs: string; ports: string; scheduling: 'once' | 'cron'; cron: string }
@@ -105,5 +106,17 @@ export function scheduleLabel(schedule: string | undefined): string {
 export function draftFromTask(task: PrivateTask | PlanningTask): ScanDraft { return { hosts: (task.host_list || []).join('\n'), cidrs: (task.cidr_list || []).join('\n'), ports: task.port_list?.join(', ') || '', scheduling: task.schedule ? 'cron' : 'once', cron: task.schedule || '0 0 3 * * *' }; }
 export function sameScope(task: PrivateTask | PlanningTask, request: PrivateTaskRequest): boolean {
   const same = (a: (string | number)[] | undefined, b: (string | number)[] | undefined) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
-  return same(task.host_list, request.host_list) && same(task.cidr_list, request.cidr_list) && same(task.port_list, request.port_list) && (!request.schedule || task.schedule === request.schedule);
+  return same(task.host_list, request.host_list) && same(task.cidr_list, request.cidr_list) && same(task.port_list, request.port_list) && (request.schedule === undefined || task.schedule === request.schedule);
+}
+
+/** A lost creation response can be reconciled only to one unambiguous new task. */
+export function findCreatedTask(tasks: (PrivateTask | PlanningTask)[], request: PrivateTaskRequest, knownIds: string[]): PrivateTask | PlanningTask | undefined {
+  const known = new Set(knownIds);
+  const matches = new Map(tasks.filter(task => !known.has(task.id) && sameScope(task, request)).map(task => [task.id, task]));
+  return matches.size === 1 ? [...matches.values()][0] : undefined;
+}
+
+/** Transport, rate and malformed-response failures do not establish a plan restriction. */
+export function scannerAccessDenied(error: unknown): boolean {
+  return isApiError(error) && error.kind === 'server' && (error.status === 403 || error.message.trim().toLowerCase() === 'business subscription required');
 }

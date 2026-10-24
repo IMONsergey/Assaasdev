@@ -1,4 +1,5 @@
-import type { BucketFile, BucketFilter } from '../../api';
+import type { BucketAnalytics, BucketFile, BucketFilter, BucketResults } from '../../api';
+import { ApiError } from '../../api/errors';
 
 export type FilesView = 'files' | 'hosts';
 export interface FileDraft {
@@ -16,6 +17,21 @@ const listFields = ['key_words', 'stop_words', 'extensions', 'alphabets', 'produ
 const numberFields = ['min_size_mb', 'max_size_mb', 'gte_uts', 'lte_uts', 'gte_cts', 'lte_cts'] as const;
 const allowed = new Set(['page', 'docs_per_page', 'host', 'exclude_extensions', 'sort_field', 'sort_direction', ...listFields, ...numberFields]);
 export const FILE_PAGE_CAPS: Record<string, number> = { Free: 2, Guest: 2, Plus: 25, Expert: 150, Business: 300 };
+
+/** Validate received metadata before rendering string/list operations; keep the source unchanged. */
+export function checkedBucketResult(value: unknown, view: FilesView): BucketResults | BucketAnalytics {
+  if (!value || typeof value !== 'object' || !('result' in value) || !Array.isArray(value.result) || !('result_count' in value) || typeof value.result_count !== 'number' || !Number.isSafeInteger(value.result_count) || value.result_count < 0) throw new ApiError('transport', 'The server returned an unexpected bucket result.', { outcome: 'unknown' });
+  const optionalStrings = view === 'files' ? ['host', 'container', 'protocol', 'key', 'extension'] : ['container'];
+  const invalid = value.result.some(row => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return true;
+    if (optionalStrings.some(key => row[key] != null && typeof row[key] !== 'string')) return true;
+    if (view === 'hosts') return typeof row.host !== 'string' || !row.host.trim() || !Number.isSafeInteger(row.file_count) || row.file_count < 0;
+    if (['cts', 'uts', 'size_mb'].some(key => row[key] != null && (typeof row[key] !== 'number' || !Number.isFinite(row[key]) || row[key] < 0))) return true;
+    return ['alphabets', 'alias_hosts'].some(key => row[key] != null && (!Array.isArray(row[key]) || row[key].some((item: unknown) => typeof item !== 'string')));
+  });
+  if (invalid) throw new ApiError('transport', 'Some returned records contain invalid file or bucket metadata.', { outcome: 'unknown' });
+  return value as BucketResults | BucketAnalytics;
+}
 
 export function list(value: string): string[] {
   return [...new Set(value.split(/[,\n]/).map(item => item.trim()).filter(Boolean))];
@@ -90,6 +106,11 @@ export function readFileParams(params: URLSearchParams): { filter: BucketFilter;
   catch (error) { return { filter: filterFromDraft(DEFAULT_FILE_DRAFT), view, restored: false, error: error instanceof Error ? error.message : 'This file search link is invalid.' }; }
 }
 export function fileParams(filter: BucketFilter, view: FilesView): URLSearchParams { return new URLSearchParams({ filter: JSON.stringify(normalizeBucketFilter(filter)), view }); }
+export function fileSignInHref(draft: FileDraft, view: FilesView, fallback: BucketFilter): string {
+  let filter = fallback;
+  try { filter = filterFromDraft(draft); } catch { /* Preserve the last valid filters when the draft is incomplete. */ }
+  return `/auth/login?returnTo=${encodeURIComponent(`/files?${fileParams(filter, view)}`)}`;
+}
 export function bucketIdentity(host?: string, container?: string): string { return [host, container].filter(Boolean).join('/'); }
 export function fileName(file: BucketFile): string { return file.key?.split('/').filter(Boolean).at(-1) || 'Name not provided'; }
 /** Presentation only. The original key remains intact for copying, URLs and requests. */

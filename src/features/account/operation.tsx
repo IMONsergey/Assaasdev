@@ -58,5 +58,6 @@ export async function copyText(value: string, toast: (message: string, tone?: 's
     if (!navigator.clipboard) throw new Error('Clipboard access is unavailable. Select and copy the text manually.');
     await navigator.clipboard.writeText(value);
     toast('Copied to clipboard.', 'success');
-  } catch (error) { toast(error instanceof Error ? error.message : 'The text could not be copied.', 'error'); }
+    return true;
+  } catch (error) { toast(error instanceof Error ? error.message : 'The text could not be copied.', 'error'); return false; }
 }

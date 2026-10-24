@@ -76,6 +76,7 @@ export function BillingPage() {
   const deletion = useOperation();
   const paymentStream = useRef<(() => void) | null>(null);
   const paymentGeneration = useRef(0);
+  const hydratedPaymentQuery = useRef(new URLSearchParams(location.search).get('payment_id'));
   const mounted = useRef(true);
   const accountSyncGeneration = useRef(0);
   const activeWalletPrincipal = useRef(walletPrincipal);
@@ -139,9 +140,21 @@ export function BillingPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (!selection) setCadence(billingCadence(params));
+  }, [location.search, selection]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
     const id = params.get('payment_id');
-    if (id && paymentStatus === 'idle') { setPaymentId(id); setPaymentPanelOpen(true); }
-  }, [location.search, selection, paymentStatus]);
+    // A previous return URL must not replace an ID that the user is now editing.
+    if (id === hydratedPaymentQuery.current) return;
+    if (id && id !== paymentId && (paymentStatus === 'checking' || paymentStatus === 'unknown')) return;
+    hydratedPaymentQuery.current = id;
+    if (id && id !== paymentId) {
+      if (invoice?.payment_id === paymentId && (paymentStatus === 'completed' || paymentFailed)) setInvoice(null);
+      setPaymentId(id); setPaymentPanelOpen(true); setPaymentStatus('idle');
+      setPaymentMessage(''); setConfirmation(null);
+    }
+  }, [location.search, paymentId, paymentStatus, invoice?.payment_id, paymentFailed]);
 
   function changeSection(next: BillingSection) {
     // A history filter can already be in the URL while its render is pending.
@@ -250,7 +263,15 @@ export function BillingPage() {
   async function validatePromo() {
     if (!promo.trim()) return;
     const requested = currentPromoRequest.current;
-    const result = await promoCheck.run(async () => responseData(await api.request<PromoData & { message?: string }>('validate_promo_code', purchaseBody(), { mutation: false })), 'Promo code checked.');
+    const result = await promoCheck.run(async () => {
+      try {
+        return responseData(await api.request<PromoData & { message?: string }>('validate_promo_code', purchaseBody(), { mutation: false }));
+      } catch (error) {
+        // A missing read result can be requested again; no purchase was sent.
+        if (error instanceof ApiError && error.outcome === 'unknown') throw new Error('The promo code could not be checked. Try again.');
+        throw error;
+      }
+    }, 'Promo code checked.');
     if (result.ok && requested === currentPromoRequest.current) setPromoResult(result.data);
   }
 
@@ -364,6 +385,12 @@ export function BillingPage() {
     });
   }
 
+  function changePaymentId(id: string) {
+    if (paymentStatus === 'checking' || paymentStatus === 'unknown') return;
+    if (invoice?.payment_id === paymentId && (paymentStatus === 'completed' || paymentFailed)) setInvoice(null);
+    setPaymentId(id); setPaymentStatus('idle'); setPaymentMessage(''); setConfirmation(null);
+  }
+
   async function removePayment() {
     if (!deleteTarget || unresolvedPayment) return;
     const result = await deletion.run(async () => {
@@ -438,7 +465,7 @@ export function BillingPage() {
       {!signedIn ? accountRequired : <>
         <div className="billing-section-heading"><div><h2 className="section-title">Payment history</h2>{location.pathname.endsWith('/return') && <p>Check the payment status before starting another payment.</p>}</div><Button data-onboarding="check-payment" variant="secondary" aria-expanded={paymentPanelOpen || paymentStatus !== 'idle'} aria-controls="billing-payment-check" onClick={() => setPaymentPanelOpen(true)}><Icon name="search" size={16} />Check payment</Button></div>
         <section id="billing-payment-check" data-onboarding="payment-status" data-payment-status={paymentStatus} className="billing-payment-check" hidden={!paymentPanelOpen && paymentStatus === 'idle'} aria-label="Payment status">
-          <form className="billing-status-form" onSubmit={event => { event.preventDefault(); checkPayment(); }}><Field label="Payment ID" value={paymentId} onChange={event => setPaymentId(event.target.value)} placeholder="Payment ID from your invoice" /><Button type="submit" variant="secondary" loading={paymentStatus === 'checking'} disabled={!paymentId.trim() || paymentStatus === 'unknown'}>Check status</Button></form>
+          <form className="billing-status-form" onSubmit={event => { event.preventDefault(); checkPayment(); }}><Field label="Payment ID" value={paymentId} onChange={event => changePaymentId(event.target.value)} disabled={paymentStatus === 'checking' || paymentStatus === 'unknown'} placeholder="Payment ID from your invoice" /><Button type="submit" variant="secondary" loading={paymentStatus === 'checking'} disabled={!paymentId.trim() || paymentStatus === 'unknown'}>Check status</Button></form>
           {paymentStatus !== 'idle' && <Alert tone={paymentStatus === 'completed' ? 'success' : paymentStatus === 'error' ? 'error' : paymentStatus === 'unknown' ? 'warning' : 'info'} title={paymentStatus === 'completed' ? 'Payment completed' : paymentStatus === 'unknown' ? 'Payment status needs checking' : 'Payment status'} actions={paymentStatus === 'unknown' ? <Button onClick={() => void reconcileBilling()}>Refresh billing</Button> : undefined}>{paymentMessage}{confirmation?.status && <div className="billing-payment-status"><Badge tone={confirmation.status === 'completed' ? 'success' : 'neutral'}>{confirmation.status}</Badge></div>}{paymentStatus === 'completed' && <p>Current plan: {user?.subscription?.type ?? 'Unavailable'}</p>}</Alert>}
         </section>
         <OperationNotice state={deletion.state} onCheck={() => void reconcileBilling()} />
@@ -474,7 +501,7 @@ export function BillingPage() {
             {!presentation && networks.isPending ? <Spinner label="Loading payment networks…" /> : !presentation && networks.isError ? <Alert tone="error" actions={<Button onClick={() => void networks.refetch()}>Try again</Button>}>{networks.error.message}</Alert> : availableNetworks.length ? <div className="form-grid"><SelectField label="Network" value={network} disabled={purchase.busy} onChange={event => { setNetwork(event.target.value); setCoin(availableNetworks.find(item => item.network === event.target.value)?.coins[0]?.coin ?? ''); }}>{availableNetworks.map(item => <option key={item.network} value={item.network}>{item.network}</option>)}</SelectField><SelectField label="Coin" value={coin} disabled={purchase.busy} onChange={event => setCoin(event.target.value)}>{selectedCoins.map(item => <option key={item.coin} value={item.coin}>{item.coin}{item.name ? ` · ${item.name}` : ''}</option>)}</SelectField></div> : <EmptyState icon={<Icon name="card" size={24} />} title="Payment service unavailable" description="Cryptocurrency payments are currently unavailable." />}
             {!presentation && availableNetworks.length > 0 && <Alert tone="warning">Only send the selected coin on the specified network. The invoice provides the amount, destination and expiry.</Alert>}
           </>}
-          <div className="billing-promo"><Field label="Promo code (optional)" data-onboarding="purchase-promo-input" value={promo} onChange={event => { setPromo(event.target.value); setPromoResult(null); promoCheck.reset(); }} disabled={purchase.busy} /><Button data-onboarding="purchase-promo-check" variant="secondary" loading={promoCheck.busy} disabled={!promo.trim() || purchase.busy} onClick={() => void validatePromo()}>Check code</Button></div>
+          <div className="billing-promo"><Field label="Promo code (optional)" data-onboarding="purchase-promo-input" value={promo} onChange={event => { setPromo(event.target.value); setPromoResult(null); promoCheck.reset(); }} disabled={purchase.busy} /><Button data-onboarding="purchase-promo-check" variant="secondary" loading={promoCheck.busy} disabled={!promo.trim() || purchase.busy || promoCheck.blocked} onClick={() => void validatePromo()}>Check code</Button></div>
           <OperationNotice state={promoCheck.state} />
           {promoResult && <p className="billing-promo-result" role="status" data-onboarding={promoResult.valid ? 'purchase-promo-applied' : undefined}><Icon name={promoResult.valid ? 'check' : 'info'} size={18} />{promoResult.valid ? `${promoResult.description || 'Promo applied'}${promoResult.final_amount_usd !== undefined ? ` · ${money(promoResult.final_amount_usd)}` : ''}` : promoResult.message || 'This promo code could not be applied.'}</p>}
           {method === 'card' && !presentation && <><Field label="Currency code (optional)" value={currency} maxLength={8} onChange={event => setCurrency(event.target.value.toUpperCase())} placeholder="Provider default" hint="Leave blank to use the provider’s default currency." disabled={purchase.busy} /><Checkbox label="Apply an eligible automatic discount" checked={automaticDiscount} onChange={event => setAutomaticDiscount(event.target.checked)} disabled={purchase.busy} /></>}

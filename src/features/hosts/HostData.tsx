@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Dialog, Icon } from '../../components/ui';
-import { CodeCanvas } from '../../components/CodeCanvas';
+import { CodeCanvas, type CodeCanvasProps } from '../../components/CodeCanvas';
 import { dateLabel, safeExternalUrl } from '../search/model';
 import { DataExplorer } from './DataExplorer';
 import { displayValue } from './model';
@@ -40,7 +40,7 @@ export function NestedRecord({ value, path, title }: { value: unknown; path: str
   return <details className="host-disclosure" onToggle={event => setOpen(event.currentTarget.open)}><summary><span>{title}</span><Icon name="chevron-down" size={16} /></summary>{open && (raw ? <CodeCanvas content={JSON.stringify(value, null, 2) ?? 'null'} language="json" title={title} /> : <DataValue value={value} path={path} />)}</details>;
 }
 
-export function RawResponse({ title, content, onCopy }: { title: string; content: string | undefined; onCopy: (value: string) => void }) {
+export function RawResponse({ title, content, onCopy }: { title: string; content: string | undefined; onCopy: NonNullable<CodeCanvasProps['onCopy']> }) {
   const [fullOpen, setFullOpen] = useState(false);
   useEffect(() => { setFullOpen(false); }, [content]);
   return <section className="host-raw-response">

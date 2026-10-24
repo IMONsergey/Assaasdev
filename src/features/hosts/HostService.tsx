@@ -1,5 +1,6 @@
 import { Alert, Badge, Button, EmptyState, Icon, TabPanel, Tabs } from '../../components/ui';
 import { TechnologyMark } from '../../components/TechnologyMark';
+import type { CodeCanvasProps } from '../../components/CodeCanvas';
 import { DataValue, Facts, NestedRecord, observationDate, RawResponse } from './HostData';
 import { ExposedData, ProductList } from './HostProducts';
 import type { ResponseTab, ServiceItem, ServiceTab, WebFileTab } from './model';
@@ -14,7 +15,7 @@ interface ServiceDetailsProps {
   onTab: (value: ServiceTab) => void;
   onResponseTab: (value: ResponseTab) => void;
   onWebTab: (value: WebFileTab) => void;
-  onCopy: (value: string) => void;
+  onCopy: NonNullable<CodeCanvasProps['onCopy']>;
   onCve: (id: string) => void;
   onDataServices?: () => void;
 }

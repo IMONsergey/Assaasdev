@@ -13,14 +13,17 @@ for (const width of [320, 1440]) {
 
     await search.fill('tls_info ja4s');
     await search.press('Enter');
-    await expect(page).toHaveURL(/section=docs#get-host$/);
+    await expect(page).toHaveURL(url => url.hash === '#get-host' && url.searchParams.get('view') === 'response' && url.searchParams.get('field') === 'ja4s');
     const article = page.locator('.api-docs-article');
-    await expect(article).toBeFocused();
-    await expect(article.getByRole('heading', { name: 'Get a host', exact: true })).toBeInViewport();
+    const field = article.locator('[data-doc-match="true"]');
+    await expect(page.getByRole('tab', { name: 'Response', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(field).toBeFocused();
+    await expect(field).toBeInViewport();
+    await expect(field.getByRole('rowheader')).toContainText('ja4s');
     if (width <= 760) {
       const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
       await expect.poll(async () => {
-        const target = await article.boundingBox(), trigger = await menu.boundingBox();
+        const target = await field.boundingBox(), trigger = await menu.boundingBox();
         return !!target && !!trigger && target.y >= trigger.y + trigger.height + 8;
       }).toBe(true);
     }

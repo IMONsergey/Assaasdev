@@ -5,13 +5,13 @@ import { useApp } from '../../app/AppProvider';
 import { Alert, Badge, Button, Dialog, Icon, Skeleton } from '../../components/ui';
 import { CodeCanvas } from '../../components/CodeCanvas';
 import { copyText } from '../account/operation';
-import { isShared, parseSavedQuery, queryLabel, withoutShareToken, type Dataset } from './model';
+import { isShared, parseSavedQuery, queryLabel, savedQueriesHref, withoutShareToken, type Dataset } from './model';
 
 export function SaveQueryDialog({ request, dataset, onClose }: { request: SearchRequest; dataset: Dataset; onClose: () => void }) {
   const { api, session, user, metadata, toast } = useApp();
   const queryClient = useQueryClient();
   const location = useLocation();
-  const savedPath = `/search/saved${dataset === 'private' ? '?dataset=private' : ''}`;
+  const savedPath = savedQueriesHref(request, dataset, location.search, location.state?.onboardingPreviewOnly === true);
   const principal = user?.user_id || user?.session_id || session.status;
   const queryKey = ['saved-queries', principal];
   const shared = isShared(request);

@@ -53,6 +53,21 @@ test('wallet purchase requires explicit consent and displays a receipt only afte
   await review.locator('[data-onboarding="wallet-done"]').click();
   await expect(page).toHaveURL(url => url.searchParams.get('section') === 'payments' && !url.searchParams.has('pack'));
   await expect(page.locator('.billing-history-table')).toContainText('completed');
+  await expect(page.getByLabel('Payment ID', { exact: true })).toHaveValue('wallet-order-1');
+  await expect(page.locator('.billing-payment-check')).toHaveAttribute('data-payment-status', 'completed');
+  await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
+  const buyAgain = page.locator('.billing-token').filter({ has: page.getByRole('heading', { name: 'Starter Pack', exact: true }) }).getByRole('button', { name: 'Buy credits', exact: true });
+  await expect(buyAgain).toBeEnabled();
+  await page.getByRole('tab', { name: 'Payments', exact: true }).click();
+  await page.getByLabel('Payment ID', { exact: true }).fill('another-payment');
+  await expect(page.locator('.billing-payment-check')).toHaveAttribute('data-payment-status', 'idle');
+  await expect(page.getByLabel('Payment ID', { exact: true })).toHaveValue('another-payment');
+  await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
+  await expect(buyAgain).toBeEnabled();
+  await buyAgain.click();
+  await expect(review).toBeVisible();
+  await review.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(api.frames.filter(frame => frame.type === 'pay_with_balance')).toHaveLength(1);
   expect(api.frames.filter(frame => ['init_checkout', 'get_address', 'billing_manage'].includes(frame.type))).toEqual([]);
 });
 

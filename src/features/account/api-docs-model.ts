@@ -200,7 +200,7 @@ export type DocTopic = { id: string; title: string; group: string; summary: stri
 export const DOC_TOPICS: DocTopic[] = [
   { id: 'getting-started', title: 'Getting started', group: 'Start here', summary: 'Your first request, API base URL and response format.', keywords: `${API_BASE_URL} quickstart curl javascript python pagination page docs_per_page` },
   { id: 'authentication', title: 'Authentication', group: 'Start here', summary: 'Connect with an account API key.', keywords: 'X-API-Key header credentials authorization 401 rotate secret env APCOSYS_API_KEY' },
-  ...API_ENDPOINTS.map(endpoint => ({ id: endpoint.id, title: endpoint.title, group: endpoint.group, summary: endpoint.summary, keywords: [endpoint.method, endpoint.path, `/api/v1${endpoint.path}`, endpoint.access, ...endpoint.request.map(item => `${item.name} ${item.description}`), ...endpoint.response.flatMap(group => group.fields.map(item => `${item.name} ${item.description}`))].join(' '), endpoint })),
+  ...API_ENDPOINTS.map(endpoint => ({ id: endpoint.id, title: endpoint.title, group: endpoint.group, summary: endpoint.summary, keywords: [endpoint.method, endpoint.path, `/api/v1${endpoint.path}`, endpoint.access, ...endpoint.request.map(item => `${item.name} ${item.description}`), ...endpoint.response.flatMap(group => group.fields.map(item => `${group.title} ${item.name} ${item.description}`))].join(' '), endpoint })),
   { id: 'filters', title: 'Filters & syntax', group: 'Reference', summary: 'Search fields, nested conditions, ranges and header filters.', keywords: `${JSON.stringify(filterGroups)} simple_search_filters range_filter AND OR NOT wildcard phrase full_text_search` },
   { id: 'limits', title: 'Plans & limits', group: 'Reference', summary: 'Rate limits, method costs and access restrictions.', keywords: `${JSON.stringify(API_PLANS)} ${JSON.stringify(RESTRICTED_FIELDS)} ${JSON.stringify(RESTRICTED_VALUES)} RPS requests second credits billing pagination page docs_per_page 402 429` },
   { id: 'errors', title: 'Errors', group: 'Reference', summary: 'Status codes and how to handle a failed request.', keywords: JSON.stringify(API_ERRORS) },
@@ -222,9 +222,42 @@ export function resolveDocTopic(hash: string): DocTopic {
   try { candidate = decodeURIComponent(candidate); } catch { candidate = ''; }
   return DOC_TOPICS.find(topic => topic.id === candidate) ?? DOC_TOPICS[0];
 }
-export function docHref(id: string): string {
-  const known = DOC_TOPICS.some(topic => topic.id === id) ? id : 'getting-started';
-  return `/api?section=docs#${known}`;
+
+export type DocSelection = { view: 'request' | 'response'; group?: string; field?: string };
+function selectionGroups(topic: DocTopic, view: DocSelection['view']): SchemaGroup[] {
+  if (topic.endpoint) return view === 'response' ? topic.endpoint.response : [{ title: 'Request', fields: topic.endpoint.request }];
+  return topic.id === 'filters' ? filterGroups : [];
+}
+
+/** Links contain only known public schema names, never the user's search text. */
+export function resolveDocSelection(topic: DocTopic, params: URLSearchParams): DocSelection {
+  const view = topic.endpoint && params.get('view') === 'response' ? 'response' : 'request';
+  const group = selectionGroups(topic, view).find(item => item.title === params.get('group'));
+  const field = group?.fields.find(item => item.name === params.get('field'));
+  return { view, ...(group && field ? { group: group.title, field: field.name } : {}) };
+}
+
+/** A matching field opens its actual request/response schema, including nested groups. */
+export function searchDocSelection(topic: DocTopic, query: string): DocSelection {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 16);
+  if (!words.length) return { view: 'request' };
+  const views: DocSelection['view'][] = topic.endpoint ? ['request', 'response'] : ['request'];
+  const matches = views.flatMap(view => selectionGroups(topic, view).flatMap(group => group.fields.map(field => {
+    const name = field.name.toLowerCase(), text = `${group.title} ${field.name} ${field.type} ${field.description}`.toLowerCase();
+    const score = words.every(word => text.includes(word)) ? words.reduce((sum, word) => sum + (name === word ? 6 : name.includes(word) ? 3 : 1), 0) : 0;
+    return { view, group: group.title, field: field.name, score };
+  }))).filter(match => match.score > 0).sort((a, b) => b.score - a.score);
+  const match = matches[0];
+  return match ? { view: match.view, group: match.group, field: match.field } : { view: 'request' };
+}
+
+export function docHref(id: string, selection: Partial<DocSelection> = {}): string {
+  const topic = DOC_TOPICS.find(item => item.id === id) ?? DOC_TOPICS[0];
+  const known = resolveDocSelection(topic, new URLSearchParams({ view: selection.view ?? '', group: selection.group ?? '', field: selection.field ?? '' }));
+  const params = new URLSearchParams({ section: 'docs' });
+  if (known.view === 'response') params.set('view', known.view);
+  if (known.group && known.field) { params.set('group', known.group); params.set('field', known.field); }
+  return `/api?${params}#${topic.id}`;
 }
 function pythonValue(value: unknown, depth = 0): string {
   if (value === null) return 'None';

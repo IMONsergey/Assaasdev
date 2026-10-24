@@ -7,7 +7,7 @@ export interface CodeCanvasProps {
   content: string;
   language?: CodeLanguage;
   title?: string;
-  onCopy?: (text: string) => void | Promise<void>;
+  onCopy?: (text: string) => void | boolean | Promise<void | boolean>;
   className?: string;
   codeClassName?: string;
   lineNumbers?: boolean;
@@ -27,8 +27,12 @@ export function CodeCanvas({ content, language, title, onCopy, className = '', c
   useEffect(() => { setPage(0); setCopied(false); setCopyError(''); }, [content]);
   useEffect(() => { if (!copied) return; const id = window.setTimeout(() => setCopied(false), 1800); return () => clearTimeout(id); }, [copied]);
   const copy = async () => {
-    setCopyError('');
-    try { if (onCopy) await onCopy(content); else await navigator.clipboard.writeText(content); setCopied(true); }
+    setCopyError(''); setCopied(false);
+    try {
+      const result = onCopy ? await onCopy(content) : await navigator.clipboard.writeText(content);
+      if (result === false) { setCopyError('Copy is unavailable. Select the code to copy it.'); return; }
+      setCopied(true);
+    }
     catch { setCopyError('Copy is unavailable. Select the code to copy it.'); }
   };
   const changePage = (next: number) => { setPage(next); if (body.current) { body.current.scrollTop = 0; body.current.scrollLeft = 0; } };
