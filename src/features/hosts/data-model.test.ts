@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareCells, exploreRows, receivedTable } from './data-model';
+import { arrayColumnCount, compareCells, exploreRows, receivedTable } from './data-model';
 
 describe('received data exploration', () => {
   it('searches and sorts the full ten-thousand-row response before paging', () => {
@@ -18,6 +18,10 @@ describe('received data exploration', () => {
     expect(table.rows[2].cells).toEqual([null]);
     expect(exploreRows(table.rows, 'unusual', null, 'asc')[0].index).toBe(3);
     expect(receivedTable([{ name: 'one' }, { name: 'two', count: 0 }]).columns).toEqual(['name', 'count']);
+    expect(arrayColumnCount([['one', 'unnamed']], [])).toBe(2);
+    expect(receivedTable([['one', 'unnamed']], []).columns).toHaveLength(2);
+    expect(arrayColumnCount([['one']], ['First', 'Second', 'Third'])).toBe(3);
+    expect(arrayColumnCount([], [])).toBe(0);
   });
   it('sorts numeric strings without converting large identifiers to imprecise numbers', () => {
     expect(compareCells('10', '2')).toBeGreaterThan(0);

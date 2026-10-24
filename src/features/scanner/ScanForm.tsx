@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Alert, Badge, Button, Checkbox, Dialog, Field, Icon, SelectField, TextArea } from '../../components/ui';
 import { buildScanRequest, DEFAULT_SCAN_PORTS, normalizeHost, parseCidr, type ScanDraft, type ScanErrors } from './model';
 import { detectTargetColumn, parseCsv } from './csv';
@@ -32,6 +32,28 @@ export function ScanReview({ draft, scanCredits, updating = false }: { draft: Sc
 function ImportTargets({ open, onClose, onImport }: { open: boolean; onClose: () => void; onImport: (hosts: string[], cidrs: string[]) => void }) {
   const [rows, setRows] = useState<string[][]>([]), [error, setError] = useState(''), [fileName, setFileName] = useState('');
   const [header, setHeader] = useState(false), [column, setColumn] = useState(0), [busy, setBusy] = useState(false);
+  const readOperation = useRef(0);
+  useEffect(() => () => { readOperation.current++; }, []);
+  function close() { readOperation.current++; onClose(); }
+  async function readFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    // Retain the File before clearing the native input so the same file can be retried.
+    event.currentTarget.value = '';
+    if (!file) return;
+    const token = ++readOperation.current;
+    setBusy(true); setError(''); setRows([]); setFileName(file.name);
+    try {
+      if (file.size > 5_000_000) throw new Error('The browser importer accepts files up to 5 MB. Split this file before importing.');
+      const content = await file.text();
+      if (token !== readOperation.current) return;
+      const parsed = parseCsv(content);
+      if (!parsed.length) throw new Error('The file contains no rows.');
+      const detected = detectTargetColumn(parsed);
+      setRows(parsed); setColumn(detected.column); setHeader(detected.header);
+    } catch (cause) {
+      if (token === readOperation.current) setError(cause instanceof Error ? cause.message : 'This CSV file could not be read. Try again.');
+    } finally { if (token === readOperation.current) setBusy(false); }
+  }
   const columns = useMemo(() => rows.reduce((max, row) => Math.max(max, row.length), 0), [rows]);
   const preview = useMemo(() => {
     const hosts: string[] = [], cidrs: string[] = [], invalid: { row: number; value: string }[] = [];
@@ -42,5 +64,5 @@ function ImportTargets({ open, onClose, onImport }: { open: boolean; onClose: ()
     const uniqueHosts = [...new Set(hosts)], uniqueCidrs = [...new Set(cidrs)];
     return { hosts: uniqueHosts, cidrs: uniqueCidrs, invalid, duplicates: hosts.length + cidrs.length - uniqueHosts.length - uniqueCidrs.length };
   }, [rows, header, column]);
-  return <Dialog open={open} onClose={onClose} title="Import scan targets" size="lg" footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={busy || (!preview.hosts.length && !preview.cidrs.length)} onClick={() => onImport(preview.hosts, preview.cidrs)}>{preview.invalid.length ? `Use ${preview.hosts.length + preview.cidrs.length} valid targets` : 'Use these targets'}</Button></>}><p>Choose a CSV column containing IP addresses, hostnames or CIDR blocks. The file is read in your browser.</p><Field label="CSV file" type="file" accept=".csv,text/csv" error={error} disabled={busy} onChange={async event => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); setError(''); setRows([]); setFileName(file.name); try { if (file.size > 5_000_000) throw new Error('The browser importer accepts files up to 5 MB. Split this file before importing.'); const parsed = parseCsv(await file.text()); if (!parsed.length) throw new Error('The file contains no rows.'); const detected = detectTargetColumn(parsed); setRows(parsed); setColumn(detected.column); setHeader(detected.header); } catch (cause) { setError((cause as Error).message); } finally { setBusy(false); } }} />{rows.length > 0 && <div className="stack"><p className="muted">{fileName} · {rows.length.toLocaleString()} rows read</p><Checkbox label="The first row contains column names" checked={header} onChange={event => setHeader(event.target.checked)} /><SelectField label="Target column" value={column} onChange={event => setColumn(Number(event.target.value))}>{Array.from({ length: columns }, (_, index) => <option key={index} value={index}>{header ? rows[0]?.[index] || `Column ${index + 1}` : `Column ${index + 1}`}</option>)}</SelectField><div className="scanner-import-summary"><Badge tone="accent">{preview.hosts.length} hosts</Badge><Badge tone="accent">{preview.cidrs.length} CIDRs</Badge>{preview.duplicates > 0 && <Badge>{preview.duplicates} duplicates removed</Badge>}<Badge tone={preview.invalid.length ? 'warning' : 'success'}>{preview.invalid.length} invalid</Badge></div><pre className="scanner-import-preview">{[...preview.hosts, ...preview.cidrs].slice(0, 20).join('\n')}{preview.hosts.length + preview.cidrs.length > 20 ? '\n… Preview shows the first 20 valid targets.' : ''}</pre>{preview.invalid.length > 0 && <Alert tone="warning" title="Some rows cannot be imported">{preview.invalid.slice(0, 8).map(row => <p key={row.row}>Row {row.row}: {row.value}</p>)}<p>“Use valid targets” excludes these invalid values. All accepted targets are shown again in the scan review.</p></Alert>}</div>}</Dialog>;
+  return <Dialog open={open} onClose={close} title="Import scan targets" size="lg" footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button disabled={busy || (!preview.hosts.length && !preview.cidrs.length)} onClick={() => onImport(preview.hosts, preview.cidrs)}>{preview.invalid.length ? `Use ${preview.hosts.length + preview.cidrs.length} valid targets` : 'Use these targets'}</Button></>}><p>Choose a CSV column containing IP addresses, hostnames or CIDR blocks. The file is read in your browser.</p><Field label="CSV file" type="file" accept=".csv,text/csv" error={error} disabled={busy} onChange={event => void readFile(event)} />{fileName && <p className="muted scanner-import-file-name">{fileName}{rows.length > 0 && ` · ${rows.length.toLocaleString()} rows read`}</p>}{busy && <p className="muted" role="status">Reading CSV…</p>}{rows.length > 0 && <div className="stack"><Checkbox label="The first row contains column names" checked={header} onChange={event => setHeader(event.target.checked)} /><SelectField label="Target column" value={column} onChange={event => setColumn(Number(event.target.value))}>{Array.from({ length: columns }, (_, index) => <option key={index} value={index}>{header ? rows[0]?.[index] || `Column ${index + 1}` : `Column ${index + 1}`}</option>)}</SelectField><div className="scanner-import-summary"><Badge tone="accent">{preview.hosts.length} hosts</Badge><Badge tone="accent">{preview.cidrs.length} CIDRs</Badge>{preview.duplicates > 0 && <Badge>{preview.duplicates} duplicates removed</Badge>}<Badge tone={preview.invalid.length ? 'warning' : 'success'}>{preview.invalid.length} invalid</Badge></div><pre className="scanner-import-preview">{[...preview.hosts, ...preview.cidrs].slice(0, 20).join('\n')}{preview.hosts.length + preview.cidrs.length > 20 ? '\n… Preview shows the first 20 valid targets.' : ''}</pre>{preview.invalid.length > 0 && <Alert tone="warning" title="Some rows cannot be imported">{preview.invalid.slice(0, 8).map(row => <p key={row.row}>Row {row.row}: {row.value}</p>)}<p>“Use valid targets” excludes these invalid values. All accepted targets are shown again in the scan review.</p></Alert>}</div>}</Dialog>;
 }

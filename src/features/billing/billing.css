@@ -119,6 +119,12 @@
 .crypto-detail-wide { grid-column:1/-1; }
 .crypto-report-meta { font-size:12px; line-height:1.6; margin:0; }
 .crypto-transactions .alert { font-size:13px; }
+.crypto-transactions { container:crypto-transactions / inline-size; }
+/* This dialog is portalled outside .billing-page, so it needs its own query. */
+@container crypto-transactions (max-width:440px) {
+  .crypto-transactions .crypto-details { grid-template-columns:minmax(0,1fr); }
+  .crypto-transactions .crypto-transaction { padding:16px; }
+}
 .crypto-unrequested { display:flex; align-items:center; gap:14px; padding:24px 0 8px; color:var(--muted); font-size:13px; }
 .crypto-unrequested .icon { flex:none; color:var(--accent); }
 @container billing (max-width:1100px) {

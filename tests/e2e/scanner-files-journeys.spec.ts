@@ -24,7 +24,13 @@ test('scan import keeps a headerless first target, deduplicates and reviews a 1,
 
   await page.getByRole('button', { name: 'Import CSV', exact: true }).click();
   const importer = page.getByRole('dialog', { name: 'Import scan targets', exact: true });
-  await importer.getByLabel('CSV file', { exact: true }).setInputFiles({ name: 'targets.csv', mimeType: 'text/csv', buffer: Buffer.from('192.0.2.10\n192.0.2.11\n192.0.2.10\n192.0.2.0/30') });
+  const input = importer.getByLabel('CSV file', { exact: true }), fileName = `targets-${'review'.repeat(30)}.csv`;
+  await input.setInputFiles({ name: fileName, mimeType: 'text/csv', buffer: Buffer.from('"192.0.2.10') });
+  await expect(importer).toContainText('A quoted CSV field is not closed. Check the file and try again.');
+  await expect(input).toHaveValue('');
+  await input.setInputFiles({ name: fileName, mimeType: 'text/csv', buffer: Buffer.from('192.0.2.10\n192.0.2.11\n192.0.2.10\n192.0.2.0/30') });
+  await expect(importer.locator('.scanner-import-file-name')).toContainText(fileName);
+  await expect(input).toHaveValue('');
   await expect(importer.getByLabel('The first row contains column names')).not.toBeChecked();
   await expect(importer.getByText('2 hosts', { exact: true })).toBeVisible();
   await expect(importer.getByText('1 duplicates removed', { exact: true })).toBeVisible();

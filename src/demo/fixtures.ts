@@ -159,7 +159,7 @@ export function seedPricing(epoch = DEMO_TIMESTAMP): PricingData {
       { type: 'Free', name: 'Free', monthly_price: 0, annually_price: 0, credits: 500, scan_credits: 0, search_pages: 2, users: 1, duration: '30d', api_access: false, cve: false, buckets: false, leak_data: false, bulk_data: false, private_scanning: false, support: 'community' },
       { type: 'Plus', name: 'Plus', monthly_price: 50, annually_price: 480, credits: 25000, scan_credits: 0, search_pages: 25, users: 1, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: false, bulk_data: false, private_scanning: false, support: 'email' },
       { type: 'Expert', name: 'Expert', monthly_price: 300, annually_price: 2880, credits: 250000, scan_credits: 0, search_pages: 150, users: 1, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: true, bulk_data: false, private_scanning: false, support: 'priority' },
-      { type: 'Business', name: 'Business', monthly_price: 900, annually_price: 8640, credits: 1500000, scan_credits: 327680, search_pages: 300, users: 10, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: true, bulk_data: true, private_scanning: true, support: 'priority' },
+      { type: 'Business', name: 'Business', monthly_price: 900, annually_price: 8640, credits: 1500000, scan_credits: 327680, search_pages: 300, users: 5, duration: '30d', api_access: true, cve: true, buckets: true, leak_data: true, bulk_data: true, private_scanning: true, support: 'priority' },
     ],
     tokens: [
       { id: 'token_pack_1', name: 'Starter Pack', product_name: 'Search credits', tokens: 25000, price_usd: 50, discount_percent: 0, price_per_token: 50 / 25000 },

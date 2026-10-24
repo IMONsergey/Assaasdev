@@ -43,6 +43,10 @@
 .search-history-more > span { color: var(--muted); font-size: .785714rem; }
 .search-history-undo { align-items: center; }
 .search-history-undo > .button { flex: none; width: auto; min-height: 36px; height: auto; padding: 6px 10px; color: var(--accent-text); }
+@container workspace (max-width: 650px) {
+  .search-history-toolbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 12px; }
+  .search-history-find { grid-column: 1 / -1; }
+}
 @media (max-width: 960px) {
   .search-history-row { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
   .search-history-mark { width: 32px; height: 32px; }

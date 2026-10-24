@@ -26,7 +26,7 @@ function FileGlyph({ extension }: { extension?: string }) {
 
 function FileLabel({ value, className = '' }: { value: string; className?: string }) {
   const parts = nameParts(value);
-  return <span className={`files-middle-label ${className}`} title={value}><span className="files-middle-label-start">{parts.start}</span>{parts.end && <span className="files-middle-label-end">{parts.end}</span>}</span>;
+  return <span className={`files-middle-label ${className}`} title={value}><span className="files-middle-label-start">{parts.start}</span>{parts.end && <span className="files-middle-label-end"><span>{parts.end}</span></span>}</span>;
 }
 
 const fileExamples: Array<{ title: string; description: string; icon: string; filter: BucketFilter }> = [

@@ -155,6 +155,11 @@ export function SearchPage() {
     } catch (cause) { setInputError(cause instanceof Error ? cause.message : 'Check the search.'); }
   }
   function loadAnalytics() { if (canRequest && !queryDirty && !analytics.isFetching) void analytics.refetch(); }
+  function chooseExample(full_text_search: string) {
+    setDraft(current => ({ ...current, full_text_search, page: 1 }));
+    setInputError('');
+    requestAnimationFrame(() => document.getElementById('main-search-query')?.focus({ preventScroll: true }));
+  }
   function openEditor() { beforeEditor.current = draft; setInputError(''); setEditorOpen(true); }
   function addSuggestedFilter(field: string, value: string) { beforeEditor.current = draft; setDraft(current => ({ ...current, full_text_search: '', simple_search_filters: [...(current.simple_search_filters || []), { field, value }] })); setInputError(''); setEditorOpen(true); }
   function cancelEditor() { setDraft(beforeEditor.current); setInputError(''); setEditorOpen(false); requestAnimationFrame(() => document.getElementById('search-filter-toggle')?.focus({ preventScroll: true })); }
@@ -181,7 +186,10 @@ export function SearchPage() {
           <DoubleButton type="submit" compact className="search-submit-button" disabled={shared || (results.isFetching && !queryDirty)} aria-label="Run search" aria-busy={results.isFetching && !queryDirty || undefined} title={parsed.hasSearch && !queryDirty ? 'Run this search again' : 'Run search'}>{results.isFetching && !queryDirty ? <OrbCubeLoader size={20} decorative color="currentColor" /> : <span>Search</span>}</DoubleButton>
         </form>
       </div>
-      {!parsed.hasSearch && <div className="search-home-support"><p className="search-query-kinds"><span><Icon name="search" size={15} />Text query</span><span><Icon name="globe" size={15} />Domain</span><span><Icon name="server" size={15} />IP / CIDR</span><span><Icon name="package" size={15} />Technology</span></p></div>}
+      {!parsed.hasSearch && <div className="search-home-support">
+        <p className="search-query-kinds"><span><Icon name="search" size={15} />Text query</span><span><Icon name="globe" size={15} />Domain</span><span><Icon name="server" size={15} />IP / CIDR</span><span><Icon name="package" size={15} />Technology</span></p>
+        <div className="search-query-examples" role="group" aria-label="Example searches"><span>Try</span>{['nginx', 'example.com', '192.0.2.10'].map(query => <Button key={query} variant="ghost" size="sm" onClick={() => chooseExample(query)}>{query}</Button>)}</div>
+      </div>}
     </div>
 
     {queryDirty && !editorOpen && <div className="search-query-draft"><span role="status"><span className="search-draft-dot" />Changes not applied</span><div className="cluster"><Button size="sm" onClick={() => run({ ...draft, page: 1 })}>Apply changes</Button><Button size="sm" variant="ghost" onClick={() => { setDraft(applied); setInputError(''); }}>Cancel changes</Button></div></div>}
@@ -217,7 +225,7 @@ export function SearchPage() {
         </div>
         {displayResults && !shared && <div className="search-results-footer"><Pagination page={page} pageSize={pageSize} count={displayResults.receivedCount} maxPage={maxPage} disabled={results.isFetching || queryDirty} onPageChange={next => run({ ...applied, page: next }, true)} />{page >= maxPage && <span className="search-plan-limit">{maxPage}-page plan limit · <Link to="/billing">View plans</Link></span>}</div>}
       </TabPanel>
-      <TabPanel idPrefix="search-view" value="analytics" hidden={view !== 'analytics'} className="search-analytics-panel"><FacetPanel requestKey={JSON.stringify([principal, dataset, facetRequest])} selectedValues={field => activeFacetValues(draft, field)} facets={analytics.facets} pending={analytics.isFetching} error={analytics.error} onSelect={(field, value) => setDraft(current => toggleFacet(current, field, value))} onRetry={loadAnalytics} disabled={shared || editorOpen} loadDisabled={queryDirty} shared={shared} loaded={analytics.data !== undefined || analytics.facets.length > 0} onLoad={loadAnalytics} /></TabPanel>
+      <TabPanel idPrefix="search-view" value="analytics" hidden={view !== 'analytics'} className="search-analytics-panel"><FacetPanel requestKey={JSON.stringify([principal, dataset, facetRequest])} selectedValues={field => activeFacetValues(draft, field)} facets={analytics.facets} pending={analytics.isFetching} error={analytics.error} onSelect={(field, value) => setDraft(current => toggleFacet(current, field, value))} onRetry={loadAnalytics} disabled={shared || editorOpen} loadDisabled={queryDirty} shared={shared} dataset={dataset} loaded={analytics.data !== undefined || analytics.facets.length > 0} onLoad={loadAnalytics} /></TabPanel>
     </>}
     <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} query={applied} privateSearch={dataset === 'private'} taskIds={applied.task_ids} shareToken={applied.st || applied.share_token} />
     {searchAction === 'save' && <SaveQueryDialog request={applied} dataset={dataset} onClose={() => setSearchAction(null)} />}

@@ -26,13 +26,14 @@
 .profile-plan-heading strong { display:block; font:550 1.3rem/1.35 var(--font-display); letter-spacing:-.02em; overflow-wrap:anywhere; }
 .profile-credit-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0 0 22px; }
 .profile-credit-grid>div { min-width:0; }
-.profile-credit-grid dt { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:.72rem; line-height:1.5; white-space:nowrap; }
+.profile-credit-grid dt { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:.72rem; line-height:1.5; }
 .profile-credit-grid dt>.icon { flex:none; }
 .profile-credit-grid dd { margin:7px 0 0; font:550 clamp(.95rem,.9rem + .15vw,1.1rem)/1.5 var(--font-ui); letter-spacing:-.02em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .profile-subscription-link { display:flex; width:100%; justify-content:space-between; gap:10px; font-size:.82rem; padding-inline:12px; min-height:44px; }
 .profile-subscription-link>.icon { flex:none; }
 .profile-account-reference { display:flex; align-items:center; justify-content:space-between; gap:14px; border-top:1px solid var(--line); margin-top:22px; padding-top:16px; color:var(--muted); font-size:.75rem; }
 .profile-account-reference code { font:500 .75rem/1.5 var(--font-mono); max-width:70%; text-align:right; overflow-wrap:anywhere; }
+.account-session h3 { min-width:0; overflow-wrap:anywhere; }
 @container settings (max-width:740px) { .profile-details-grid { grid-template-columns:1fr; }.profile-credit-grid { max-width:440px; }.profile-subscription-link { width:auto; justify-content:flex-start; gap:16px; }.profile-account-reference { justify-content:flex-start; }.profile-account-reference code { text-align:left; }.profile-plan-heading { margin-bottom:20px; } }
 @media(max-width:900px) { .account-page .profile-details-grid { grid-template-columns:1fr; } }
 @media(max-width:600px) { .profile-identity { flex-wrap:wrap; gap:14px; padding-bottom:22px; }.profile-identity .user-avatar { --avatar-size:60px!important; }.profile-identity-copy { flex-basis:calc(100% - 80px); }.profile-avatar-action { margin-left:74px; min-height:40px; padding:8px 13px; }.profile-identity-copy h2 { font-size:1.25rem; }.profile-identity-copy p { font-size:.83rem; }.profile-details-grid { grid-template-columns:1fr; gap:24px; }.profile-account-summary { padding:20px; }.profile-credit-grid dt { font-size:.76rem; }.profile-credit-grid dd { font-size:1.06rem; }.profile-subscription-link { width:100%; justify-content:space-between; }.profile-details-card .form-actions .button { width:100%!important; }.profile-account-reference code { max-width:65%; }.profile-account-reference { justify-content:space-between; }.profile-account-reference code { text-align:right; } }

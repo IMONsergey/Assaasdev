@@ -250,7 +250,8 @@
 .files-record-name:hover { text-decoration: none; }
 .files-middle-label { display: flex; max-width: 100%; min-width: 0; white-space: nowrap; text-align: left; }
 .files-middle-label-start { display: block; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.files-middle-label-end { display: block; flex: none; }
+.files-middle-label-end { display: flex; justify-content: flex-end; flex: none; min-width: 0; max-width: 60%; overflow: hidden; }
+.files-middle-label-end > span { flex: none; }
 .files-record-path { min-width: 0; overflow: hidden; }
 .files-bucket-name strong { display: block; min-width: 0; flex: 1; }
 .files-bucket-name > .icon { flex: none; }

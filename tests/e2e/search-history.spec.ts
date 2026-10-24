@@ -148,7 +148,7 @@ test('limited shares and credential-shaped searches are not written to history',
   expect(stored).not.toContain('do-not-persist-this-token'); expect(stored).not.toContain('abcdefghijklmnopqrstuvwxyz');
 });
 
-for (const width of [1440, 390, 320]) test(`search suggestions and history layout at ${width}px`, async ({ page }, testInfo) => {
+for (const width of [1440, 768, 390, 320]) test(`search suggestions and history layout at ${width}px`, async ({ page }, testInfo) => {
   const requests: Request[] = []; await setup(page, requests);
   await page.setViewportSize({ width, height: width === 1440 ? 960 : 844 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -174,6 +174,7 @@ for (const width of [1440, 390, 320]) test(`search suggestions and history layou
   await queryInput(page).fill('country_name: Germany'); await page.locator('.search-query-bar').getByRole('button', { name: 'Run search', exact: true }).click();
   await expect(page.locator('.search-result-row').first()).toBeVisible();
   await page.getByRole('link', { name: 'Search history', exact: true }).click(); await expect(historyRows(page)).toHaveCount(2);
+  await expect.poll(() => page.locator('.search-history-toolbar').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const action of [historyRows(page).first().getByRole('link', { name: 'Restore', exact: true }), historyRows(page).first().getByRole('button', { name: /^Run search:/ })]) {
     const bounds = await action.boundingBox(); expect(bounds).not.toBeNull(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);

@@ -2,7 +2,7 @@ import { chooseOption } from './helpers/controls';
 import { expect, test, type Page } from '@playwright/test';
 
 type RecordedRequest = { type: string; data: Record<string, unknown> };
-async function setupSearch(page: Page, requests: RecordedRequest[], deferAnalytics?: (reply: () => void) => void) {
+async function setupSearch(page: Page, requests: RecordedRequest[], deferAnalytics?: (reply: () => void) => void, hostLabels: string[] = []) {
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__ = {dataMode:"live", apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user_id: 'search-ux', user_name: 'search_ux', user_type: 'USER', credits: 5000, subscription: { type: 'Business', credits: 5000 } }) }));
   await page.routeWebSocket('**/backend/ws', socket => {
@@ -10,7 +10,7 @@ async function setupSearch(page: Page, requests: RecordedRequest[], deferAnalyti
       const request = JSON.parse(String(message)) as RecordedRequest & { id: string };
       requests.push(request);
       const send = (data: unknown) => socket.send(JSON.stringify({ type: request.type, id: request.id, data, metadata: { subscription_type: 'Business' } }));
-      if (request.type === 'hosts') send(Array.from({ length: Number(request.data.docs_per_page) || 20 }, (_, index) => ({ ip: `192.0.2.${index + 1}`, org: 'Network A', country_code: 'DE', open_ports: [{ port: 443, protocol: 'https' }], uts: 1709251199 })));
+      if (request.type === 'hosts') send(Array.from({ length: Number(request.data.docs_per_page) || 20 }, (_, index) => ({ ip: `192.0.2.${index + 1}`, org: 'Network A', country_code: 'DE', labels_list: hostLabels, open_ports: [{ port: 443, protocol: 'https' }], uts: 1709251199 })));
       else if (request.type === 'analytics') {
         const reply = () => {
           send({ facet_name: 'country_name', facet_values: [{ key: 'Germany', doc_count: 120 }, { key: 'France', doc_count: 0 }] });
@@ -30,6 +30,17 @@ test('workspace focus keeps restored results clear and suggestions open only for
   const input = page.getByRole('combobox', { name: 'Search internet infrastructure', exact: true });
   const suggestions = page.getByRole('listbox', { name: 'Search suggestions', exact: true });
   await expect(input).toBeFocused();
+  const examples = page.getByRole('group', { name: 'Example searches', exact: true });
+  for (const query of ['nginx', 'example.com', '192.0.2.10']) {
+    const example = examples.getByRole('button', { name: query, exact: true });
+    await example.focus();
+    await page.keyboard.press('Enter');
+    await expect(input).toHaveValue(query);
+    await expect(input).toBeFocused();
+    await expect(suggestions).toHaveCount(0);
+    expect(requests.filter(item => item.type === 'hosts' || item.type === 'analytics')).toHaveLength(0);
+    await expect(page).toHaveURL(/\/search$/);
+  }
   await input.fill('network');
   await expect(suggestions).toBeVisible();
   await input.press('Enter');
@@ -49,6 +60,35 @@ test('workspace focus keeps restored results clear and suggestions open only for
   await expect(page.getByRole('button', { name: 'Load analytics', exact: true })).toBeVisible();
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(2);
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+});
+
+test('long result labels and starter examples fit the available workspace at each breakpoint', async ({ page }) => {
+  const requests: RecordedRequest[] = [];
+  const longLabel = 'observed_' + 'continuous-label-'.repeat(24);
+  await setupSearch(page, requests, undefined, [longLabel]);
+  await page.goto('/search?q=network&run=1');
+  const row = page.locator('.search-result-row').first();
+  const badge = row.locator('.search-labels .badge');
+  await expect(badge).toHaveText(longLabel);
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => badge.evaluate(node => {
+      const bounds = node.getBoundingClientRect(), row = node.closest('.search-result-row')!.getBoundingClientRect();
+      return bounds.left >= row.left && bounds.right <= row.right + 1 && node.scrollWidth <= node.clientWidth + 1;
+    })).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await page.goto('/search');
+  const examples = page.getByRole('group', { name: 'Example searches', exact: true });
+  await expect(examples.getByRole('button')).toHaveCount(3);
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await examples.evaluate(node => [...node.querySelectorAll('button')].every(button => {
+      const bounds = button.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth;
+    }))).toBe(true);
+  }
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
 });
 
 test('local search views preserve drafts and analytics requires an explicit request', async ({ page }) => {

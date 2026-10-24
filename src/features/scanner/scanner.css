@@ -79,6 +79,7 @@
 
 .scanner-create-layout { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:var(--page-gap,24px); align-items:start; }
 .scanner-form-fields { min-width:0; display:flex; flex-direction:column; gap:18px; }
+.scanner-import-file-name { overflow-wrap:anywhere; }
 .scanner-form-section { display:flex; flex-direction:column; gap:18px; padding:var(--card-padding,24px); border:1px solid var(--line); border-radius:12px; }
 .scanner-section-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; }
 .scanner-section-heading h2 { display:flex; align-items:center; gap:9px; margin:0; font:600 1.14rem/1.4 var(--font-ui); }
@@ -208,6 +209,9 @@
   .scanner-list-heading .tab-count { display:none; }
 }
 /* Dialog content is portalled outside the scanner container. */
+@media (max-width:760px) {
+  .scanner-tasks-table-wrap { scroll-margin-top:80px; }
+}
 @media (max-width:600px) {
   .scanner-review .scanner-estimate { display:block; }
   .scanner-review-scope > div { grid-template-columns:90px minmax(0,1fr); gap:12px; }
