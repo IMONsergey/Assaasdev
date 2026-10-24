@@ -120,6 +120,7 @@
 .crypto-report-meta { font-size:12px; line-height:1.6; margin:0; }
 .crypto-transactions .alert { font-size:13px; }
 .crypto-transactions { container:crypto-transactions / inline-size; }
+:root:not([data-input-modality="pointer"]) .crypto-transactions:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
 /* This dialog is portalled outside .billing-page, so it needs its own query. */
 @container crypto-transactions (max-width:440px) {
   .crypto-transactions .crypto-details { grid-template-columns:minmax(0,1fr); }

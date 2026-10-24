@@ -72,7 +72,7 @@ export function CryptoActivity({ active = true }: { active?: boolean }) {
         </div>}
     </Card>
     <Dialog open={selected !== null} onClose={() => setSelected(null)} title="Address transactions" size="lg" footer={<><Button variant="secondary" loading={transactions.isFetching} onClick={() => void transactions.refetch()}>Refresh transactions</Button><Button onClick={() => setSelected(null)}>Close</Button></>}>
-      {selected && <div className="stack crypto-transactions">
+      {selected && <div className="stack crypto-transactions" role="region" aria-label="Transaction records" tabIndex={0}>
         <div><p className="crypto-report-meta muted">Tracked coin: {selected.coin} · Network: {selected.network}</p><code className="crypto-exact">{selected.address}</code></div>
         <p className="crypto-report-meta muted">Transfer activity · Check Payments for invoice status.</p>
         {transactions.isPending ? <Skeleton rows={4} label="Loading address transactions…" />

@@ -194,7 +194,7 @@
 :root:not([data-input-modality='pointer']) .search-condition-error:focus { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 .search-saved-page, .search-share-page { max-width: var(--page-max); width: 100%; }
 .search-secondary-link { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); text-decoration: none; font-size: .857143rem; font-weight: 500; }
-.search-secondary-link:hover { background: var(--surface-hover); }
+.search-secondary-link:hover { background: var(--surface-hover); text-decoration: none; }
 .search-saved-toolbar { display: grid; grid-template-columns: minmax(200px,440px) minmax(0,1fr); align-items: end; gap: 16px 28px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 .search-saved-actions { display: flex; justify-content: flex-end; align-items: end; gap: 12px; min-width: 0; flex-wrap: wrap; }
 .search-saved-actions > .button { min-height: 46px; white-space: nowrap; }
