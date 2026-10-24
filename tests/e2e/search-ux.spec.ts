@@ -81,6 +81,35 @@ test('local search views preserve drafts and analytics requires an explicit requ
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(3);
 });
 
+test('switching to Analytics immediately after changing rows keeps the submitted search', async ({ page }) => {
+  const requests: RecordedRequest[] = [];
+  await setupSearch(page, requests);
+  await page.goto('/search?q=network&run=1');
+  await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  // Dispatch both controls in one turn, before the router's transition can render.
+  await page.getByRole('combobox', { name: 'Rows', exact: true }).evaluate(select => {
+    if (!(select instanceof HTMLSelectElement)) throw new Error('Rows control is missing');
+    const analytics = document.getElementById('search-view-tab-analytics');
+    if (!(analytics instanceof HTMLButtonElement)) throw new Error('Analytics tab is missing');
+    select.value = '25';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    analytics.click();
+  });
+  await expect(page).toHaveURL(url => {
+    const request = JSON.parse(url.searchParams.get('request') || '{}');
+    return url.searchParams.get('view') === 'analytics' && request.docs_per_page === 25 && request.full_text_search === 'network';
+  });
+  await expect(page.getByRole('button', { name: 'Load analytics', exact: true })).toBeVisible();
+  await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(2);
+  expect(requests.filter(item => item.type === 'hosts').at(-1)?.data).toMatchObject({ full_text_search: 'network', docs_per_page: 25 });
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+  await page.getByRole('tab', { name: 'Results', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Rows', exact: true })).toHaveValue('25');
+  await expect(page.getByRole('heading', { name: '25 hosts returned', exact: true })).toBeVisible();
+  expect(requests.filter(item => item.type === 'hosts')).toHaveLength(2);
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+});
+
 test('observation dates apply UTC seconds without rewriting complex rules', async ({ page }) => {
   const requests: RecordedRequest[] = [];
   await setupSearch(page, requests);

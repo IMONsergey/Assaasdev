@@ -104,7 +104,7 @@ export function SearchPage() {
     return `${path}?${next}`;
   }
   function changeView(nextView: string) {
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(window.location.search);
     if (nextView === 'analytics') next.set('view', 'analytics'); else next.delete('view');
     navigate(`${location.pathname}?${next}`, { replace: true, state: { preserveTabFocus: true } });
   }

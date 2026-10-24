@@ -47,6 +47,56 @@ test('classifying and returning to a thousand-service list retains local context
   expect(requests.filter(type => type === 'hostinfo')).toHaveLength(1);
 });
 
+test('rapid service filters and nested tabs compose the current URL without losing search context', async ({ page }) => {
+  const requests: string[] = [];
+  await hostWorkspaceFixture(page, requests);
+  await page.goto('/hosts/192.0.2.44?tab=http&q=retained&run=1&back=%2Fsearch%3Fq%3Dretained%26run%3D1');
+  const list = page.getByRole('complementary', { name: 'Service list', exact: true });
+  await expect(list.locator('.host-service-row')).toHaveCount(25);
+  await list.locator('summary').filter({ hasText: 'Classify services' }).click();
+
+  // These input events run before the router can commit any intermediate render.
+  await list.locator('.host-service-filters').evaluate(element => {
+    const [protocol, content] = element.querySelectorAll<HTMLSelectElement>('select');
+    const port = element.querySelector<HTMLInputElement>('input');
+    const setInputValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    if (!protocol || !content || !port || !setInputValue) throw new Error('Service filters must be available.');
+    protocol.value = 'https'; protocol.dispatchEvent(new Event('change', { bubbles: true }));
+    content.value = 'tls'; content.dispatchEvent(new Event('change', { bubbles: true }));
+    setInputValue.call(port, '10800-10999'); port.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page).toHaveURL(url => url.searchParams.get('service_protocol') === 'https'
+    && url.searchParams.get('service_content') === 'tls' && url.searchParams.get('service_port') === '10800-10999'
+    && url.searchParams.get('service_page') === '1' && url.searchParams.get('q') === 'retained'
+    && url.searchParams.get('back') === '/search?q=retained&run=1');
+  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
+  await expect(list.locator('.host-service-row')).toHaveCount(20);
+  await expect(list.locator('.host-service-window')).toContainText('20 matching');
+
+  // A parent tab must retain a service subtab selected in the same task.
+  await page.getByRole('tab', { name: 'TLS', exact: true }).evaluate(element => {
+    const dns = document.querySelector<HTMLButtonElement>('#host-workspace-tab-dns');
+    if (!dns) throw new Error('The DNS workspace tab must be available.');
+    (element as HTMLButtonElement).click(); dns.click();
+  });
+  await expect(page).toHaveURL(url => url.searchParams.get('tab') === 'dns'
+    && url.searchParams.get('view') === 'tls' && url.searchParams.get('response') === 'body'
+    && url.searchParams.get('service_content') === 'tls' && url.searchParams.get('service_port') === '10800-10999');
+  await page.getByRole('tab', { name: /^Services/ }).click();
+  await expect(page.getByRole('tab', { name: 'TLS', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(list.locator('.host-service-row')).toHaveCount(20);
+  const restoredLocation = page.url();
+  await page.getByRole('complementary', { name: 'Workspace navigation', exact: true }).getByRole('link', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(restoredLocation);
+  await expect(list.getByRole('combobox', { name: 'Protocol', exact: true })).toHaveValue('https');
+  await expect(list.getByRole('combobox', { name: 'Contains', exact: true })).toHaveValue('tls');
+  await expect(list.getByRole('textbox', { name: 'Port or range', exact: true })).toHaveValue('10800-10999');
+  await expect(list.locator('.host-service-row')).toHaveCount(20);
+  expect(requests.filter(type => type === 'hostinfo')).toHaveLength(1);
+});
+
 test('all ten thousand received rows are searchable and numerically sortable with bounded rendering and retained table settings', async ({ page }) => {
   const requests: string[] = [];
   await hostWorkspaceFixture(page, requests);

@@ -17,8 +17,25 @@ test('primary file search and grouped filters submit explicitly and changing vie
   const input = page.getByLabel('Filename or keywords', { exact: true });
   await input.fill('report');
   expect(frames.filter(frame => frame.type === 'buckets')).toEqual([]);
-  await input.press('Enter');
+  // Submit and switch views in one turn while rendered URL parameters are still old.
+  await input.evaluate(node => {
+    if (!(node instanceof HTMLInputElement) || !node.form) throw new Error('File search form is missing');
+    const buckets = document.getElementById('files-tab-hosts');
+    if (!(buckets instanceof HTMLButtonElement)) throw new Error('Buckets tab is missing');
+    node.form.requestSubmit();
+    buckets.click();
+  });
+  await expect(page).toHaveURL(url => {
+    const filter = JSON.parse(url.searchParams.get('filter') || '{}');
+    return url.searchParams.get('view') === 'hosts' && filter.key_words?.join(',') === 'report';
+  });
+  await expect(page.getByLabel('Keywords in bucket files', { exact: true })).toHaveValue('report');
+  await expect.poll(() => frames.filter(frame => frame.type === 'buckets').length).toBe(1);
+  expect(frames.filter(frame => frame.type === 'buckets')[0].data).toMatchObject({ key_words: ['report'] });
+  expect(frames.filter(frame => frame.type === 'bucket_analytics')).toHaveLength(0);
+  await page.getByRole('tab', { name: 'Files', exact: true }).click();
   await expect(page.getByRole('heading', { name: '1 file record', exact: true })).toBeVisible();
+  expect(frames.filter(frame => frame.type === 'buckets')).toHaveLength(1);
   await expect(page.locator('.files-table')).toContainText('0 MB');
   await page.locator('.files-page').screenshot({ path: testInfo.outputPath('files-results-1440.png') });
   const filters = page.getByRole('button', { name: 'Filters', exact: true });

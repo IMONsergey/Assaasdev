@@ -85,14 +85,19 @@ export function HostPage() {
   }, [serializedParams, tab, detailOpen, service?.key]);
 
   const compactWorkspace = () => (workspaceRef.current?.clientWidth || window.innerWidth) <= 760;
-  const canonicalService = (next: URLSearchParams) => { next.set('tab', 'services'); next.set('view', serviceTab); next.set('response', responseTab); next.set('file', webTab); };
+  const canonicalService = (next: URLSearchParams) => {
+    const current = hostWorkspace(next);
+    next.set('tab', 'services'); next.set('view', current.serviceTab); next.set('response', current.responseTab); next.set('file', current.webTab);
+  };
   const setSelection = (next: URLSearchParams, item: ServiceItem) => {
     next.set('service', item.key);
     if (item.record.port !== undefined) next.set('port', String(item.record.port)); else next.delete('port');
     if (item.record.protocol) next.set('protocol', item.record.protocol); else next.delete('protocol');
   };
   const updateServiceView = (values: Record<string, string | null>, resetPage = true) => {
-    const next = new URLSearchParams(params);
+    // Browser history already includes earlier control events while React may
+    // still be rendering the previous filters or nested tab selection.
+    const next = new URLSearchParams(window.location.search);
     for (const [name, value] of Object.entries(values)) { if (value) next.set(name, value); else next.delete(name); }
     if (resetPage) next.set('service_page', '1');
     rowScroll.current = 0;
@@ -100,23 +105,23 @@ export function HostPage() {
     setParams(next, { replace: true });
   };
   const showSelected = () => {
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(window.location.search);
     if (selectedIndex < 0) for (const key of ['service_q', 'service_protocol', 'service_content', 'service_port']) next.delete(key);
     next.set('service_page', String(Math.floor((selectedIndex >= 0 ? selectedIndex : filterServices(items, '', order).findIndex(item => item.key === service?.key)) / 25) + 1));
     next.set('panel', 'list');
     pendingFocus.current = { target: 'list', scroll: compactWorkspace() };
     setParams(next, { replace: true });
   };
-  const changeTab = (value: string) => { const next = new URLSearchParams(params); canonicalService(next); next.set('tab', value); if (!params.has('panel') && detailOpen) next.set('panel', 'details'); setParams(next, { replace: true }); };
-  const changeServiceTab = (value: ServiceTab) => { const next = new URLSearchParams(params); canonicalService(next); next.set('view', value); next.set('panel', 'details'); setParams(next, { replace: true }); };
-  const changeDetailView = (name: string, value: string) => { const next = new URLSearchParams(params); canonicalService(next); next.set(name, value); next.set('panel', 'details'); setParams(next, { replace: true }); };
+  const changeTab = (value: string) => { const next = new URLSearchParams(window.location.search); const current = hostWorkspace(next); canonicalService(next); next.set('tab', value); if (!next.has('panel') && current.detailOpen) next.set('panel', 'details'); setParams(next, { replace: true }); };
+  const changeServiceTab = (value: ServiceTab) => { const next = new URLSearchParams(window.location.search); canonicalService(next); next.set('view', value); next.set('panel', 'details'); setParams(next, { replace: true }); };
+  const changeDetailView = (name: string, value: string) => { const next = new URLSearchParams(window.location.search); canonicalService(next); next.set(name, value); next.set('panel', 'details'); setParams(next, { replace: true }); };
   const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); toast('Copied to clipboard.', 'success'); } catch { toast('Clipboard access is unavailable. Select and copy the visible text.', 'error'); } };
   const select = (item: ServiceItem) => {
     pendingFocus.current = compactWorkspace() ? { target: 'details', scroll: true } : null;
-    const next = new URLSearchParams(params); canonicalService(next); setSelection(next, item); next.set('service_page', String(serviceWindow.page)); next.set('panel', 'details'); setParams(next, { replace: true });
+    const next = new URLSearchParams(window.location.search); canonicalService(next); setSelection(next, item); next.set('service_page', String(serviceWindow.page)); next.set('panel', 'details'); setParams(next, { replace: true });
   };
   const openServices = (options: { protocol?: string; content?: ServiceContent; service?: ServiceItem; view?: 'response' | 'products' } = {}) => {
-    const next = new URLSearchParams(params); canonicalService(next);
+    const next = new URLSearchParams(window.location.search); canonicalService(next);
     for (const key of ['service_q', 'service_protocol', 'service_content', 'service_port', 'service_page']) next.delete(key);
     if (options.protocol) next.set('service_protocol', options.protocol);
     if (options.content) next.set('service_content', options.content);
@@ -127,7 +132,7 @@ export function HostPage() {
     pendingFocus.current = { target: options.service ? 'details' : 'list', scroll: compactWorkspace() };
     setParams(next, { replace: true });
   };
-  const backToList = () => { const next = new URLSearchParams(params); next.set('panel', 'list'); pendingFocus.current = { target: 'list', scroll: true }; setParams(next, { replace: true }); };
+  const backToList = () => { const next = new URLSearchParams(window.location.search); next.set('panel', 'list'); pendingFocus.current = { target: 'list', scroll: true }; setParams(next, { replace: true }); };
   const sectionProps = { sections: host.sections, loading: host.isFetching, error: host.error, retry: () => { void host.refetch(); } };
   const ownParams = new URLSearchParams(encodeSearch(withoutShareToken(parsed.request))); if (params.has('back')) ownParams.set('back', params.get('back')!);
 

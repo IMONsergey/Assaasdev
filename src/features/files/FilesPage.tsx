@@ -123,7 +123,7 @@ export function FilesPage() {
 
   return <div className="files-page stack">
     <PageHeader title="Files & buckets" />
-    <Tabs idPrefix="files" ariaLabel="File search views" items={[{ id: 'files', label: 'Files', icon: 'list' }, { id: 'hosts', label: 'Buckets', icon: 'database' }]} value={view} onChange={value => { setView(value as FilesView); setSelected(null); const next = new URLSearchParams(params); next.set('view', value); lastWritten.current = next.toString(); setParams(next); }} />
+    <Tabs idPrefix="files" ariaLabel="File search views" items={[{ id: 'files', label: 'Files', icon: 'list' }, { id: 'hosts', label: 'Buckets', icon: 'database' }]} value={view} onChange={value => { setView(value as FilesView); setSelected(null); const next = new URLSearchParams(window.location.search); next.set('view', value); lastWritten.current = next.toString(); setParams(next); }} />
     <TabPanel idPrefix="files" value={view === 'files' ? 'hosts' : 'files'} hidden>{null}</TabPanel>
     <TabPanel idPrefix="files" value={view} className="files-workspace stack">
     {restored.error && <Alert tone="error" title="These file filters could not be restored" actions={<Button variant="secondary" onClick={() => { lastWritten.current = ''; setParams({}); }}>Start a new search</Button>}>{restored.error}</Alert>}
