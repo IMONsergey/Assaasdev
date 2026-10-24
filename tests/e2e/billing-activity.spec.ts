@@ -1,28 +1,40 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { seedPricing, seedProfile } from '../../src/demo/fixtures';
 
 test('tracked crypto activity preserves exact amounts and never grants access from received transfers', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  const profile = seedProfile(), frames: string[] = [];
+  await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__={dataMode:"live",apiBaseUrl:"/backend"};' }));
+  await page.route('**/backend/**', route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/pricing') ? seedPricing() : profile }));
+  await page.routeWebSocket('**/backend/ws', socket => socket.onMessage(raw => {
+    const frame = JSON.parse(String(raw)); frames.push(frame.type);
+    const reply = (data: unknown) => socket.send(JSON.stringify({ id: frame.id, type: frame.type, data }));
+    if (frame.type === 'user_billing') reply({ payments: [], subscription: profile.subscription, balance: profile.balance, credits: profile.credits, scan_credits: profile.scan_credits });
+    else if (frame.type === 'get_user_addresses_info') reply({ addresses: [{ network: 'Ethereum', coin: 'USDC', address: 'account-address-1', is_active: false, total_received_readable: '900719925.474099312345678901', total_received: '900719925474099312345678901', last_checked_at: 1800000000, last_tx_timestamp: 1799999000 }], timestamp: 1800000000 });
+    else if (frame.type === 'get_address_transactions') reply({ address: 'account-address-1', count: 1, timestamp: 1800000000, transactions: [{ tx_hash: 'transfer-1', from_address: 'sender-1', amount: '900719925474099312345678901', decimals: 18, block_number: '9007199254740993', status: 'received', timestamp: 1799999000, created_at: 1800000000 }] });
+    else reply({ unread_count: 0 });
+  }));
   await page.goto('/billing');
   await expect(page.locator('.billing-metric')).toHaveCount(3);
   const before = await page.locator('.billing-metric').allTextContents();
+  await page.getByRole('tab', { name: 'Crypto activity', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Load tracked addresses', exact: true })).toBeVisible();
   await expect(page.locator('.crypto-address')).toHaveCount(0);
   await page.getByRole('button', { name: 'Load tracked addresses', exact: true }).click();
   const address = page.locator('.crypto-address');
   await expect(address).toHaveCount(1);
-  await expect(address).toContainText('DEMO_ONLY_NOT_A_PAYMENT_ADDRESS');
+  await expect(address).toContainText('account-address-1');
   await expect(address).toContainText('900719925.474099312345678901');
   await expect(address).toContainText('900719925474099312345678901');
-  await expect(page.locator('.crypto-activity')).toContainText('invalid and cannot receive funds');
   await page.locator('.crypto-activity').screenshot({ path: testInfo.outputPath('crypto-addresses-1440.png') });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await expect.poll(() => page.locator('.app-sidebar').evaluate(node => node.getBoundingClientRect().right <= 1)).toBe(true);
   await page.locator('.crypto-activity').screenshot({ path: testInfo.outputPath('crypto-addresses-390.png') });
-  await page.getByRole('button', { name: 'View transactions for DEMO on demo-network', exact: true }).click();
+  await page.getByRole('button', { name: 'View transactions for USDC on Ethereum', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Address transactions', exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByTestId('crypto-raw-amount')).toHaveText('900719925474099312345678901');
@@ -39,5 +51,6 @@ test('tracked crypto activity preserves exact amounts and never grants access fr
   await expect(dialog).not.toBeVisible();
   expect(await page.locator('.billing-metric').allTextContents()).toEqual(before);
   await expect(page.locator('.page-description')).toContainText('Current plan: Business');
+  expect(frames.filter(type => ['confirm_payment', 'init_checkout', 'get_address', 'pay_with_balance'].includes(type))).toEqual([]);
   expect(errors).toEqual([]);
 });

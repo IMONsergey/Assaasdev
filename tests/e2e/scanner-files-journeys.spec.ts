@@ -45,10 +45,11 @@ test('scanner task cards keep details and actions reachable on a narrow screen',
   expect(await table.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
   const first = page.locator('.scanner-task-table tbody tr').first();
   await first.locator('.scanner-target-button').click();
-  const details = page.getByRole('dialog', { name: 'Task task-demo-001', exact: true });
+  const taskId = (await first.getByRole('checkbox').getAttribute('aria-label'))!.replace('Select task ', '');
+  const details = page.getByRole('dialog', { name: 'Task details', exact: true });
   await expect(details.getByText('Created', { exact: true })).toBeVisible();
   await expect(details.getByText('Started', { exact: true })).toBeVisible();
-  await expect(details.getByText('Status / checks', { exact: true })).toBeVisible();
+  await expect(details.locator('.scanner-progress')).toBeVisible();
   await details.getByRole('button', { name: 'Close dialog', exact: true }).click();
   const focusTrail: unknown[] = [];
   async function recordFocus(step: string) {
@@ -60,7 +61,7 @@ test('scanner task cards keep details and actions reachable on a narrow screen',
   }
   await recordFocus('before Edit');
   await first.getByRole('button', { name: 'Edit', exact: true }).click();
-  const editor = page.getByRole('dialog', { name: 'Edit task task-demo-001', exact: true });
+  const editor = page.getByRole('dialog', { name: `Edit task ${taskId}`, exact: true });
   await recordFocus('after Edit');
   await editor.getByLabel('Port list', { exact: true }).fill('22,443');
   await editor.getByRole('radio', { name: /Custom schedule/ }).check();
@@ -82,7 +83,7 @@ test('scanner task cards keep details and actions reachable on a narrow screen',
   await recordFocus('after delete Cancel');
   await test.info().attach('scanner-focus-trail.json', { body: JSON.stringify(focusTrail, null, 2), contentType: 'application/json' });
   await expect(first.getByRole('button', { name: 'Delete', exact: true })).toBeFocused();
-  await expect(first).toContainText('task-demo-001');
+  await expect(first).toContainText(taskId);
   await page.getByRole('heading', { name: 'Private Scanner', exact: true }).click();
   await page.screenshot({ path: test.info().outputPath('scanner-cards-320.png'), fullPage: true });
   await page.setViewportSize({ width: 768, height: 1024 });
@@ -92,7 +93,7 @@ test('scanner task cards keep details and actions reachable on a narrow screen',
 
 test('files back and forward restore the matching response without a fresh search', async ({ page }) => {
   await page.goto('/files');
-  await page.getByRole('button', { name: 'Explore sample files', exact: true }).click();
+  await page.getByRole('button', { name: 'Search files', exact: true }).click();
   await expect(page.getByRole('heading', { name: '8 file records', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByLabel('Keywords', { exact: true }).fill('not-present-anywhere');
@@ -121,17 +122,17 @@ test('export locks options while the browser save picker is pending and recovers
     }) });
   });
   await page.goto('/files');
-  await page.getByRole('button', { name: 'Explore sample files', exact: true }).click();
+  await page.getByRole('button', { name: 'Search files', exact: true }).click();
   await page.getByRole('button', { name: 'Download records', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Export bucket data', exact: true });
-  await dialog.getByRole('button', { name: 'Export sample data', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Start export', exact: true }).click();
   await expect(dialog.getByRole('button', { name: 'Preparing download', exact: true })).toBeDisabled();
   await expect(dialog.getByLabel('Format', { exact: true })).toBeDisabled();
   await expect(dialog.getByLabel('Maximum records', { exact: true })).toBeDisabled();
   await dialog.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await expect(dialog).toBeVisible();
   await page.evaluate(() => (window as unknown as { __cancelSave: () => void }).__cancelSave());
-  await expect(dialog.getByRole('button', { name: 'Export sample data', exact: true })).toBeEnabled();
+  await expect(dialog.getByRole('button', { name: 'Start export', exact: true })).toBeEnabled();
   await expect(dialog.getByLabel('Format', { exact: true })).toBeEnabled();
   await expect(dialog).not.toContainText('Export is incomplete');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();

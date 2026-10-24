@@ -68,6 +68,7 @@ test('credit pack selection survives login as the same one-off review without st
   const { writes, frames } = await mockBillingEntry(page);
   await page.goto('/billing');
   await page.getByRole('tab', { name: 'Annually', exact: true }).click();
+  await page.getByRole('tab', { name: 'Credit packs', exact: true }).click();
   const pack = page.locator('.billing-token').filter({ has: page.getByText('Research Pack', { exact: true }) });
   await pack.getByRole('button', { name: '$180', exact: true }).click();
   await expect(page).toHaveURL(url => {

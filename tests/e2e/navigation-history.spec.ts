@@ -48,16 +48,19 @@ for (const returnMethod of ['browser Back', 'Back to results'] as const) {
 }
 
 test('host tab and service changes preserve the desktop reading position', async ({ page }) => {
-  await page.goto('/hosts/198.51.100.24');
+  await page.goto('/hosts/198.51.100.24?tab=services');
   const services = page.getByRole('complementary', { name: 'Service list', exact: true });
   await expect(services.locator('.host-service-row')).toHaveCount(25);
   await page.evaluate(() => window.scrollTo({ top: 180, behavior: 'instant' }));
-  const tabPosition = await page.evaluate(() => window.scrollY);
+  const before = await page.evaluate(() => ({ y: scrollY, max: document.documentElement.scrollHeight - innerHeight, document: document.documentElement.scrollHeight, detail: document.querySelector('.host-detail-container')?.getBoundingClientRect().height }));
+  const tabPosition = before.y;
   expect(tabPosition).toBeGreaterThan(100);
-  await page.getByRole('tab', { name: 'HTTP', exact: true }).click();
-  await expect(page.getByRole('tabpanel', { name: 'http', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'TLS', exact: true }).click();
+  await expect(page.getByRole('tabpanel', { name: 'TLS', exact: true })).toBeVisible();
+  const after = await page.evaluate(() => ({ y: scrollY, max: document.documentElement.scrollHeight - innerHeight, document: document.documentElement.scrollHeight, detail: document.querySelector('.host-detail-container')?.getBoundingClientRect().height }));
+  await test.info().attach('tab-reading-position.json', { body: JSON.stringify({ before, after }), contentType: 'application/json' });
   await expect.poll(() => page.evaluate(position => Math.abs(window.scrollY - position), tabPosition)).toBeLessThan(3);
-  expect(new URL(page.url()).searchParams.get('tab')).toBe('http');
+  expect(new URL(page.url()).searchParams.get('view')).toBe('tls');
   const service = services.locator('.host-service-row').nth(2);
   await service.scrollIntoViewIfNeeded();
   const servicePosition = await page.evaluate(() => window.scrollY);

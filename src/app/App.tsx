@@ -3,7 +3,7 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router
 import { AppShell } from './AppShell';
 import { NavigationEffects } from './NavigationEffects';
 import { SearchPage } from '../features/search/SearchPage';
-import { EmptyState, Button, Spinner } from '../components/ui';
+import { EmptyState, Button, Skeleton } from '../components/ui';
 import { useApp } from './AppProvider';
 import { safeReturnPath } from '../features/auth/auth-state';
 
@@ -24,15 +24,16 @@ class ScreenBoundary extends Component<{ children: ReactNode }, { failed: boolea
   static getDerivedStateFromError() { return { failed: true }; }
   componentDidCatch(_error: Error, _info: ErrorInfo) { /* No account or query data is sent to an unconfigured telemetry service. */ }
   render() {
-    return this.state.failed ? <EmptyState title="This view could not be displayed" description="Your workspace is still available. Reload this view to try again; no operation is automatically repeated."
+    return this.state.failed ? <EmptyState title="This view could not be displayed" description="Reload this view or return to search."
       actions={<><Link to="/search" className="button button--secondary">Back to search</Link><Button onClick={() => window.location.reload()}>Reload view</Button></>} /> : this.props.children;
   }
 }
 
-function RouteLoading() { return <div className="route-loading"><Spinner label="Opening workspace…" /></div>; }
+function RouteLoading() { return <div className="route-loading"><Skeleton rows={5} label="Loading workspace" /></div>; }
 function WorkspaceView() {
   const { pathname } = useLocation();
-  return <ScreenBoundary key={pathname}><Suspense fallback={<RouteLoading />}><Outlet /></Suspense></ScreenBoundary>;
+  const workspaceKey = pathname === '/account' || pathname.startsWith('/account/') ? '/account' : pathname;
+  return <ScreenBoundary key={workspaceKey}><Suspense fallback={<RouteLoading />}><Outlet /></Suspense></ScreenBoundary>;
 }
 
 export function App() {

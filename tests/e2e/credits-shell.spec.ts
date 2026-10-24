@@ -93,13 +93,14 @@ test('mobile navigation stays isolated, reaches account actions in landscape and
   await menu.click();
   await expect(page.locator('main')).toHaveAttribute('inert', '');
   await expect(page.locator('.app-topbar')).toHaveAttribute('inert', '');
-  const signout = sidebar.getByRole('button', { name: 'Sign out', exact: true });
-  await signout.focus();
-  await expect(signout).toBeInViewport();
+  const account = sidebar.getByRole('link', { name: 'Account settings', exact: true });
+  const support = sidebar.getByRole('button', { name: 'Support', exact: true });
+  await account.focus();
+  await expect(account).toBeInViewport();
   await page.keyboard.press('Tab');
   await expect(sidebar.getByRole('link', { name: 'APCOSYS home', exact: true })).toBeFocused();
-  await signout.click();
-  const dialog = page.getByRole('dialog', { name: 'Sign out of every session?', exact: true });
+  await support.click();
+  const dialog = page.getByRole('dialog', { name: 'Help & support', exact: true });
   await expect(dialog).toBeVisible();
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   await page.keyboard.press('Escape');
@@ -135,6 +136,7 @@ for (const width of [820, 1024, 1280]) {
       await expect(page.locator('main')).not.toContainText('This view could not be displayed');
       await noOverflow(page);
       if (route === '/billing') {
+        await page.getByRole('tab', { name: 'Plans', exact: true }).click();
         await expect(page.locator('.billing-plan')).toHaveCount(4);
         const bounds = await page.locator('.billing-plan').first().boundingBox();
         expect(bounds!.width).toBeGreaterThan(240);

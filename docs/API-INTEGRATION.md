@@ -252,7 +252,7 @@ Historical handoff counts (548 Figma states and 3868 research specifications) re
 
 ## 11. Explicit demonstration adapter
 
-`src/demo/index.ts` exports `createDemoApi(): ApiClient`. This is a separate, in-memory adapter: it never invokes fetch or WebSocket, never becomes a live fallback, and resets when the page/application is recreated. It starts as Business account **alex_research**, `alex@example.com`. All host addresses use documentation networks or example domains. Fixture CVE-2099-0001 is fictional. The 12 hosts include 100-service and 1000-service detail cases; buckets contain eight files including an observed zero-size file.
+`src/demo/index.ts` exports `createDemoApi(): ApiClient`. This is a separate, in-memory adapter: it never invokes fetch or WebSocket, never becomes a live fallback, and resets when the page/application is recreated. It starts as Business account **alex_research**, `alex@example.com`. All host addresses use documentation networks or example domains. Public fixtures do not claim vulnerability associations; CVE dialogs and large association sets are exercised with isolated browser-test responses. The 12 hosts include 100-service and 1000-service detail cases; buckets contain eight files including an observed zero-size file.
 
 | Demonstration | Observable result |
 |---|---|

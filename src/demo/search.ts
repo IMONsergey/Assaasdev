@@ -29,7 +29,7 @@ export function fieldValues(host: DemoHost, field: string): Array<string | numbe
     const value = (port as Record<string, unknown>)[field];
     return typeof value === 'string' || typeof value === 'number' ? [value] : [];
   });
-  throw new ApiError('server', `The demo fixtures do not implement search field "${field}". The live backend remains authoritative.`, { outcome: 'rejected' });
+  throw new ApiError('server', `Search field "${field}" is unavailable. Choose a suggested field or remove this condition.`, { outcome: 'rejected' });
 }
 
 function filterMatches(host: DemoHost, filter: SearchFilter): boolean {

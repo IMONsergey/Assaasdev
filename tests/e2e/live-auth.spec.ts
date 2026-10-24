@@ -5,7 +5,12 @@ test('live API failure stays live and never silently creates a guest session', a
   await page.route('**/runtime-config.js', route => route.fulfill({ contentType: 'application/javascript', body: 'window.__APCOSYS_CONFIG__ = {dataMode:"live", apiBaseUrl:"/backend"};' }));
   await page.route('**/backend/**', route => { requests.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Staging unavailable"}' }); });
   await page.goto('/search');
-  await expect(page.getByText('The workspace could not connect', { exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('Staging unavailable');
+  await page.getByRole('button', { name: 'Connection', exact: true }).click();
+  const connection = page.getByRole('dialog', { name: 'Connection', exact: true });
+  await expect(connection).toContainText('Staging unavailable');
+  await expect(connection.getByRole('button', { name: 'Try again', exact: true })).toBeEnabled();
+  await connection.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.locator('.demo-label')).toHaveCount(0);
   expect(requests).not.toContain('/backend/auth/guest');
   expect(requests.filter(p => p === '/backend/whoami').length).toBe(1);
@@ -30,7 +35,7 @@ test('HTTP 202 requires TOTP before authenticated workspace access', async ({ pa
   await page.getByLabel('Authenticator code').fill('123456');
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(page).toHaveURL(/\/search$/);
-  const accountLink = page.getByRole('link', { name: 'Account', exact: true });
+  const accountLink = page.getByRole('link', { name: 'Account settings', exact: true });
   await expect(accountLink).toBeVisible();
   await expect(accountLink).toHaveAttribute('title', 'contract_test');
   expect(writes).toEqual(['/backend/auth/login', '/backend/auth/totp/verify']);

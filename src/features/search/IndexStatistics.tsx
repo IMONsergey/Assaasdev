@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useApp } from '../../app/AppProvider';
-import { Alert, Badge, Button, Icon } from '../../components/ui';
+import { Alert, Button, Icon } from '../../components/ui';
 import { dateLabel } from './model';
 
 const COUNTERS = [
@@ -17,7 +17,7 @@ type IndexStatisticsData = Partial<Record<typeof COUNTERS[number][0] | 'last_upd
 interface IndexStatisticsResponse { success: boolean; data?: IndexStatisticsData | null }
 
 function countLabel(value: unknown): string {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString('en') : 'Not provided';
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString('en') : '—';
 }
 
 export function IndexStatistics() {
@@ -42,7 +42,7 @@ export function IndexStatistics() {
     <summary><span>Index statistics</span><Icon name="chevron-down" size={16} /></summary>
     <div className="search-index-content">
       <div className="search-index-toolbar">
-        <p>Snapshot of the global internet index.</p>
+        <p>Global internet index</p>
         <Button variant="secondary" size="sm" loading={statistics.isFetching} onClick={() => void statistics.refetch()}>
           {statistics.data && <Icon name="refresh" size={16} />}
           {statistics.data ? 'Refresh statistics' : 'Load statistics'}
@@ -54,9 +54,9 @@ export function IndexStatistics() {
         <dl className="search-index-counts">
           {COUNTERS.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{countLabel(statistics.data[key])}</dd></div>)}
         </dl>
-        <p className="search-index-updated">Last updated: {validTimestamp ? <time dateTime={new Date(timestamp * 1000).toISOString()}>{dateLabel(timestamp)}</time> : 'Not provided'}{mode === 'demo' && <Badge>Demo snapshot</Badge>}</p>
+        <p className="search-index-updated">Last updated: {validTimestamp ? <time dateTime={new Date(timestamp * 1000).toISOString()}>{dateLabel(timestamp)}</time> : '—'}</p>
       </>}
-      {!statistics.data && !statistics.isFetching && !statistics.error && <p className="search-index-status">Load the current snapshot when you need it.</p>}
+
     </div>
   </details>;
 }

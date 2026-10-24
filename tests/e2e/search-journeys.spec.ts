@@ -1,11 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 
+async function openAnalytics(page: Page) {
+  const tab = page.getByRole('tab', { name: 'Analytics', exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  const load = page.getByRole('button', { name: 'Load analytics', exact: true });
+  if (await load.isVisible()) await load.click();
+}
+
+
 // These journeys guard billable search intent and keyboard context, beyond route rendering.
 test('editing result type keeps condition drafts uncommitted and Escape restores focus', async ({ page }) => {
   await page.goto('/search?q=nginx&run=1');
   await expect(page.getByRole('heading', { name: '4 hosts returned' })).toBeVisible();
   const before = page.url();
-  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
   await expect(editor).toBeVisible();
   await editor.getByRole('button', { name: 'Add condition', exact: true }).click();
@@ -19,7 +28,7 @@ test('editing result type keeps condition drafts uncommitted and Escape restores
   await editor.getByRole('button', { name: 'Cancel', exact: true }).focus();
   await page.keyboard.press('Escape');
   await expect(editor).not.toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add Filter', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeFocused();
   await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('');
   expect(page.url()).toBe(before);
 });
@@ -27,6 +36,7 @@ test('editing result type keeps condition drafts uncommitted and Escape restores
 test('facet selection combines alternatives once and survives results navigation', async ({ page }) => {
   await page.goto('/search?q=example&run=1');
   await expect(page.getByRole('heading', { name: '12 hosts returned', exact: true })).toBeVisible();
+  await openAnalytics(page);
   const analytics = page.getByRole('complementary', { name: 'Result analytics' });
   const germany = analytics.getByRole('button', { name: /^Germany/ });
   const usa = analytics.getByRole('button', { name: /^United States/ });
@@ -37,15 +47,18 @@ test('facet selection combines alternatives once and survives results navigation
   await expect(germany).toHaveAttribute('aria-pressed', 'true');
   await expect(usa).toHaveAttribute('aria-pressed', 'true');
   expect(page.url()).toBe(before);
-  await analytics.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
   await expect(page.getByRole('heading', { name: '6 hosts returned', exact: true })).toBeVisible();
   const request = JSON.parse(new URL(page.url()).searchParams.get('request')!);
   expect(request.simple_search_filters).toEqual([{ operator: 'OR', filters: [{ field: 'country_name', value: 'Germany' }, { field: 'country_name', value: 'United States' }] }]);
+  await openAnalytics(page);
   await analytics.getByRole('button', { name: /^Germany/ }).click();
-  await analytics.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel changes', exact: true }).click();
   await expect(analytics.getByRole('button', { name: /^Germany/ })).toHaveAttribute('aria-pressed', 'true');
   await page.goBack();
+  await page.getByRole('tab', { name: 'Results', exact: true }).click();
   await expect(page.getByRole('heading', { name: '12 hosts returned', exact: true })).toBeVisible();
+  await openAnalytics(page);
   await expect(germany).toHaveAttribute('aria-pressed', 'false');
 });
 
@@ -62,6 +75,7 @@ test('an out-of-plan page preserves the query and offers an actionable recovery'
 test('a mobile deep service link reveals its page and supports returning to the service list', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/hosts/198.51.100.24?port=10999');
+  await page.getByRole('button', { name: 'Back to service list', exact: true }).click();
   const list = page.getByRole('complementary', { name: 'Service list', exact: true });
   await expect(list.getByRole('button', { pressed: true })).toContainText('10999');
   await expect(page.getByRole('navigation', { name: 'Received service pages' })).toContainText('40 / 40');
@@ -83,7 +97,10 @@ test('result and 1000-service layouts fit intermediate widths with large text', 
     for (const path of ['/search?run=1', '/hosts/198.51.100.24']) {
       await page.goto(path);
       await expect(page.locator('h1')).toBeVisible();
-      if (path.startsWith('/hosts')) await expect(page.locator('.host-service-row')).toHaveCount(25);
+      if (path.startsWith('/hosts')) {
+        await page.getByRole('tab', { name: /^Services/ }).click();
+        await expect(page.locator('.host-service-row')).toHaveCount(25);
+      }
       else await expect(page.getByRole('heading', { name: '12 hosts returned', exact: true })).toBeVisible();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       if (!path.startsWith('/hosts')) {
@@ -126,7 +143,10 @@ test('pagination, sorting and row count reuse analytics instead of spending anot
   await mockSearchApi(page, requests);
   await page.goto('/search?q=example&run=1');
   await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+  await openAnalytics(page);
   await expect(page.getByRole('complementary', { name: 'Result analytics' }).getByRole('button', { name: /^Germany/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Results', exact: true }).click();
   const pages = page.getByRole('navigation', { name: 'Pagination', exact: true });
   await pages.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(pages).toContainText('Page 2');
@@ -138,6 +158,7 @@ test('pagination, sorting and row count reuse analytics instead of spending anot
   await expect(page.getByRole('heading', { name: '10 hosts returned', exact: true })).toBeVisible();
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(4);
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
+  await openAnalytics(page);
   await page.getByRole('button', { name: 'Reload analytics', exact: true }).click();
   await expect.poll(() => requests.filter(item => item.type === 'analytics').length).toBe(2);
 });
@@ -161,24 +182,26 @@ test('large exposed-data responses render bounded pages without dropping records
 });
 
 
-test('hidden mobile analytics waits for an explicit open and then reuses its result', async ({ page }) => {
+test('mobile analytics waits for an explicit load and then reuses its result', async ({ page }) => {
   const requests: Array<{ type: string; data: Record<string, unknown> }> = [];
   await mockSearchApi(page, requests);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/search?q=example&run=1');
   await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
-  const toggle = page.getByRole('button', { name: 'Analytics', exact: true });
-  await toggle.click();
-  await expect(page.getByRole('complementary', { name: 'Result analytics' }).getByRole('button', { name: /^Germany/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Load analytics', exact: true })).toBeVisible();
+  expect(requests.filter(item => item.type === 'analytics')).toHaveLength(0);
+  await page.getByRole('button', { name: 'Load analytics', exact: true }).click();
+  const analytics = page.getByRole('complementary', { name: 'Result analytics' });
+  await expect(analytics.getByRole('button', { name: /^Germany/ })).toBeVisible();
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
-  await toggle.click();
-  await expect(page.getByRole('complementary', { name: 'Result analytics' })).not.toBeVisible();
-  await toggle.click();
-  await expect(page.getByRole('complementary', { name: 'Result analytics' }).getByRole('button', { name: /^Germany/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Results', exact: true }).click();
+  await expect(analytics).not.toBeVisible();
+  await page.getByRole('tab', { name: 'Analytics', exact: true }).click();
+  await expect(analytics.getByRole('button', { name: /^Germany/ })).toBeVisible();
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
 });
-
 
 test('filters open from the left without moving the home search and keep actions visible', async ({ page }) => {
   for (const width of [1440, 390, 320]) {
@@ -186,7 +209,7 @@ test('filters open from the left without moving the home search and keep actions
     await page.goto('/search');
     const search = page.locator('.search-entry');
     const before = await search.boundingBox();
-    await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
     const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
     await expect(editor).toBeVisible();
     const during = await search.boundingBox();
@@ -194,14 +217,14 @@ test('filters open from the left without moving the home search and keep actions
     expect(Math.abs(before!.y - during!.y)).toBeLessThan(1);
     expect(Math.abs(before!.width - during!.width)).toBeLessThan(1);
     expect((await editor.boundingBox())!.x).toBe(0);
-    await editor.getByRole('button', { name: 'Add AND / OR / NOT group', exact: true }).click();
     await editor.getByRole('button', { name: 'Add group', exact: true }).click();
+    await editor.locator('.search-condition-group').first().getByRole('button', { name: 'Add group', exact: true }).click();
     await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeInViewport();
     await expect(editor.getByRole('button', { name: 'Cancel', exact: true })).toBeInViewport();
     expect(await editor.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     await page.keyboard.press('Escape');
     await expect(editor).not.toBeVisible();
-    await expect(page.getByRole('button', { name: 'Add Filter', exact: true })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeFocused();
   }
 });
 
@@ -210,14 +233,14 @@ test('a slow search does not lock filter cancellation or applying a changed quer
   const control = await mockSearchApi(page, requests, { holdHosts: true });
   await page.goto('/search?q=example&run=1');
   await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(1);
-  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
   await editor.getByRole('textbox', { name: 'Search text', exact: true }).fill('discard this');
   await expect(editor.getByRole('button', { name: 'Apply conditions', exact: true })).toBeEnabled();
   await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Search internet infrastructure', exact: true })).toHaveValue('example');
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
-  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await editor.getByRole('textbox', { name: 'Search text', exact: true }).fill('refined');
   await editor.getByRole('button', { name: 'Apply conditions', exact: true }).click();
   await expect(editor).not.toBeVisible();
@@ -261,7 +284,7 @@ test('changing result type waits for explicit apply and preserves complex type r
   await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toHaveValue('custom');
   await expect(page.getByRole('combobox', { name: 'Result type', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
   await expect(editor.getByRole('combobox', { name: 'Result type', exact: true })).toBeDisabled();
   await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -273,8 +296,9 @@ test('5000 facet values stay bounded and preserve selections across search and p
   await mockSearchApi(page, requests, { facetCount: 5000 });
   await page.goto('/search?q=example&run=1');
   const analytics = page.getByRole('complementary', { name: 'Result analytics' });
-  const facet = analytics.getByRole('region', { name: 'Organization · Hosts', exact: true });
-  await expect(facet.locator('.search-facet-item')).toHaveCount(10);
+  await openAnalytics(page);
+  const facet = analytics.getByRole('region', { name: 'Organization', exact: true });
+  await expect(facet.locator('.search-facet-item')).toHaveCount(5);
   await facet.getByRole('button', { name: 'Browse all 5,000 values', exact: true }).click();
   await expect(facet.locator('.search-facet-item')).toHaveCount(50);
   await facet.getByRole('button', { name: /^Organization 0000 / }).click();
@@ -290,7 +314,7 @@ test('5000 facet values stay bounded and preserve selections across search and p
   await expect(facet.locator('.search-facet-item button[aria-pressed="true"]')).toHaveCount(3);
   expect(requests.filter(item => item.type === 'hosts')).toHaveLength(1);
   expect(requests.filter(item => item.type === 'analytics')).toHaveLength(1);
-  await analytics.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply changes', exact: true }).click();
   await expect.poll(() => requests.filter(item => item.type === 'hosts').length).toBe(2);
   const applied = requests.filter(item => item.type === 'hosts')[1].data.simple_search_filters;
   expect(applied).toEqual([{ operator: 'OR', filters: ['0000', '0050', '4999'].map(value => ({ field: 'org', value: `Organization ${value}` })) }]);
@@ -320,7 +344,7 @@ test('invalid long filter drafts focus a visible error without changing the appl
   await page.goto(`/search?request=${encodeURIComponent(JSON.stringify(request))}&run=1`);
   await expect(page.getByRole('heading', { name: '20 hosts returned', exact: true })).toBeVisible();
   const before = page.url();
-  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Filters', exact: true });
   await editor.getByLabel('Value', { exact: true }).first().clear();
   await editor.getByRole('button', { name: 'Apply conditions', exact: true }).click();

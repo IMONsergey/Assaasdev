@@ -47,7 +47,7 @@ function withoutToken(data: Data): Data {
   const result = { ...data }; delete result.st; delete result.share_token; return result;
 }
 function asApiError(error: unknown): ApiError {
-  return error instanceof ApiError ? error : new ApiError('server', error instanceof Error ? error.message : 'Demo operation failed', { cause: error });
+  return error instanceof ApiError ? error : new ApiError('server', error instanceof Error ? error.message : 'The operation could not be completed', { cause: error });
 }
 function aborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new ApiError('transport', 'Request was aborted before it was sent.', { outcome: 'not-sent', cause: signal.reason });
@@ -116,13 +116,13 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     return { notifications: values.slice(offset, offset + limit), total: values.length, unread_count: notifications.filter(item => !item.is_read).length, timestamp: now() };
   }
   function pushNotifications() { if (principal === 'authenticated') emit({ type: 'unread_notifications', id: '', data: notificationData(true, 10), context: { principal: 'push' } }); }
-  function notify(type: string, message: string) { notifications.unshift({ id: id('demo-notification'), notification_type: type, message, payload: {}, is_read: false, created_at: now() }); pushNotifications(); }
+  function notify(type: string, message: string) { notifications.unshift({ id: id('notification'), notification_type: type, message, payload: {}, is_read: false, created_at: now() }); pushNotifications(); }
   function sessionData() { return { sessions, total: sessions.length, limit: sessionCaps[profile.subscription?.type ?? 'Free'] ?? 1 }; }
   function authenticated() {
     principal = 'authenticated';
     if (!sessions.some(session => session.is_current)) sessions.unshift({ ...seedSessions().sessions[0], created_at: now(), authenticated_at: now() });
     sessions = sessions.slice(0, sessionCaps[profile.subscription?.type ?? 'Free'] ?? 1);
-    profile.session_id = 'demo-current-session';
+    profile.session_id = 'session_current';
     profile.authenticated_at = now();
   }
   function httpError(statusCode: number, message: string): never { throw new ApiError(statusCode === 401 ? 'auth' : statusCode === 429 ? 'rate' : 'server', message, { status: statusCode }); }
@@ -165,7 +165,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       if (text(body.code) !== DEMO_CODE) httpError(400, 'Invalid or expired code');
       const email = text(body.email).trim().toLowerCase(), pending = pendingAccounts.get(email);
       if (!pending) httpError(400, 'Pending user not found or expired');
-      const account: Profile = { user_id: id('demo-user'), email, user_name: pending.user_name, user_type: 'USER', credits: 500, scan_credits: 0, balance: 0, purchased_credits: 0, subscription: { type: 'Free', search_pages: 2, credits: 500, scan_credits: 0, api_access: false }, totp_active: false, analytics_facets: clone(guestFacets) };
+      const account: Profile = { user_id: id('usr'), email, user_name: pending.user_name, user_type: 'USER', credits: 500, scan_credits: 0, balance: 0, purchased_credits: 0, subscription: { type: 'Free', search_pages: 2, credits: 500, scan_credits: 0, api_access: false }, totp_active: false, analytics_facets: clone(guestFacets) };
       accounts.set(email, account); accounts.set(pending.user_name.toLowerCase(), account); pendingAccounts.delete(email);
       // Account creation does not manufacture a login cookie or authenticated session.
       return ok({ message: 'Email verified successfully. Sign in to continue.' });
@@ -203,7 +203,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       accounts.set(profile.email.toLowerCase(), profile); accounts.set(profile.user_name.toLowerCase(), profile);
       return ok({ message: 'Profile updated successfully' });
     }
-    throw new ApiError('server', `The ${method} ${route} operation is not connected in demo mode.`, { status: 501, outcome: 'not-sent' });
+    throw new ApiError('server', `This service is currently unavailable.`, { status: 501, outcome: 'not-sent' });
   }
 
   function ownerFor(type: string, data: Data): { owner: Profile; shared: boolean } {
@@ -280,7 +280,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       const ipv6 = network.includes(':'), bits = ipv6 ? 128 : 32;
       if (!prefixText || !Number.isInteger(prefix) || prefix < 0 || prefix > bits || (!ipv6 && !/^(\d{1,3}\.){3}\d{1,3}$/.test(network)) || (!ipv6 && network.split('.').some(part => Number(part) > 255))) throw new ApiError('server', `Failed to deduct credits: invalid CIDR ${cidr}`);
       // A bounded IPv6 demo rejects oversized scans explicitly; it never submits targets.
-      if (bits - prefix > 30) throw new ApiError('server', 'This CIDR exceeds the bounded demo scan capacity');
+      if (bits - prefix > 30) throw new ApiError('server', 'This CIDR exceeds the scan capacity');
       addressCount += Math.max(0, 2 ** (bits - prefix) - (ipv6 ? 0 : 2));
     }
     return { host_list: hosts, cidr_list: cidrs, port_list: ports, schedule, workers: 500, cost: addressCount * ports.length };
@@ -313,15 +313,15 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       if (!query.ip) throw new ApiError('server', 'please write ip for search');
       const host = matchingHosts(hosts, query, privateData, deletedResults)[0]; charge(owner, 1);
       const section = (sectionType: string, value: unknown): ApiFrame => ({ type: sectionType, ...(privateData ? {} : { id: requestId }), data: clone(value), context: { principal: shared ? 'shared' : 'account' } });
-      const dns = host ? { updated_at: DEMO_TIMESTAMP, records: { A: host.detail.type === 'ipv4' ? [host.card.ip] : [], AAAA: host.detail.type === 'ipv6' ? [host.card.ip] : [], MX: ['mail.example.com'], TXT: ['Synthetic demonstration record'] } } : null;
-      const whois = host ? { domain_name: host.host, registrar: 'Example Registrar (demo)', organization: host.card.org, creation_date: '2020-01-01', updated_date: '2026-10-01', status: ['active'], raw: 'Synthetic WHOIS fixture. No external query was performed.' } : null;
+      const dns = host ? { updated_at: DEMO_TIMESTAMP, records: { A: host.detail.type === 'ipv4' ? [host.card.ip] : [], AAAA: host.detail.type === 'ipv6' ? [host.card.ip] : [], MX: ['mail.example.com'], TXT: ['v=spf1 -all'] } } : null;
+      const whois = host ? { domain_name: host.host, registrar: 'Example Registrar', organization: host.card.org, creation_date: '2020-01-01', updated_date: '2026-10-01', status: ['active'], raw: 'Domain: example.com\nStatus: active\nRegistrar: Example Registrar' } : null;
       const sections = [section('dnsinfo', dns), section(type, host ? visibleHost(host.detail, owner) : {}), section('whois', whois)];
       if (!privateData) sections.push(section('domain_ip_map', host ? [{ d: host.host, ip: host.card.ip, uts: DEMO_TIMESTAMP }] : []));
       return { frames: sections };
     }
     if (type === 'cveinfo') {
-      const cve = requiredString(data, 'cve_ID');
-      return one(cve === 'CVE-2099-0001' ? { cve_id: cve, description: 'Synthetic vulnerability used only to review the detail interface. This identifier is not a real advisory.', base_score: 7.5, published: '2099-01-01', references: [] } : {});
+      requiredString(data, 'cve_ID');
+      return one({});
     }
     if (type === 'autocomplete') {
       const value = requiredString(data, 'query', 'query is required').toLowerCase(), field = text(data.field);
@@ -348,7 +348,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       saved = saved.filter(item => item.id !== key); return one({ success: true });
     }
     if (type === 'short_link_create' || type === 'share_link_create') {
-      const queryString = validQuery(data.query), shortId = id('demo-link');
+      const queryString = validQuery(data.query), shortId = id('link');
       // No demo redirect server: returned URLs carry the full query and stay on this app.
       const route = new URLSearchParams(queryString).get('dataset') === 'private' ? '/private/search' : '/search';
       const url = new URL(route, origin()); url.search = queryString;
@@ -356,7 +356,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       if (!data.data || typeof data.data !== 'object' || Array.isArray(data.data)) throw new ApiError('server', 'data (search payload) is required');
       const ttl = data.ttl_seconds === undefined ? 604800 : Number(data.ttl_seconds), uses = data.max_opens === undefined ? 10 : Number(data.max_opens);
       if (!Number.isSafeInteger(ttl) || ttl < 1 || !Number.isSafeInteger(uses) || uses < 1) throw new ApiError('server', 'ttl_seconds and max_opens must be positive integers');
-      const token = id('demo-share'); shares.set(token, { data: canonical(withoutToken(object(data.data))), expires: now() + ttl, remaining: uses, owner });
+      const token = id('share'); shares.set(token, { data: canonical(withoutToken(object(data.data))), expires: now() + ttl, remaining: uses, owner });
       url.searchParams.set('st', token); shortLinks.set(shortId, url.toString());
       return one({ short_id: shortId, short_url: url.toString(), long_url: url.toString(), share_token: token });
     }
@@ -365,10 +365,10 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     if (type === 'private_task_add') {
       const input = taskInput(data);
       if ((profile.scan_credits ?? 0) < input.cost) throw new ApiError('server', 'Not enough scan credits');
-      const taskId = id('task-demo'); profile.scan_credits = (profile.scan_credits ?? 0) - input.cost;
+      const taskId = id('scan'); profile.scan_credits = (profile.scan_credits ?? 0) - input.cost;
       tasks.unshift({ id: taskId, status: 'queued', created_at: now(), start_time: 0, end_time: 0, done_task_count: 0, task_count: input.cost, result_count: 0, has_results: false, host_list: input.host_list, cidr_list: input.cidr_list, port_list: input.port_list, schedule: input.schedule });
       if (input.schedule) planned.unshift({ id: taskId, user_name: profile.user_name, workers: 500, host_list: input.host_list, cidr_list: input.cidr_list, port_list: input.port_list, schedule: input.schedule });
-      return { frames: [result({ task_id: taskId, message: 'Queued in the demo workspace. No network scan will run.' }), result(tasks, 'private_tasks_get')] };
+      return { frames: [result({ task_id: taskId, message: 'Task queued.' }), result(tasks, 'private_tasks_get')] };
     }
     if (type === 'private_task_update') {
       const taskId = requiredString(data, 'id', 'Task ID is required'), task = tasks.find(item => item.id === taskId) ?? planned.find(item => item.id === taskId);
@@ -394,14 +394,14 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     if (type === 'networks') return one([{ network: 'demo-network', coins: [{ coin: 'DEMO', name: 'Demo token — no real payment', price: 1, addresses: [] }] }]);
     if (type === 'validate_promo_code') {
       const amount = purchase(data), valid = text(data.promo_code).toUpperCase() === 'WELCOME';
-      return one({ valid, promo_code: text(data.promo_code), description: valid ? '10% demo discount' : 'Demo accepts WELCOME only', discount_pct: valid ? 10 : 0, original_amount_usd: amount.amount, final_amount_usd: valid ? amount.final : amount.amount, timestamp: now() });
+      return one({ valid, promo_code: text(data.promo_code), description: valid ? '10% discount' : 'Promo code not recognized', discount_pct: valid ? 10 : 0, original_amount_usd: amount.amount, final_amount_usd: valid ? amount.final : amount.amount, timestamp: now() });
     }
-    if (type === 'init_checkout' || type === 'billing_manage') throw new ApiError('server', 'The payment provider is not connected in demo mode. No checkout or customer portal has been created.', { outcome: 'not-sent' });
+    if (type === 'init_checkout' || type === 'billing_manage') throw new ApiError('server', 'Payment service unavailable. Please try again later.', { outcome: 'not-sent' });
     if (type === 'get_address' || type === 'pay_with_balance') {
       const amount = purchase(data);
       if (type === 'get_address' && (data.network !== 'demo-network' || data.coin !== 'DEMO')) throw new ApiError('server', 'Choose the demo network and DEMO token');
       if (type === 'pay_with_balance' && (profile.balance ?? 0) < amount.final) throw new ApiError('server', 'Insufficient balance');
-      const paymentId = id('demo-payment'), address = 'DEMO_ONLY_NOT_A_PAYMENT_ADDRESS';
+      const paymentId = id('pay'), address = 'DEMO_ONLY_NOT_A_PAYMENT_ADDRESS';
       // Financial completion is never fabricated, including balance payments.
       payments.unshift({ payment_id: paymentId, subscription: text(data.subscription), amount: amount.final, amount_usd: amount.final, address, network: 'demo-network', coin: 'DEMO', status: 'pending', created_at: now(), updated_at: now(), expires_at: now() + 3600 });
       return one({ payment_id: paymentId, network: 'demo-network', coin: 'DEMO', address, amount: amount.final, amount_usd: amount.final, original_amount_usd: amount.amount, final_amount_usd: amount.final, expires_at: now() + 3600, timestamp: now(), message: 'Demo invoice only. Do not send money. Payment remains pending; access and balance are unchanged.' });
@@ -409,7 +409,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     if (type === 'confirm_payment') {
       const paymentId = requiredString(data, 'payment_id'), payment = payments.find(item => item.payment_id === paymentId);
       if (!payment) throw new ApiError('server', 'Payment not found');
-      return { frames: [result({ payment_id: paymentId, status: 'pending', message: 'Demo payment remains pending. No financial settlement or entitlement change occurs.', timestamp: now() })], persistent: true };
+      return { frames: [result({ payment_id: paymentId, status: 'pending', message: 'Payment is pending. Access updates after confirmation.', timestamp: now() })], persistent: true };
     }
     if (type === 'delete_payment') {
       const paymentId = requiredString(data, 'payment_id', 'Missing payment_id');
@@ -428,8 +428,8 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       if (!profile.subscription) throw new ApiError('server', 'No subscription found');
       profile.subscription.canceled = type === 'cancel_subscription';
       if (profile.subscription.canceled) profile.subscription.canceled_at = now(); else delete profile.subscription.canceled_at;
-      notify(profile.subscription.canceled ? 'subscription_canceled' : 'subscription_resumed', 'Demo subscription setting updated. Existing access remains until expiry.');
-      return one({ status: profile.subscription.canceled ? 'canceled' : 'resumed', subscription: profile.subscription, message: 'Demo subscription setting updated. Existing benefits remain active until expiry.', timestamp: now() });
+      notify(profile.subscription.canceled ? 'subscription_canceled' : 'subscription_resumed', 'Subscription renewal updated. Your current access remains active until expiry.');
+      return one({ status: profile.subscription.canceled ? 'canceled' : 'resumed', subscription: profile.subscription, message: 'Subscription renewal updated.', timestamp: now() });
     }
     if (type === 'get_notifications') return one(notificationData(false, Math.min(100, Math.max(1, Number(data.limit) || 20)), Math.max(0, Number(data.offset) || 0)));
     if (type === 'unread_notifications') return one(notificationData(true, 10));
@@ -440,7 +440,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     if (type === 'mark_all_notifications_read') { notifications.forEach(item => { item.is_read = true; }); pushNotifications(); return one({ status: 'all_marked_as_read' }); }
     if (type === 'regenerate_api_key') {
       profile.api_key = `00000000-0000-4000-8000-${String(++keyVersion).padStart(12, '0')}`;
-      notifications.unshift({ id: id('demo-notification'), notification_type: 'balance_increased', message: 'Demo API key regenerated.', payload: { event: 'api_key_regenerated', api_key: profile.api_key }, is_read: false, created_at: now() });
+      notifications.unshift({ id: id('notification'), notification_type: 'balance_increased', message: 'API key rotated.', payload: { event: 'api_key_regenerated', api_key: profile.api_key }, is_read: false, created_at: now() });
       pushNotifications(); return one({ api_key: profile.api_key, timestamp: now(), message: 'API key regenerated successfully' });
     }
     if (type === 'org_add' || type === 'org_remove') {
@@ -453,7 +453,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       profile.team.team_members ??= [];
       if (type === 'org_add') {
         if (profile.team.team_members.some(member => member.user_id === memberId)) throw new ApiError('server', 'User is already a member of this team');
-        profile.team.team_members.push({ user_id: memberId, user_name: memberId, email: `${encodeURIComponent(memberId)}@example.com`, added_at: now() }); notify('team_member_added', `Demo member ${memberId} joined the team.`);
+        profile.team.team_members.push({ user_id: memberId, user_name: memberId, email: `${encodeURIComponent(memberId)}@example.com`, added_at: now() }); notify('team_member_added', `${memberId} joined the organization.`);
       } else {
         if (!profile.team.team_members.some(member => member.user_id === memberId)) throw new ApiError('server', 'User is not a member of this team');
         profile.team.team_members = profile.team.team_members.filter(member => member.user_id !== memberId);
@@ -475,15 +475,15 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     if (type === 'totp') {
       if (profile.totp_active) throw new ApiError('server', '2FA is already enabled');
       totpExpires = now() + 900;
-      return one({ qr_code_url: `otpauth://totp/Apcosys-Demo:${encodeURIComponent(profile.email ?? 'demo')}?secret=JBSWY3DPEHPK3PXP&issuer=Apcosys-Demo`, secret_key: 'JBSWY3DPEHPK3PXP', account_name: profile.email, issuer: 'Apcosys-Demo', message: 'Demo only: enter 123456 within 15 minutes.', warning: 'This fixture secret is public. Never use it for a real account.' });
+      return one({ qr_code_url: `otpauth://totp/APCOSYS:${encodeURIComponent(profile.email ?? 'demo')}?secret=JBSWY3DPEHPK3PXP&issuer=APCOSYS`, secret_key: 'JBSWY3DPEHPK3PXP', account_name: profile.email, issuer: 'APCOSYS', message: 'Enter the six-digit code within 15 minutes.', warning: 'This fixture secret is public. Never use it for a real account.' });
     }
     if (type === 'totp_validate') {
       if (!totpExpires || totpExpires <= now()) throw new ApiError('server', 'No temporary 2FA key found or it has expired');
       if (text(data.totp_code) !== DEMO_CODE) throw new ApiError('server', 'Invalid 2FA code');
       profile.totp_active = true; totpExpires = 0; backupCodes = [...DEMO_BACKUP_CODES];
-      return one({ is_valid: true, message: '2FA enabled in the demo. Save these five one-time demonstration backup codes.', backup_codes: backupCodes });
+      return one({ is_valid: true, message: 'Two-factor authentication enabled. Save your backup codes.', backup_codes: backupCodes });
     }
-    throw new ApiError('server', `The ${type} operation is not implemented in this demo.`, { outcome: 'not-sent' });
+    throw new ApiError('server', `This operation is currently unavailable.`, { outcome: 'not-sent' });
   }
 
   function download(path: string, input: HttpOptions): Response {
@@ -513,7 +513,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     }
     let index = 0;
     const stream = new ReadableStream<Uint8Array>({ pull(controller) { if (input.signal?.aborted) { controller.error(new ApiError('transport', 'Download aborted.', { outcome: 'unknown' })); return; } if (index >= lines.length) { controller.close(); return; } controller.enqueue(new TextEncoder().encode(lines[index++])); } });
-    return new Response(stream, { status: 200, headers: { 'Content-Type': format === 'csv' ? 'text/csv; charset=utf-8' : 'application/x-ndjson', 'Content-Disposition': `attachment; filename="apcosys-demo.${format === 'csv' ? 'csv' : 'ndjson'}"`, 'X-Apcosys-Demo': 'true' } });
+    return new Response(stream, { status: 200, headers: { 'Content-Type': format === 'csv' ? 'text/csv; charset=utf-8' : 'application/x-ndjson', 'Content-Disposition': `attachment; filename="apcosys-export.${format === 'csv' ? 'csv' : 'ndjson'}"`, 'X-APCOSYS': 'true' } });
   }
 
   const api: ApiClient = {
@@ -525,7 +525,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
     subscribeConnection(listener) { connectionListeners.add(listener); listener(connection); return () => { connectionListeners.delete(listener); }; },
     async httpResponse<T>(path: string, input: HttpOptions = {}): Promise<HttpResponse<T>> {
       aborted(input.signal); const response = httpRoute(path, input);
-      return { data: clone(response.data) as T, status: response.status, headers: new Headers({ 'Content-Type': 'application/json', 'X-Apcosys-Demo': 'true' }) };
+      return { data: clone(response.data) as T, status: response.status, headers: new Headers({ 'Content-Type': 'application/json', 'X-APCOSYS': 'true' }) };
     },
     async http<T>(path: string, input?: HttpOptions): Promise<T> { return (await api.httpResponse<T>(path, input)).data; },
     async raw(path: string, input: HttpOptions = {}): Promise<Response> {
@@ -535,7 +535,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
         if ((input.method ?? (input.body === undefined ? 'GET' : 'POST')).toUpperCase() !== 'POST') httpError(405, 'Method not allowed');
         return download(url.pathname, input);
       }
-      if (url.pathname === '/s') { const target = shortLinks.get(url.searchParams.get('sid') ?? '') ?? `${origin()}/search`; return new Response(null, { status: 302, headers: { Location: target, 'X-Apcosys-Demo': 'true' } }); }
+      if (url.pathname === '/s') { const target = shortLinks.get(url.searchParams.get('sid') ?? '') ?? `${origin()}/search`; return new Response(null, { status: 302, headers: { Location: target, 'X-APCOSYS': 'true' } }); }
       const response = await api.httpResponse(path, input); return new Response(JSON.stringify(response.data), { status: response.status, headers: response.headers });
     },
     async request<T>(type: string, data?: unknown, input: RequestOptions = {}): Promise<ApiFrame<T>> {
@@ -543,7 +543,7 @@ export function createDemoApi(options: DemoApiOptions = {}): ApiClient {
       const requestId = id('demo-request'), prepared = frames(type, object(data), requestId);
       prepared.frames.forEach(emit);
       const response = prepared.frames.find(frame => (input.responseTypes ?? [type]).includes(frame.type));
-      if (!response) throw new ApiError('server', `Demo produced no accepted ${type} response`);
+      if (!response) throw new ApiError('server', `No supported ${type} response was returned`);
       return clone(response) as ApiFrame<T>;
     },
     stream<T>(type: string, data: unknown, input: StreamOptions<T>): () => void {

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiFrame } from '../../api';
 import { Alert, Button } from '../../components/ui';
+import { useApp } from '../../app/AppProvider';
 
 export interface OperationState { status: 'idle' | 'pending' | 'success' | 'error' | 'unknown'; message: string; retryAt?: number }
 
 export function useOperation() {
+  const { toast } = useApp();
   const [state, setState] = useState<OperationState>({ status: 'idle', message: '' });
   const busy = useRef(false);
   useEffect(() => {
@@ -20,11 +22,14 @@ export function useOperation() {
     try {
       const data = await operation();
       setState({ status: 'success', message: successMessage });
+      if (successMessage) toast(successMessage, 'success');
       return { ok: true, data };
     } catch (error) {
       const unknown = error instanceof ApiError && error.outcome === 'unknown';
       const retryAt = error instanceof ApiError && error.retryAfterSeconds && Number.isFinite(error.retryAfterSeconds) ? Date.now() + error.retryAfterSeconds * 1000 : undefined;
-      setState({ status: unknown ? 'unknown' : 'error', retryAt, message: unknown ? 'The request was sent, but its result could not be confirmed. Check the current state before trying again.' : error instanceof Error ? error.message : 'The operation could not be completed.' });
+      const message = unknown ? 'The result is not confirmed. Check the current state before trying again.' : error instanceof Error ? error.message : 'The operation could not be completed.';
+      setState({ status: unknown ? 'unknown' : 'error', retryAt, message });
+      if (!unknown && !retryAt) toast(message, 'error');
       return { ok: false };
     } finally { busy.current = false; }
   }
@@ -32,8 +37,8 @@ export function useOperation() {
 }
 
 export function OperationNotice({ state, onCheck }: { state: OperationState; onCheck?: () => void }) {
-  if (state.status === 'idle' || state.status === 'pending') return null;
-  return <Alert tone={state.status === 'unknown' ? 'warning' : state.status === 'error' ? 'error' : 'success'} title={state.status === 'unknown' ? 'Result not confirmed' : undefined} actions={state.status === 'unknown' && onCheck ? <Button variant="secondary" onClick={onCheck}>Check current state</Button> : undefined}>{state.message}{state.retryAt && <p>Try again after {new Date(state.retryAt).toLocaleTimeString()}. No request will be retried automatically.</p>}</Alert>;
+  if (state.status === 'idle' || state.status === 'pending' || state.status === 'success' || (state.status === 'error' && !state.retryAt)) return null;
+  return <Alert tone={state.status === 'unknown' ? 'warning' : 'error'} title={state.status === 'unknown' ? 'Result not confirmed' : undefined} actions={state.status === 'unknown' && onCheck ? <Button variant="secondary" onClick={onCheck}>Check current state</Button> : undefined}>{state.message}{state.retryAt && <p>Try again after {new Date(state.retryAt).toLocaleTimeString()}.</p>}</Alert>;
 }
 
 export function responseData<T>(frame: ApiFrame<T>): T {

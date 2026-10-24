@@ -48,7 +48,7 @@ test('file filters open independently, cancel their draft and remain dismissible
   await expect(panel.getByRole('button', { name: 'Cancel', exact: true })).toBeEnabled();
   await panel.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(panel).not.toBeVisible();
-  await expect(page.locator('.files-query-summary')).toContainText('report');
+  await expect(page.getByLabel('Filename or keywords', { exact: true })).toHaveValue('report');
   expect(frames.filter(frame => frame.type === 'buckets')).toHaveLength(1);
 });
 
@@ -112,7 +112,7 @@ test('scanner filters all loaded tasks and preserves the list page through priva
 test('payment history searches 5,000 records locally with bounded rendering and keeps zero amounts', async ({ page }) => {
   const payments = Array.from({ length: 5000 }, (_, index): BillingPayment => ({ payment_id: `payment-${String(index).padStart(4, '0')}`, amount_usd: index === 4999 ? 0 : 50, subscription: 'Plus', created_at: 1800000000 + index, ...(index === 4999 ? {} : { status: index % 2 ? 'pending' : 'completed' }) }));
   const frames = await internalApi(page, { payments });
-  await page.goto('/billing');
+  await page.goto('/billing?section=payments');
   const history = page.getByRole('region', { name: 'Payment history records', exact: true });
   await expect(history.locator('tbody tr')).toHaveCount(25);
   await expect(history).toContainText('5,000 loaded');
@@ -137,7 +137,7 @@ test('payment history searches 5,000 records locally with bounded rendering and 
 
 test('an omitted payment history is shown as unknown instead of an empty history', async ({ page }) => {
   await internalApi(page, { omitPayments: true });
-  await page.goto('/billing');
+  await page.goto('/billing?section=payments');
   await expect(page.getByText('Payment history was not provided', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'No payments to show', exact: true })).toHaveCount(0);
 });

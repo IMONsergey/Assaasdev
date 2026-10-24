@@ -1,4 +1,4 @@
-import type { DomainMapData, HostDetail, PortRecord } from '../../api';
+import type { DetectedProduct, DomainMapData, HostDetail, PortRecord } from '../../api';
 
 export interface ServiceItem { key: string; record: PortRecord; receivedIndex: number; context: string; searchText: string; rawRecord: PortRecord; invalidFields: string[] }
 export type ServiceOrder = 'received' | 'port-asc' | 'port-desc' | 'newest';
@@ -8,6 +8,56 @@ export const serviceContentOptions = [
 ] as const;
 export type ServiceContent = '' | typeof serviceContentOptions[number][0];
 export interface ServiceFilters { protocol?: string; content?: ServiceContent; port?: string }
+export type HostTab = 'overview' | 'services' | 'dns' | 'whois';
+export type ServiceTab = 'response' | 'tls' | 'products' | 'exposed' | 'web';
+export type ResponseTab = 'banner' | 'body' | 'headers';
+export type WebFileTab = 'security' | 'robots';
+
+/** Old shared URLs remain valid while service-only tabs move inside the workspace. */
+export function hostWorkspace(params: URLSearchParams): { tab: HostTab; serviceTab: ServiceTab; responseTab: ResponseTab; webTab: WebFileTab; detailOpen: boolean } {
+  const legacy = params.get('tab') || '';
+  const serviceTabs: Record<string, ServiceTab> = { services: 'response', http: 'response', tls: 'tls', products: 'products', exposed: 'exposed', security: 'web', robots: 'web' };
+  const isServiceTab = Object.hasOwn(serviceTabs, legacy);
+  const tab: HostTab = legacy === 'overview' || legacy === 'dns' || legacy === 'whois' ? legacy : isServiceTab || params.has('service') || params.has('port') ? 'services' : 'overview';
+  const view = params.get('view');
+  const serviceTab = (['response', 'tls', 'products', 'exposed', 'web'].includes(view || '') ? view : isServiceTab ? serviceTabs[legacy] : 'response') as ServiceTab;
+  const response = params.get('response');
+  const responseTab = (['banner', 'body', 'headers'].includes(response || '') ? response : legacy === 'http' ? 'body' : 'banner') as ResponseTab;
+  const file = params.get('file');
+  const webTab = (file === 'security' || file === 'robots' ? file : legacy === 'robots' ? 'robots' : 'security') as WebFileTab;
+  return { tab, serviceTab, responseTab, webTab, detailOpen: params.get('panel') === 'details' || (params.get('panel') !== 'list' && (params.has('service') || params.has('port') || (isServiceTab && legacy !== 'services'))) };
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+function normalizeProducts(value: unknown, invalidFields: string[]): DetectedProduct[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) { invalidFields.push('detected_products'); return undefined; }
+  let invalid = false;
+  const products = value.filter(product => { if (!isRecord(product)) { invalid = true; return false; } return true; }).map(product => {
+    const normalized = { ...product } as DetectedProduct;
+    for (const key of ['product', 'version', 'vendor', 'cve_product', 'cve_vendor', 'cve_identifier'] as const) {
+      if (normalized[key] !== undefined && typeof normalized[key] !== 'string') { invalid = true; delete normalized[key]; }
+    }
+    if (product.labels !== undefined) {
+      normalized.labels = Array.isArray(product.labels) ? product.labels.filter((label: unknown): label is string => typeof label === 'string') : undefined;
+      if (!Array.isArray(product.labels) || normalized.labels?.length !== product.labels.length) invalid = true;
+    }
+    if (product.cve_list !== undefined) {
+      if (!Array.isArray(product.cve_list)) { invalid = true; delete normalized.cve_list; }
+      else normalized.cve_list = product.cve_list.filter((cve: unknown): cve is Record<string, unknown> => { if (!isRecord(cve)) { invalid = true; return false; } return true; }).map((cve: Record<string, unknown>) => {
+        const cve_id = typeof cve.cve_id === 'string' ? cve.cve_id : undefined;
+        const base_score = typeof cve.base_score === 'number' && Number.isFinite(cve.base_score) && cve.base_score >= 0 && cve.base_score <= 10 ? cve.base_score : undefined;
+        if ((cve.cve_id !== undefined && cve_id === undefined) || (cve.base_score !== undefined && base_score === undefined)) invalid = true;
+        return { cve_id, base_score };
+      });
+    }
+    if (product.exposed_data !== undefined && !isRecord(product.exposed_data)) { invalid = true; delete normalized.exposed_data; }
+    return normalized;
+  });
+  if (invalid) invalidFields.push('detected_products');
+  return value.length > 0 && products.length === 0 ? undefined : products;
+}
 
 export function portRange(value: string): { start: number; end: number } | undefined {
   const match = value.trim().match(/^(\d{1,5})(?:\s*[-–]\s*(\d{1,5}))?$/);
@@ -54,14 +104,17 @@ export function serviceItems(records: PortRecord[]): ServiceItem[] {
     for (const field of ['protocol', 'transport', 'banner', 'body', 'status', 'title', 'link', 'favicon_md5'] as const) {
       if (record[field] !== undefined && typeof record[field] !== 'string') { invalidFields.push(field); delete record[field]; }
     }
-    if (record.detected_products !== undefined && !Array.isArray(record.detected_products)) { invalidFields.push('detected_products'); delete record.detected_products; }
-    else if (record.detected_products) {
-      const products = record.detected_products.filter(product => Boolean(product && typeof product === 'object' && !Array.isArray(product)));
-      if (products.length !== record.detected_products.length) invalidFields.push('detected_products');
-      record.detected_products = products.map(product => ({ ...product,
-        cve_list: Array.isArray(product.cve_list) ? product.cve_list.filter(cve => Boolean(cve && typeof cve === 'object')).map(cve => ({ cve_id: typeof cve.cve_id === 'string' ? cve.cve_id : undefined, base_score: typeof cve.base_score === 'number' && Number.isFinite(cve.base_score) ? cve.base_score : undefined })) : undefined,
-        labels: Array.isArray(product.labels) ? product.labels.filter(label => typeof label === 'string') : undefined,
-      }));
+    record.detected_products = normalizeProducts(rawRecord.detected_products, invalidFields);
+    for (const field of ['tls_info', 'headers', 'security_txt', 'robots_txt'] as const) {
+      if (record[field] !== undefined && !isRecord(record[field])) { invalidFields.push(field); delete record[field]; }
+    }
+    if (record.security_txt) {
+      record.security_txt = { ...record.security_txt };
+      for (const field of ['body', 'url', 'endpoint'] as const) if (record.security_txt[field] !== undefined && typeof record.security_txt[field] !== 'string') { invalidFields.push(`security_txt.${field}`); delete record.security_txt[field]; }
+    }
+    if (record.robots_txt) {
+      record.robots_txt = { ...record.robots_txt };
+      if (record.robots_txt.body !== undefined && typeof record.robots_txt.body !== 'string') { invalidFields.push('robots_txt.body'); delete record.robots_txt.body; }
     }
     const identity = JSON.stringify([record.port ?? null, record.transport ?? null, record.protocol ?? null, serviceContext(record), record.uts ?? null]);
     const occurrence = occurrences.get(identity) || 0;
@@ -75,7 +128,7 @@ export function filterServices(items: ServiceItem[], filter: string, order: Serv
   const range = filters.port?.trim() ? portRange(filters.port) : undefined;
   const matches = items.filter(({ record, searchText }) =>
     (!query || searchText.includes(query)) &&
-    (!filters.protocol || String(record.protocol || '').toLocaleLowerCase() === filters.protocol.toLocaleLowerCase()) &&
+    (!filters.protocol || String(record.protocol || '').trim().toLocaleLowerCase() === filters.protocol.trim().toLocaleLowerCase()) &&
     (!filters.content || serviceHasContent(record, filters.content)) &&
     (!filters.port?.trim() || Boolean(range && record.port !== undefined && record.port >= range.start && record.port <= range.end)));
   if (order === 'port-asc') matches.sort((a, b) => (a.record.port ?? Infinity) - (b.record.port ?? Infinity) || a.receivedIndex - b.receivedIndex);
@@ -86,7 +139,7 @@ export function filterServices(items: ServiceItem[], filter: string, order: Serv
 
 export function servicePage(items: ServiceItem[], requestedPage: number, size = 25) {
   const totalPages = Math.max(1, Math.ceil(items.length / size));
-  const page = Math.max(1, Math.min(requestedPage, totalPages));
+  const page = Math.max(1, Math.min(Number.isFinite(requestedPage) ? Math.trunc(requestedPage) : 1, totalPages));
   const start = (page - 1) * size;
   return { page, totalPages, rows: items.slice(start, start + size), start: items.length ? start + 1 : 0, end: Math.min(start + size, items.length) };
 }
@@ -98,7 +151,40 @@ export function hostLocation(host: HostDetail): string {
 
 export function mappedDomains(map: DomainMapData | undefined): string[] {
   const values = Array.isArray(map) ? map : map ? [map] : [];
-  return [...new Set(values.map(item => item.d).filter((value): value is string => typeof value === 'string' && !!value))];
+  return [...new Set(values.filter(isRecord).map(item => item.d).filter((value): value is string => typeof value === 'string' && !!value.trim()))];
+}
+
+export function serviceSummary(items: ServiceItem[], hasServiceList: boolean, receivedCount = items.length) {
+  const protocols = new Map<string, number>();
+  const products = new Map<string, { key: string; name: string; version?: string; services: Set<string>; service: ServiceItem }>();
+  const ports = new Set<number>(), cves = new Set<string>();
+  let productRecords = 0, productSections = 0, cveSections = 0;
+  for (const item of items) {
+    const protocol = item.record.protocol?.trim().toLowerCase() || '';
+    protocols.set(protocol, (protocols.get(protocol) || 0) + 1);
+    if (item.record.port !== undefined) ports.add(item.record.port);
+    if (Array.isArray(item.record.detected_products)) productSections++;
+    for (const product of item.record.detected_products || []) {
+      productRecords++;
+      const name = product.product?.trim() || 'Unnamed product';
+      const key = JSON.stringify([name, product.version || '', product.vendor || '']);
+      const existing = products.get(key);
+      if (existing) existing.services.add(item.key);
+      else products.set(key, { key, name, version: product.version, services: new Set([item.key]), service: item });
+      if (Array.isArray(product.cve_list)) cveSections++;
+      for (const cve of product.cve_list || []) if (cve.cve_id?.trim()) cves.add(cve.cve_id.trim().toUpperCase());
+    }
+  }
+  const empty = hasServiceList && receivedCount === 0;
+  return {
+    services: hasServiceList && (empty || items.length > 0) ? items.length : undefined,
+    ports: empty || ports.size ? ports.size : undefined,
+    productRecords: empty || productSections ? productRecords : undefined,
+    cves: empty || cveSections || (productSections > 0 && productRecords === 0) ? cves.size : undefined,
+    productSections,
+    protocols: [...protocols].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+    products: [...products.values()].map(product => ({ ...product, count: product.services.size })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+  };
 }
 
 export function safeBackPath(value: string | null, fallback: string): string {

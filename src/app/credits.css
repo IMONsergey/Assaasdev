@@ -1,4 +1,4 @@
-.credit-trigger { display:flex; flex-direction:column; justify-content:center; gap:7px; min-height:44px; min-width:166px; padding:9px 12px; border:1px solid transparent; border-radius:9px; background:var(--surface); color:var(--muted); transition:background-color .16s,border-color .16s,box-shadow .16s; }
+.credit-trigger { display:flex; flex-direction:column; justify-content:center; gap:7px; min-height:44px; min-width:158px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--muted); transition:background-color .16s,border-color .16s,box-shadow .16s; }
 .credit-trigger:hover,.credit-trigger[aria-expanded='true'] { background:var(--surface-hover); border-color:var(--line); }
 .credit-trigger-line { display:flex; align-items:center; gap:9px; width:100%; line-height:1; font-size:.86rem; }
 .credit-trigger-line strong { margin-left:auto; color:var(--accent-text); font:400 .86rem/1 var(--font-mono); font-variant-numeric:tabular-nums; }

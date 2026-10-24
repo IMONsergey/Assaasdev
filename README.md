@@ -6,7 +6,7 @@ This repository contains the **working React application**, its website HTTP/Web
 
 **Release status:** client implementation and local browser verification are available. Acceptance against the client's actual HTTPS backend and external providers remains a separate release gate. See [release review](docs/RELEASE-2026-10-23.md), [implementation coverage](docs/IMPLEMENTATION-COVERAGE.md) and [verification evidence](docs/VERIFICATION.md).
 
-**Latest UX release:** left filter drawers, explicit draft application, service classification, searchable large data tables, task and payment pagination, and preserved navigation context. See the [24 October workspace review](docs/audit/2026-10-24-workspaces.md), [previous UX report and screenshots](docs/audit/2026-10-23-ux-readiness.md), and [source-to-scenario review](docs/audit/2026-10-23-scenario-coverage.md).
+**Latest UX release:** a reorganized navigation shell, dedicated workspace tabs, a host overview and service inspector, explicit result analytics, unified Settings, a structured billing workspace, coherent icons, loading states and responsive layouts. See the [24 October interface audit](docs/audit/2026-10-24-interface-architecture.md), [earlier workspace review](docs/audit/2026-10-24-workspaces.md), and [source-to-scenario review](docs/audit/2026-10-23-scenario-coverage.md).
 
 **Public review deployment:** the committed `vercel.json` publishes the explicit demo build at a domain root and supports direct links to application routes. This hosting configuration is for interface acceptance; the live backend deployment uses the separate proxy configuration below. Demo state resets after a page reload.
 
@@ -21,16 +21,16 @@ npm ci
 npm run dev:demo
 ```
 
-Open `http://127.0.0.1:5173`. Demo status is identified in the workspace, credit details and Settings. The adapter starts with a synthetic Business account and stores its working state in memory. Reloading recreates that state. It makes no backend calls, sends no emails, starts no network scans and performs no real payments.
+Open `http://127.0.0.1:5173`. The customer-facing interface omits demonstration badges and implementation notes. This build still starts with a synthetic Business account and stores its working state in memory. Reloading recreates that state. It makes no backend calls, sends no emails, starts no network scans and performs no real payments.
 
 A short review route:
 
 1. Search for `nginx`; open the first host and inspect its services, HTTP, TLS, DNS and WHOIS. The larger fixture has 1,000 service records with local paging and filtering.
 2. Open **Filters**, build nested conditions, apply them, save a query and create a limited shared view.
-3. Visit **Buckets & files**, choose **Explore sample files**, inspect a zero-byte file and download the sample NDJSON export.
+3. Visit **Buckets & files**, choose **Search files**, inspect a zero-byte file and download an NDJSON export.
 4. Open **Private Scanner**, create a task from hosts/CIDR/CSV, review the estimate and edit its schedule. Demo tasks remain queued; no scan runs.
-5. Review **Plans & billing**, subscription renewal and payment history. Crypto activity includes an explicitly non-payable address and exact string amounts. Demo invoices remain pending; card checkout and the external portal clearly report unavailable providers.
-6. Review **Account** security, sessions and team; rotate the demo API key. Sign out and use an identifier containing `2fa` to exercise the login challenge. Demo verification/TOTP code: `123456`.
+5. Review **Billing**: Overview, Plans, Credit packs, Payments and Crypto activity. Unconfigured payment instructions are not offered as payable destinations. In-memory invoices remain pending; card checkout and the external portal report unavailable providers.
+6. Review **Settings** profile, security, sessions and organization; rotate the key in **API access**. Sign out from Profile and use an identifier containing `2fa` to exercise the login challenge. Demo verification/TOTP code: `123456`.
 7. Change theme, density, text size and reduced motion under **Settings**. Only these view preferences persist in local storage. Click the credit meter to inspect separate search/scan balances and open credit packs.
 
 For signup use an 18-character password; verification does not silently log the new user in. Login/reset require at least six characters. The demo accepts validly shaped login credentials to exercise the interface; it is not an authentication service. Full fixture behavior is documented in [API integration](docs/API-INTEGRATION.md#11-explicit-demonstration-adapter).
@@ -39,8 +39,8 @@ For signup use an 18-character password; verification does not silently log the 
 
 | Area | Implemented behavior |
 | --- | --- |
-| Search | Public/private datasets, type selection, nested AND/OR/NOT conditions, ranges, field suggestions, sorting, page limits and independent streaming facets. Exact query context is retained. |
-| Host details | Independent public/private response sections, HTTP/TLS/products/CVE, DNS/WHOIS/domain map, large service lists, raw observations and explicit missing/partial/error states. |
+| Search | Public/private datasets, Results/Analytics tabs, explicit analytics loading, nested AND/OR/NOT conditions, UTC date ranges, field suggestions, sorting and page limits. Exact query context is retained. |
+| Host details | Overview/Services/DNS/WHOIS tabs; Response/TLS/Products/Data/Web files inside a selected service; bounded service catalogs and data tables, raw observations and distinct missing/partial/error states. |
 | Saved queries and sharing | Create/list/open/delete saved JSON; explicit dataset when the saved payload does not identify it; short links and separately limited links with fixed payloads. |
 | Buckets and files | Supported host/key/extension/size/product/alphabet/date filters, explicit grouped analytics, drilldown, server counts and file metadata. Unsupported server filters are not presented as working controls. |
 | Export | Raw NDJSON/CSV streams, public/private/task scope, documented format/record caps, cancellation, bounded memory fallback and direct file saving when the browser supports it. Real server Range recovery still needs integration acceptance. |
@@ -86,7 +86,7 @@ The container requires the actual `APCOSYS_API_UPSTREAM` at startup. It uses Ngi
 - **React Router:** deep links and route layouts, including private search and authentication states.
 - **TanStack Query:** bounded in-memory server state. Automatic retries and refetch on focus/reconnect are disabled because searches, facets and limited links can consume credits or uses.
 - **Dedicated website transport:** credentialed HTTP, request-correlated WebSocket frames, multipart completion, isolated anonymous private-host replies and explicit unknown outcomes. It uses the website `/ws` contract, not an invented `/v1` API.
-- **Native CSS tokens and local assets:** the canonical Figma structure, original logo/artwork/icons, local font packages, semantic themes and responsive density. No temporary Figma asset URLs are needed at runtime.
+- **Native CSS tokens and local assets:** the original APCOSYS logo and artwork, official Tabler icons, local font packages, semantic themes and responsive density. No temporary Figma asset URLs are needed at runtime.
 - **Vitest, Playwright and axe:** domain/transport tests plus real browser interaction, layout and accessibility checks.
 
 Dependencies are pinned in `package.json` and `package-lock.json`; `.nvmrc` selects Node 24. No telemetry service, new identity provider or replacement database is implicitly provisioned.
@@ -119,6 +119,6 @@ Local Firefox can be selected with `APCOSYS_BROWSER=firefox`; install the matchi
 
 ## Design and source authority
 
-The [canonical Figma application](https://www.figma.com/design/lLMSuy0RrCiPhg873xpVUY/Apcosys?node-id=899-3620) and the 22 October website API determine this implementation. Earlier Red/R1 review models and generated research combinations remain historical material, not proof of implemented or tested behavior. Original research is retained in the existing handoff repository; it is not duplicated here.
+The original [canonical Figma application](https://www.figma.com/design/lLMSuy0RrCiPhg873xpVUY/Apcosys?node-id=899-3620), the supplied [legacy SaaS design](https://www.figma.com/design/6RaLENxGqlpA6u3jGtKczc/Untitled?node-id=0-1), and the 22 October website API inform this implementation. The latest interface audit records the current structure and reference decisions. Earlier Red/R1 review models and generated research combinations remain historical material, not proof of implemented or tested behavior. Original research is retained in the existing handoff repository; it is not duplicated here.
 
 Start with [RELEASE-2026-10-23.md](docs/RELEASE-2026-10-23.md) for the Russian handoff, the audit findings and the concrete remaining checks before customer production acceptance.

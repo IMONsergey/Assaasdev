@@ -3,37 +3,35 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type Profile, type SessionData, type SessionRecord, type TOTPEnrollmentData, type TOTPValidationData } from '../../api';
 import { useApp } from '../../app/AppProvider';
-import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, Spinner, Tabs } from '../../components/ui';
+import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, Spinner, Skeleton, Tabs, Icon } from '../../components/ui';
 import { copyText, formatDate, formatNumber, OperationNotice, responseData, useOperation } from './operation';
 import { normalizeOneTimeCode } from '../auth/auth-state';
 import './account.css';
 
-const accountTabs = [{ id: 'profile', label: 'Profile' }, { id: 'security', label: 'Security' }, { id: 'sessions', label: 'Sessions' }, { id: 'team', label: 'Organization' }];
+const accountTabs = [{ id: 'profile', label: 'Profile', icon: 'user' }, { id: 'security', label: 'Security', icon: 'shield' }, { id: 'sessions', label: 'Sessions', icon: 'desktop' }, { id: 'team', label: 'Organization', icon: 'users' }];
 
-export function AccountPage() {
+export function AccountPage({ section, embedded = false }: { section?: string; embedded?: boolean } = {}) {
   const { session, user } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const accountRoot = useRef<HTMLDivElement>(null);
-  const tab = accountTabs.find((item) => location.pathname.endsWith('/' + item.id))?.id ?? 'profile';
+  const tab = section ?? accountTabs.find((item) => location.pathname.endsWith('/' + item.id))?.id ?? 'profile';
+  const [visited, setVisited] = useState(() => new Set([tab]));
+  useEffect(() => { setVisited(previous => previous.has(tab) ? previous : new Set([...previous, tab])); }, [tab]);
   useLayoutEffect(() => {
     if (session.status === 'authenticated' && location.state?.preserveTabFocus === true) {
       accountRoot.current?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
     }
   }, [location.key, location.state?.preserveTabFocus, session.status, tab]);
-  if (session.status === 'loading') return <Spinner label="Loading your account…" />;
-  if (session.status !== 'authenticated' || !user) return <EmptyState title="Your account, in one place." description="Sign in to manage your profile, security, sessions and organization." actions={<Link className="inline-link" to={`/auth/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}>Sign in →</Link>} />;
+  if (session.status === 'loading') return <Skeleton rows={4} label="Loading account" />;
+  if (session.status !== 'authenticated' || !user) return <EmptyState title="Account settings" description="Sign in to manage your profile and access." actions={<Link className="inline-link" to={`/auth/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}>Sign in →</Link>} />;
   return <div ref={accountRoot} className="account-page stack">
-    <PageHeader eyebrow="ACCOUNT" title="Made for your work." description="Your profile, security and access. Always under your control." />
-    <Tabs items={accountTabs} value={tab} onChange={(id) => navigate(id === 'profile' ? '/account' : '/account/' + id, { state: { preserveTabFocus: true } })} />
-    {tab === 'profile' && <ProfilePanel user={user} />}
-    {tab === 'security' && <SecurityPanel user={user} />}
-    {tab === 'sessions' && <SessionsPanel />}
-    {tab === 'team' && <TeamPanel user={user} />}
+    {!embedded && <><PageHeader title="Account settings" actions={<Link className="button button--secondary" to="/settings"><Icon name="settings" size={17} />All settings</Link>} /><Tabs items={accountTabs} value={tab} ariaLabel="Account settings" idPrefix="account" onChange={(id) => navigate(id === 'profile' ? '/account' : '/account/' + id, { state: { preserveTabFocus: true } })} /></>}
+    {accountTabs.map(item => <section key={item.id} id={`account-panel-${item.id}`} role={embedded ? undefined : 'tabpanel'} aria-labelledby={embedded ? undefined : `account-tab-${item.id}`} hidden={tab !== item.id}>{(visited.has(item.id) || tab === item.id) && (item.id === 'profile' ? <ProfilePanel user={user} /> : item.id === 'security' ? <SecurityPanel user={user} /> : item.id === 'sessions' ? <SessionsPanel /> : <TeamPanel user={user} />)}</section>)}
   </div>;
 }
 
-function ProfilePanel({ user }: { user: Profile }) {
+export function ProfilePanel({ user }: { user: Profile }) {
   const { api, refreshSession } = useApp();
   const update = useOperation();
   const verify = useOperation();
@@ -66,7 +64,7 @@ function ProfilePanel({ user }: { user: Profile }) {
       await refreshSession();
       if (requested && current.email === requested.email && current.user_name === requested.user_name) {
         setPending(false); setVerifyCode(''); setRequested(null); setUntil(null); update.reset(); verify.reset();
-        setProfileNotice('Your current profile confirms the requested email and username.');
+        setProfileNotice('Profile changes confirmed.');
       } else {
         setProfileNotice('The requested profile changes are not confirmed yet. Your current verified profile remains active. If a code arrived and is still valid, you can enter it below.');
         // A status read never repeats the mutation. A subsequent code submit is explicit.
@@ -91,13 +89,13 @@ function ProfilePanel({ user }: { user: Profile }) {
       </Card>
     </div>
     <div className="stack">
-      <Card><h2 className="section-title">Your access</h2><dl className="account-facts"><div><dt>Current plan</dt><dd>{user.subscription?.type ?? '—'}</dd></div><div><dt>Search credits</dt><dd>{formatNumber(user.credits)}</dd></div><div><dt>Scan credits</dt><dd>{formatNumber(user.scan_credits)}</dd></div><div><dt>User ID</dt><dd className="mono account-break">{user.user_id ?? '—'}</dd></div></dl><Link to="/billing" className="inline-link">View subscription →</Link></Card>
-      <Card><h2 className="section-title">Workspace settings</h2><p className="muted">Theme, layout, text size and motion, all in one place.</p><Link className="inline-link" to="/settings">Open settings →</Link></Card>
+      <Card><h2 className="section-title">Account</h2><dl className="account-facts"><div><dt>Current plan</dt><dd>{user.subscription?.type ?? '—'}</dd></div><div><dt>Search credits</dt><dd>{formatNumber(user.credits)}</dd></div><div><dt>Scan credits</dt><dd>{formatNumber(user.scan_credits)}</dd></div><div><dt>User ID</dt><dd className="mono account-break">{user.user_id ?? '—'}</dd></div></dl><Link to="/billing" className="inline-link">View subscription →</Link></Card>
+
     </div>
   </div>;
 }
 
-function SecurityPanel({ user }: { user: Profile }) {
+export function SecurityPanel({ user }: { user: Profile }) {
   const { api, refreshSession, toast, mode } = useApp();
   const password = useOperation();
   const enrollment = useOperation();
@@ -169,19 +167,19 @@ function SecurityPanel({ user }: { user: Profile }) {
   }
 
   return <div className="account-columns">
-    <Card><h2 className="section-title">Password</h2><p className="muted">Use a unique password that you do not use anywhere else.</p>{notice && <Alert tone="warning">{notice}</Alert>}<OperationNotice state={password.state} />
-      <form className="stack" onSubmit={(event) => void changePassword(event)}><Field label="Current password" name="old_password" type="password" autoComplete="current-password" minLength={6} required disabled={password.busy} /><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} hint="At least 6 characters. A longer passphrase is recommended." /><Field label="Confirm new password" name="confirm_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} /><div className="form-actions"><Button type="submit" loading={password.busy} disabled={password.blocked}>Update password</Button></div></form>
+    <Card><h2 className="section-title">Password</h2><p className="muted">Update your account password.</p><OperationNotice state={password.state} />
+      <form className="stack" onSubmit={(event) => void changePassword(event)}><Field label="Current password" name="old_password" type="password" autoComplete="current-password" minLength={6} required disabled={password.busy} /><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} hint="At least 6 characters. A longer passphrase is recommended." /><Field label="Confirm new password" error={notice || undefined} name="confirm_password" type="password" autoComplete="new-password" minLength={6} required disabled={password.busy} /><div className="form-actions"><Button type="submit" loading={password.busy} disabled={password.blocked}>Update password</Button></div></form>
       {password.state.status === 'unknown' && <p className="muted">The password may have changed. Verify sign-in with the new password before requesting another change.</p>}
     </Card>
     <div className="stack"><Card><div className="cluster account-card-heading"><h2 className="section-title">Two-factor authentication</h2><Badge tone={factorEnabled ? 'success' : 'neutral'}>{factorEnabled ? 'Enabled' : 'Not enabled'}</Badge></div><p className="muted">An authenticator adds a second check when you sign in.</p>{factorNotice && <Alert tone="info">{factorNotice}</Alert>}<OperationNotice state={enrollment.state} onCheck={() => void checkFactor()} /><OperationNotice state={validation.state} onCheck={() => void checkFactor()} />{checkingFactor && <Spinner label="Checking two-factor status…" />}
       {!factorEnabled && !details && !codes && <Button variant="secondary" loading={enrollment.busy} disabled={enrollment.blocked} onClick={() => void beginEnrollment()}>Set up authenticator</Button>}
       {details && <div className="stack account-totp-setup"><p>Scan this code with your authenticator app, or enter the setup key manually.</p>{qr && <img src={qr} width="192" height="192" className="account-qr" alt="Authenticator enrollment QR code" />}<Field label="Setup key" type={showSecret ? 'text' : 'password'} value={details.secret_key} readOnly /><div className="cluster"><Button size="sm" variant="ghost" onClick={() => setShowSecret(!showSecret)}>{showSecret ? 'Hide' : 'Reveal'} key</Button><Button size="sm" variant="ghost" onClick={() => void copyText(details.secret_key, toast)}>Copy key</Button></div><p className="muted">{expiresAt ? `The 15-minute setup window ends at approximately ${new Date(expiresAt).toLocaleTimeString()}.` : ''} Keep this key private.</p><form className="stack" onSubmit={(event) => void validateEnrollment(event)}><Field label="Authenticator code" name="totp_code" inputMode="numeric" autoComplete="one-time-code" minLength={6} maxLength={64} pattern="[0-9]{6}" onChange={event => { event.currentTarget.value = normalizeOneTimeCode(event.currentTarget.value); }} required disabled={validation.busy || checkingFactor} hint="Enter all 6 digits. You can paste a code with spaces." /><Button type="submit" loading={validation.busy} disabled={validation.blocked}>Enable two-factor authentication</Button></form><Button variant="ghost" disabled={validation.busy || validation.blocked || enrollment.busy} onClick={() => { validation.reset(); setShowSecret(false); void beginEnrollment(); }}>Start a fresh setup</Button></div>}
-      {codes && (codes.length === 5 ? <div className="stack account-backup"><h3>Keep these somewhere safe.</h3><p className="muted">Five backup codes. Each can be used once. They are shown here only during this setup.</p><div className="account-backup-grid">{codes.map((code) => <code key={code}>{code}</code>)}</div><Button variant="secondary" onClick={() => void copyText(codes.join('\n'), toast)}>Copy backup codes</Button><Button variant="ghost" onClick={() => { setCodes(null); void refreshSession().catch(() => undefined); }}>I have saved my codes</Button></div> : <Alert tone="warning">Two-factor authentication was enabled, but all five backup codes were not returned. Keep your authenticator accessible and contact support before signing out.</Alert>)}
-    </Card><Card><h2 className="section-title">Connected sign-in</h2><p className="muted">Attach an external sign-in method to this account.</p><div className="cluster"><Button variant="secondary" disabled={mode === 'demo'} onClick={() => window.location.assign(api.url('/google/link'))}>Link Google</Button><Button variant="secondary" disabled={mode === 'demo'} onClick={() => window.location.assign(api.url('/telegram/link'))}>Link Telegram</Button></div>{mode === 'demo' && <p className="muted">External sign-in providers are unavailable in the demonstration environment.</p>}{user.telegram_account && <p className="muted">A Telegram account is linked.</p>}</Card></div>
+      {codes && (codes.length === 5 ? <div className="stack account-backup"><h3>Backup codes</h3><p className="muted">Five backup codes. Each can be used once. They are shown here only during this setup.</p><div className="account-backup-grid">{codes.map((code) => <code key={code}>{code}</code>)}</div><Button variant="secondary" onClick={() => void copyText(codes.join('\n'), toast)}>Copy backup codes</Button><Button variant="ghost" onClick={() => { setCodes(null); void refreshSession().catch(() => undefined); }}>I have saved my codes</Button></div> : <Alert tone="warning">Two-factor authentication was enabled, but all five backup codes were not returned. Keep your authenticator accessible and contact support before signing out.</Alert>)}
+    </Card>{mode !== 'demo' && <Card><h2 className="section-title">Connected sign-in</h2><p className="muted">Attach an external sign-in method to this account.</p><div className="cluster"><Button variant="secondary" onClick={() => window.location.assign(api.url('/google/link'))}><Icon name="link" size={16} />Link Google</Button><Button variant="secondary" onClick={() => window.location.assign(api.url('/telegram/link'))}><Icon name="link" size={16} />Link Telegram</Button></div>{user.telegram_account && <p className="muted">A Telegram account is linked.</p>}</Card>}</div>
   </div>;
 }
 
-function SessionsPanel() {
+export function SessionsPanel() {
   const { api, user } = useApp();
   const queryClient = useQueryClient();
   const operation = useOperation();
@@ -204,11 +202,11 @@ function SessionsPanel() {
     if (result.ok) await queryClient.invalidateQueries({ queryKey: ['account-sessions'] });
   }
   return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Active sessions</h2><p className="muted">{sessions.data ? `${sessions.data.total} of ${sessions.data.limit} sessions in use` : 'Review where your account is signed in.'}</p></div><Button variant="secondary" onClick={() => setTarget('others')} disabled={operation.blocked || !sessions.data?.sessions.some((item) => !item.is_current)}>End other sessions</Button></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
-      {sessions.isPending ? <Spinner label="Loading sessions…" /> : sessions.isError ? <Alert tone="error" actions={<Button onClick={() => void sessions.refetch()}>Try again</Button>}>{sessions.error.message}</Alert> : sessions.data.sessions.length === 0 ? <EmptyState title="No sessions returned" description="Refresh to check the latest session state." actions={<Button onClick={() => void sessions.refetch()}>Refresh</Button>} /> : <div className="account-session-list">{sessions.data.sessions.map((item) => <article key={item.session_id} className="account-session"><div className="account-session-symbol" aria-hidden="true">▣</div><div className="account-session-body"><div className="cluster"><h3>{item.device_info || item.browser || 'Device'}</h3>{item.is_current && <Badge tone="accent">This session</Badge>}</div><p className="muted">{[item.browser, item.os, item.location].filter(Boolean).join(' · ') || 'Device details unavailable'}</p><p className="mono muted">{item.ip_address ?? 'IP unavailable'}</p><p className="muted">Last active {formatDate(item.last_activity)}</p></div><Button variant="ghost" size="sm" disabled={item.is_current || operation.blocked} onClick={() => setTarget(item)}>{item.is_current ? 'Current' : 'End session'}</Button></article>)}</div>}
-    </Card><Alert tone="info">Ending other sessions keeps this one active. Signing out of APCOSYS ends every session, including this one.</Alert><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void terminate()} title={target === 'others' ? 'End all other sessions?' : 'End this session?'} description={target === 'others' ? 'Other devices will need to sign in again. This session will stay active.' : 'The selected device will need to sign in again.'} confirmLabel="End session" danger busy={operation.busy} /></div>;
+      {sessions.isPending ? <Skeleton rows={3} label="Loading sessions" /> : sessions.isError ? <Alert tone="error" actions={<Button onClick={() => void sessions.refetch()}>Try again</Button>}>{sessions.error.message}</Alert> : sessions.data.sessions.length === 0 ? <EmptyState title="No sessions returned" description="Refresh to check the latest session state." actions={<Button onClick={() => void sessions.refetch()}>Refresh</Button>} /> : <div className="account-session-list">{sessions.data.sessions.map((item) => <article key={item.session_id} className="account-session"><div className="account-session-symbol" aria-hidden="true"><Icon name={/mobile|phone|tablet/i.test(item.device_info ?? '') ? 'mobile' : 'desktop'} size={21} /></div><div className="account-session-body"><div className="cluster"><h3>{item.device_info || item.browser || 'Device'}</h3>{item.is_current && <Badge tone="accent">This session</Badge>}</div><p className="muted">{[item.browser, item.os, item.location].filter(Boolean).join(' · ') || 'Device details unavailable'}</p><p className="mono muted">{item.ip_address ?? 'IP unavailable'}</p><p className="muted">Last active {formatDate(item.last_activity)}</p></div><Button variant="ghost" size="sm" disabled={item.is_current || operation.blocked} onClick={() => setTarget(item)}>{item.is_current ? 'Current' : 'End session'}</Button></article>)}</div>}
+    </Card><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void terminate()} title={target === 'others' ? 'End all other sessions?' : 'End this session?'} description={target === 'others' ? 'Other devices will need to sign in again. This session will stay active.' : 'The selected device will need to sign in again.'} confirmLabel="End session" danger busy={operation.busy} /></div>;
 }
 
-function TeamPanel({ user }: { user: Profile }) {
+export function TeamPanel({ user }: { user: Profile }) {
   const { api, refreshSession, metadata } = useApp();
   const operation = useOperation();
   const [memberId, setMemberId] = useState('');
@@ -238,6 +236,6 @@ function TeamPanel({ user }: { user: Profile }) {
   }
   return <div className="stack"><Card><div className="account-card-heading cluster"><div><h2 className="section-title">Organization</h2><p className="muted">Share the account owner’s plan and credit balance with existing APCOSYS users.</p></div><Badge tone="accent">{isMember ? 'Member' : canManage ? 'Owner access' : 'Organization access'}</Badge></div><OperationNotice state={operation.state} onCheck={() => void reconcile()} />
       {user.team?.team_owner_name && <p>Owner: <strong>{user.team.team_owner_name}</strong>{user.team.team_owner_email ? ` · ${user.team.team_owner_email}` : ''}</p>}
-      {canManage ? <><form className="account-member-form" onSubmit={(event) => void add(event)}><Field label="Member user ID" value={memberId} onChange={(event) => { setMemberId(event.target.value); setMemberError(''); }} error={memberError} disabled={operation.busy} required hint="Enter an existing APCOSYS user ID. This does not send an email invitation." /><Button type="submit" loading={operation.busy} disabled={operation.blocked || !memberId.trim()}>Add member</Button></form>{members.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Member</th><th>Added</th><th><span className="muted">Action</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.user_id}><td><strong>{member.user_name || member.user_id}</strong><div className="muted">{member.email || 'No email'}</div></td><td>{formatDate(member.added_at)}</td><td><Button variant="ghost" size="sm" disabled={operation.blocked} onClick={() => setTarget({ id: member.user_id, name: member.user_name || member.user_id })}>Remove</Button></td></tr>)}</tbody></table></div> : <EmptyState title="Your team starts here." description="Add an existing user by their APCOSYS user ID." />}</> : isMember ? <><p className="muted">The owner manages membership. You can leave the organization at any time.</p><Button variant="secondary" disabled={operation.blocked} onClick={() => setTarget('leave')}>Leave organization</Button></> : <Alert tone="info" actions={<Link className="inline-link" to="/billing">View plans →</Link>}>Organization membership is managed by a Business account owner.</Alert>}
+      {canManage ? <><form className="account-member-form" onSubmit={(event) => void add(event)}><Field label="Member user ID" value={memberId} onChange={(event) => { setMemberId(event.target.value); setMemberError(''); }} error={memberError} disabled={operation.busy} required hint="Enter an existing APCOSYS user ID. This does not send an email invitation." /><Button type="submit" loading={operation.busy} disabled={operation.blocked || !memberId.trim()}>Add member</Button></form>{members.length ? <div className="table-wrap account-team-table-wrap"><table className="data-table account-team-table" aria-label="Organization members"><thead><tr><th>Member</th><th>Added</th><th><span className="muted">Action</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.user_id}><td><strong>{member.user_name || member.user_id}</strong><div className="muted">{member.email || 'No email'}</div></td><td data-label="Added">{formatDate(member.added_at)}</td><td><Button variant="ghost" size="sm" disabled={operation.blocked} onClick={() => setTarget({ id: member.user_id, name: member.user_name || member.user_id })}>Remove</Button></td></tr>)}</tbody></table></div> : <EmptyState title="No members yet" description="Add an existing user by their APCOSYS user ID." />}</> : isMember ? <><p className="muted">The owner manages membership. You can leave the organization at any time.</p><Button variant="secondary" disabled={operation.blocked} onClick={() => setTarget('leave')}>Leave organization</Button></> : <Alert tone="info" actions={<Link className="inline-link" to="/billing">View plans →</Link>}>Organization membership is managed by a Business account owner.</Alert>}
     </Card><ConfirmDialog open={target !== null} onClose={() => setTarget(null)} onConfirm={() => void remove()} title={target === 'leave' ? 'Leave this organization?' : 'Remove this member?'} description={target === 'leave' ? 'You will stop using the owner’s shared plan and credits.' : `Remove ${target && typeof target !== 'string' ? target.name : 'this member'} from the shared plan?`} confirmLabel={target === 'leave' ? 'Leave organization' : 'Remove member'} danger busy={operation.busy} /></div>;
 }

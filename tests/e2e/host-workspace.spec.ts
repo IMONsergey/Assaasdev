@@ -23,6 +23,7 @@ test('classifying and returning to a thousand-service list retains local context
   const requests: string[] = [];
   await hostWorkspaceFixture(page, requests);
   await page.goto('/hosts/192.0.2.44');
+  await page.getByRole('tab', { name: /^Services/ }).click();
   const list = page.getByRole('complementary', { name: 'Service list', exact: true });
   await expect(list.locator('.host-service-row')).toHaveCount(25);
   await list.locator('summary').filter({ hasText: 'Classify services' }).click();
@@ -67,8 +68,8 @@ test('all ten thousand received rows are searchable and numerically sortable wit
   await search.fill('odd');
   await expect(page.locator('.host-data-toolbar [role="status"]')).toContainText('5,000 matching');
   await expect(table.locator('tbody tr').first()).toContainText('entry-09999');
-  await page.getByRole('tab', { name: /^Services/ }).click();
-  await page.getByRole('tab', { name: 'Exposed data', exact: true }).click();
+  await page.getByRole('tab', { name: 'Response', exact: true }).click();
+  await page.getByRole('tab', { name: 'Data', exact: true }).click();
   await expect(search).toHaveValue('odd');
   await expect(table.locator('thead th')).toHaveCount(2);
   const pagination = page.getByRole('navigation', { name: 'Pagination', exact: true });
@@ -82,6 +83,7 @@ test('all ten thousand received rows are searchable and numerically sortable wit
 test('service page jump and a deep selection remain reachable on a narrow screen', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
   await page.goto('/hosts/198.51.100.24?port=10999');
+  await page.getByRole('button', { name: 'Back to service list', exact: true }).click();
   const list = page.getByRole('complementary', { name: 'Service list', exact: true });
   const pages = page.getByRole('navigation', { name: 'Received service pages', exact: true });
   await expect(pages).toContainText('40 / 40');
@@ -90,7 +92,8 @@ test('service page jump and a deep selection remain reachable on a narrow screen
   await pages.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(pages).toContainText('20 / 40');
   await expect(list.locator('.host-service-row')).toHaveCount(25);
-  await page.getByRole('button', { name: 'Show selected service', exact: true }).click();
+  await pages.getByRole('spinbutton', { name: 'Go to page', exact: true }).fill('40');
+  await pages.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(pages).toContainText('40 / 40');
   await expect(list.getByRole('button', { pressed: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

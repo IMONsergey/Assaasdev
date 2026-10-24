@@ -92,6 +92,16 @@ export function taskGroup(status: string | undefined): 'active' | 'history' | 'o
 }
 export function taskResultsLabel(task: PrivateTask): string { return task.result_count !== undefined ? task.result_count.toLocaleString() : task.has_results === true ? 'Available' : task.has_results === false ? 'None stored' : 'Not provided'; }
 export function taskHasResults(task: PrivateTask): boolean { return task.has_results === true || (task.result_count !== undefined && task.result_count > 0); }
+export function scheduleLabel(schedule: string | undefined): string {
+  if (schedule === undefined) return 'Not provided';
+  if (schedule === '') return 'One-time scan';
+  const normalized = schedule.trim().replace(/\s+/g, ' ');
+  if (normalized === '0 * * * * *') return 'Every minute';
+  if (normalized === '0 0 * * * *') return 'Every hour';
+  const daily = /^0 ([0-5]?\d) ([01]?\d|2[0-3]) \* \* \*$/.exec(normalized);
+  if (daily) return `Daily at ${daily[2].padStart(2, '0')}:${daily[1].padStart(2, '0')} (scanner time)`;
+  return 'Custom schedule';
+}
 export function draftFromTask(task: PrivateTask | PlanningTask): ScanDraft { return { hosts: (task.host_list || []).join('\n'), cidrs: (task.cidr_list || []).join('\n'), ports: task.port_list?.join(', ') || '', scheduling: task.schedule ? 'cron' : 'once', cron: task.schedule || '0 0 3 * * *' }; }
 export function sameScope(task: PrivateTask | PlanningTask, request: PrivateTaskRequest): boolean {
   const same = (a: (string | number)[] | undefined, b: (string | number)[] | undefined) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());

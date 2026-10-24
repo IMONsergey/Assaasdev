@@ -62,7 +62,7 @@ test('HTTP 202 preserves the return context and a spaced TOTP keeps its leading 
   await page.goto(`/auth/login?returnTo=${encodeURIComponent(destination)}`);
   await signIn(page);
   await expect(page).toHaveURL(/\/auth\/totp(?:\?|$)/);
-  await expect(page.getByRole('heading', { name: 'One more check.', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Two-factor authentication', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Account', exact: true })).toHaveCount(0);
   expect(writes.map(item => item.path)).toEqual(['/backend/auth/login']);
   await enterSpacedCode(page);
@@ -79,7 +79,7 @@ test('an existing pending 2FA session preserves a deep link across the challenge
   const destination = '/account/security?from=deep-link#two-factor';
   await page.goto(destination);
   await expect(page).toHaveURL(url => url.pathname === '/auth/totp' && url.searchParams.get('returnTo') === destination);
-  await expect(page.getByRole('heading', { name: 'One more check.', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Two-factor authentication', exact: true })).toBeVisible();
   await page.reload();
   await enterSpacedCode(page);
   await expect(page).toHaveURL(destination);

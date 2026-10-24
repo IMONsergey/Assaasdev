@@ -18,7 +18,7 @@ function UsageMeter({ usage, label }: { usage: CreditUsage; label: string }) {
 }
 
 export function CreditBalance() {
-  const { user, session, metadata, mode, refreshSession } = useApp();
+  const { user, session, metadata, refreshSession } = useApp();
   const [open, setOpen] = useState(false), [refreshing, setRefreshing] = useState(false), [error, setError] = useState('');
   const dialogId = useId();
   const guest = session.status === 'guest';
@@ -52,7 +52,6 @@ export function CreditBalance() {
       footer={<>{!guest && <Button variant="secondary" loading={refreshing} onClick={() => void refresh()}><Icon name="refresh" size={16} />Refresh balance</Button>}<Link className="button button--primary" to={guest ? '/auth/signup' : '/billing#billing-token-packs'} onClick={() => setOpen(false)}>{guest ? 'Create an account' : 'Plans & credit packs'}<Icon name="arrow" size={16} /></Link></>}>
       <div id={dialogId} className="credit-details stack">
         {error && <Alert tone="error" title="Balance could not be refreshed">{error}</Alert>}
-        {mode === 'demo' && <p className="credit-context">Demo balances · no live charges</p>}
         {teamMember && <p className="credit-context">Your team shares the owner’s credit balance.</p>}
         <section className="credit-detail">
           <div className="credit-detail-heading"><h3>{guest ? 'Daily searches' : 'Search credits'}</h3><span className="credit-plan">{guest ? 'Guest' : user?.subscription?.type ?? 'Your plan'}</span></div>

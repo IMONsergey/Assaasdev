@@ -73,7 +73,7 @@ test('search opens with a centered single-line title and keeps the query after c
   await page.screenshot({ path: test.info().outputPath('search-reference-1440.png'), fullPage: false });
 
   await query.fill('nginx');
-  await page.getByRole('button', { name: 'Add Filter', exact: true }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const conditions = page.getByRole('region', { name: 'Conditions', exact: true });
   await expect(conditions).toBeVisible();
   await conditions.getByRole('button', { name: 'Add condition', exact: true }).click();
@@ -163,12 +163,12 @@ for (const route of ['/search', '/files', '/scanner', '/billing', '/account/secu
 
 test('files export downloads an actual NDJSON stream', async ({ page }) => {
   await page.addInitScript(() => { Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true }); });
-  await page.goto('/files'); await page.getByRole('button', { name: 'Explore sample files' }).click();
+  await page.goto('/files'); await page.getByRole('button', { name: 'Search files' }).click();
   await expect(page.getByRole('heading', { name: /file records/ })).toBeVisible();
   await page.getByRole('button', { name: 'Download records' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export sample data' }).click();
+  await page.getByRole('button', { name: 'Start export' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/apcosys-files-.*\.ndjson$/);
   await expect(page.getByText('Export complete', { exact: true })).toBeVisible();
@@ -196,9 +196,9 @@ for (const failCommit of [false, true]) {
       }) });
     }, { failCommit });
     await page.goto('/files');
-    await page.getByRole('button', { name: 'Explore sample files' }).click();
+    await page.getByRole('button', { name: 'Search files' }).click();
     await page.getByRole('button', { name: 'Download records' }).click();
-    await page.getByRole('button', { name: 'Export sample data' }).click();
+    await page.getByRole('button', { name: 'Start export' }).click();
     if (failCommit) {
       await expect(page.getByText('Export is incomplete', { exact: true })).toBeVisible();
       await expect(page.getByRole('dialog')).toContainText('Its contents are unverified');

@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type Inp
 import { createPortal } from 'react-dom';
 import { asset } from '../config';
 import { lockPageScroll } from '../lib/scroll-lock';
+import { useTabOverflow } from '../lib/tab-overflow';
 
 const join = (...names: (string | undefined | false)[]) => names.filter(Boolean).join(' ');
 
@@ -35,6 +36,9 @@ export function Alert({ tone = 'info', title, children, actions }: { tone?: 'err
 }
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'error'; children: ReactNode }) { return <span className={`badge badge--${tone}`}>{children}</span>; }
 export function Spinner({ label = 'Loading…' }: { label?: string }) { return <span className="loading-state" role="status"><span className="spinner" aria-hidden="true" />{label}</span>; }
+export function Skeleton({ rows = 4, className, label = 'Loading…' }: { rows?: number; className?: string; label?: string }) {
+  return <div className={join('skeleton', className)} role="status" aria-label={label} aria-busy="true"><span className="sr-only">{label}</span><div className="skeleton-heading" aria-hidden="true" /><div className="skeleton-subheading" aria-hidden="true" />{Array.from({ length: rows }, (_, index) => <div className="skeleton-row" key={index} aria-hidden="true"><i /><span><i /><i /></span><i /></div>)}</div>;
+}
 export function Dialog({ open, onClose, title, children, footer, size = 'md', placement = 'center', className }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; size?: 'sm' | 'md' | 'lg'; placement?: 'center' | 'left'; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null), titleId = useId();
   useEffect(() => {
@@ -56,16 +60,12 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, description, co
   return <Dialog open={open} onClose={() => { if (!busy) onClose(); }} title={title} size="sm" footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button variant={danger ? 'danger' : 'primary'} loading={busy} disabled={confirmDisabled} onClick={() => void onConfirm()}>{confirmLabel}</Button></>}><div className="confirm-description">{description}</div></Dialog>;
 }
 export function EmptyState({ title, description, icon, actions }: { title: ReactNode; description?: ReactNode; icon?: ReactNode; actions?: ReactNode }) { return <div className="empty-state">{icon && <div className="empty-state-icon">{icon}</div>}<h2>{title}</h2>{description && <p>{description}</p>}{actions && <div className="cluster">{actions}</div>}</div>; }
-export function Tabs({ items, value, onChange }: { items: { id: string; label: ReactNode; count?: number }[]; value: string; onChange: (id: string) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const list = ref.current, selected = list?.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (!list || !selected || list.scrollWidth <= list.clientWidth) return;
-    const listBox = list.getBoundingClientRect(), selectedBox = selected.getBoundingClientRect();
-    if (selectedBox.left < listBox.left) list.scrollLeft -= listBox.left - selectedBox.left + 4;
-    else if (selectedBox.right > listBox.right) list.scrollLeft += selectedBox.right - listBox.right + 4;
-  }, [value]);
-  return <div ref={ref} className="tabs" role="tablist" onKeyDown={e => { const index = items.findIndex(item => item.id === value); const next = e.key === 'ArrowRight' ? (index + 1) % items.length : e.key === 'ArrowLeft' ? (index + items.length - 1) % items.length : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1; if (next >= 0 && items[next]) { e.preventDefault(); onChange(items[next].id); (e.currentTarget.children[next] as HTMLElement).focus({ preventScroll: true }); } }}>{items.map(item => <button key={item.id} type="button" role="tab" aria-selected={value === item.id} tabIndex={value === item.id ? 0 : -1} onClick={() => onChange(item.id)}>{item.label}{item.count !== undefined && <span className="tab-count">{item.count}</span>}</button>)}</div>;
+export function Tabs({ items, value, onChange, variant = 'line', ariaLabel = 'Sections', idPrefix }: { items: { id: string; label: ReactNode; count?: number; icon?: string }[]; value: string; onChange: (id: string) => void; variant?: 'line' | 'segmented'; ariaLabel?: string; idPrefix?: string }) {
+  const { ref, overflow } = useTabOverflow(value);
+  return <div ref={ref} data-tab-overflow={overflow} className={`tabs tabs--${variant}`} role="tablist" aria-label={ariaLabel} onKeyDown={e => { const index = items.findIndex(item => item.id === value); const next = e.key === 'ArrowRight' ? (index + 1) % items.length : e.key === 'ArrowLeft' ? (index + items.length - 1) % items.length : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1; if (next >= 0 && items[next]) { e.preventDefault(); onChange(items[next].id); (e.currentTarget.children[next] as HTMLElement).focus({ preventScroll: true }); } }}>{items.map(item => <button key={item.id} id={idPrefix ? `${idPrefix}-tab-${item.id}` : undefined} aria-controls={idPrefix ? `${idPrefix}-panel-${item.id}` : undefined} type="button" role="tab" aria-selected={value === item.id} tabIndex={value === item.id ? 0 : -1} onClick={() => onChange(item.id)}>{item.icon && <Icon name={item.icon} size={17} />}{item.label}{item.count !== undefined && <span className="tab-count">{item.count}</span>}</button>)}</div>;
+}
+export function TabPanel({ idPrefix, value, children, hidden, className }: { idPrefix: string; value: string; children: ReactNode; hidden?: boolean; className?: string }) {
+  return <section id={`${idPrefix}-panel-${value}`} role="tabpanel" aria-labelledby={`${idPrefix}-tab-${value}`} hidden={hidden} className={join('tab-panel', className)}>{children}</section>;
 }
 export function Pagination({ page, pageSize, count, total, maxPage, disabled = false, onPageChange }: { page: number; pageSize: number; count: number; total?: number; maxPage?: number; disabled?: boolean; onPageChange: (page: number) => void }) {
   const knownTotal = total !== undefined && Number.isFinite(total) && total >= 0 ? total : undefined;
@@ -82,28 +82,21 @@ export function Pagination({ page, pageSize, count, total, maxPage, disabled = f
   </nav>;
 }
 
-const figmaIcons: Record<string, string> = { search: 'home/imgIconSearch.svg', database: 'home/imgIconDatabase.svg', files: 'home/imgIconDatabase.svg', scan: 'home/imgIconScan.svg', code: 'home/imgIconCode.svg', api: 'home/imgIconCode.svg', card: 'home/imgIconCard.svg', bell: 'home/imgIconBell.svg', copy: 'results-heading/imgIconCopy.svg', download: 'results-heading/imgIconDownload.svg', external: 'host/imgIconExternal.svg' };
-const tablerIcons = new Set(['settings', 'help-circle', 'bookmark', 'chevrons-left', 'chevrons-right']);
-const paths: Record<string, ReactNode> = {
-  menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>, close: <path d="m6 6 12 12M6 18 18 6" />,
-  'chevron-left': <path d="m14 5-7 7 7 7" />, 'chevron-right': <path d="m10 5 7 7-7 7" />, 'chevron-down': <path d="m5 9 7 7 7-7" />,
-  plus: <path d="M12 5v14M5 12h14" />, arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
-  check: <path d="m5 12 4 4L19 6" />,
-  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></>,
-  moon: <path d="M20 14.3A8.5 8.5 0 0 1 9.7 4a8.5 8.5 0 1 0 10.3 10.3Z" />,
-  refresh: <><path d="M20 4v5h-5M4 20v-5h5" /><path d="M5.5 8a7 7 0 0 1 12-2L20 9M4 15l2.5 3a7 7 0 0 0 12-2" /></>,
-  filter: <path d="M4 5h16l-6 7v7l-4-2v-5Z" />,
-  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-  user: <><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></>,
-  lock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 1 1 8 0v3m-4 4v3" /></>,
-  logout: <><path d="M9 4H4v16h5M10 12h11m-4-4 4 4-4 4" /></>,
-  trash: <><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7" /></>,
-  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6m0-10h.01" /></>,
-  grid: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
-  list: <path d="M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01" />,
+const iconNames: Record<string, string> = {
+  edit: 'pencil', 'chevron-up': 'chevron-up', mobile: 'device-mobile', share: 'link', x: 'x',
+  search: 'search', database: 'database', files: 'file-text', scan: 'scan', code: 'code', api: 'code', card: 'credit-card',
+  bell: 'bell', copy: 'copy', download: 'download', external: 'external-link', menu: 'menu-2', close: 'x',
+  'chevron-left': 'chevron-left', 'chevron-right': 'chevron-right', 'chevron-down': 'chevron-down',
+  'chevrons-left': 'chevrons-left', 'chevrons-right': 'chevrons-right', plus: 'plus', arrow: 'arrow-right',
+  check: 'check', sun: 'sun', moon: 'moon', refresh: 'refresh', filter: 'filter', clock: 'clock', user: 'user',
+  lock: 'lock', logout: 'logout', trash: 'trash', info: 'info-circle', grid: 'layout-grid', list: 'list',
+  settings: 'settings', 'help-circle': 'help-circle', bookmark: 'bookmark', server: 'server', globe: 'world',
+  shield: 'shield-check', package: 'package', key: 'key', desktop: 'device-desktop', users: 'users', mail: 'mail',
+  adjustments: 'adjustments-horizontal', chart: 'chart-bar', alert: 'alert-circle', success: 'circle-check',
+  file: 'file-text', more: 'dots', eye: 'eye', 'eye-off': 'eye-off', calendar: 'calendar', link: 'link',
+  'arrow-up-right': 'arrow-up-right', 'arrow-left': 'arrow-left', folder: 'folder', receipt: 'receipt', wallet: 'wallet',
 };
 export function Icon({ name, size = 20, className }: { name: string; size?: number; className?: string }) {
-  const iconPath = figmaIcons[name] ? `figma/${figmaIcons[name]}` : tablerIcons.has(name) ? `icons/${name}.svg` : null;
-  if (iconPath) return <span className={join('icon icon--asset', className)} style={{ width: size, height: size, maskImage: `url("${asset(iconPath)}")`, WebkitMaskImage: `url("${asset(iconPath)}")` }} aria-hidden="true" />;
-  return <svg className={join('icon', className)} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.info}</svg>;
+  const path = asset(`icons/${iconNames[name] ?? 'info-circle'}.svg`);
+  return <span className={join('icon icon--asset', className)} style={{ width: size, height: size, maskImage: `url("${path}")`, WebkitMaskImage: `url("${path}")` }} aria-hidden="true" />;
 }

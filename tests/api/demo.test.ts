@@ -36,7 +36,7 @@ describe('in-memory demo implements meaningful client behavior', () => {
     expect(frame.data).toHaveLength(4);
     expect((await api.http<Profile>('/whoami')).credits).toBe(1_240_499);
     expect((await another.http<Profile>('/whoami')).credits).toBe(1_240_500);
-    await expect(api.request('hosts', { simple_search_filters: [{ field: 'unimplemented_demo_field', value: 'x' }] })).rejects.toThrow('do not implement');
+    await expect(api.request('hosts', { simple_search_filters: [{ field: 'unimplemented_demo_field', value: 'x' }] })).rejects.toThrow('is unavailable');
   });
 
   it('emits complete facet streams with host counts separate from service record counts', async () => {
@@ -57,14 +57,14 @@ describe('in-memory demo implements meaningful client behavior', () => {
     expect(publicFrames.map(frame => frame.type)).toEqual(['dnsinfo', 'hostinfo', 'whois', 'domain_ip_map']);
     expect(new Set(publicFrames.map(frame => frame.id)).size).toBe(1); expect(publicFrames.every(frame => !frame.metadata)).toBe(true);
     expect((publicFrames[1].data as { ports: unknown[] }).ports).toHaveLength(1000);
-    const privateFrames = await collect(api, 'private_hostinfo', { ip: '192.0.2.10', task_ids: ['task-demo-001'] });
+    const privateFrames = await collect(api, 'private_hostinfo', { ip: '192.0.2.10', task_ids: ['scan_001'] });
     expect(privateFrames).toHaveLength(3); expect(privateFrames.every(frame => frame.id === undefined && frame.metadata === undefined)).toBe(true);
     expect((privateFrames.find(frame => frame.type === 'private_hostinfo')?.data as { ports: unknown[] }).ports).toHaveLength(100);
   });
 
   it('saves exact nested JSON, deletes only a chosen saved query and enforces the cap', async () => {
     const api = createDemoApi(), initial = (await api.request<SavedQuery[]>('query_list')).data!;
-    const query = { task_ids: ['task-demo-002'], range_filter: [{ field: 'uts', start: '100' }], page: 1, simple_search_filters: [{ operator: 'NOT', filters: [{ field: 'port', value: '22' }] }] };
+    const query = { task_ids: ['scan_002'], range_filter: [{ field: 'uts', start: '100' }], page: 1, simple_search_filters: [{ operator: 'NOT', filters: [{ field: 'port', value: '22' }] }] };
     await api.request('query_create', query);
     const saved = (await api.request<SavedQuery[]>('query_list')).data!; expect(JSON.parse(saved[0].query)).toEqual(query);
     await api.request('query_delete', { id: saved[0].id });
@@ -136,7 +136,7 @@ describe('in-memory demo implements meaningful client behavior', () => {
 
   it('keeps the current session when terminating others and deletes all sessions at logout', async () => {
     const api = createDemoApi(); const observed: ApiFrame[] = []; api.subscribe(frame => observed.push(frame));
-    await expect(api.request('terminate_user_session', { session_id: 'demo-current-session' })).rejects.toThrow('current session');
+    await expect(api.request('terminate_user_session', { session_id: 'session_current' })).rejects.toThrow('current session');
     const response = await api.request('terminate_all_sessions', {});
     const followup = observed.find(frame => frame.type === 'user_sessions' && frame.id === response.id);
     expect((followup?.data as SessionData).sessions).toHaveLength(1); expect((followup?.data as SessionData).sessions[0].is_current).toBe(true);
@@ -152,17 +152,17 @@ describe('in-memory demo implements meaningful client behavior', () => {
     expect(task.task_count).toBe(30); expect(task.done_task_count).toBe(0); expect(task.has_results).toBe(false); expect(task.status).toBe('queued');
     expect((await api.http<Profile>('/whoami')).scan_credits).toBe(327650);
     expect((await api.request<HostCard[]>('private_hosts', { task_ids: [task.id] })).data).toEqual([]);
-    await api.request('private_task_results_delete', { task_ids: ['task-demo-001'] });
-    expect((await api.request<HostCard[]>('private_hosts', { task_ids: ['task-demo-001'] })).data).toEqual([]);
+    await api.request('private_task_results_delete', { task_ids: ['scan_001'] });
+    expect((await api.request<HostCard[]>('private_hosts', { task_ids: ['scan_001'] })).data).toEqual([]);
     expect((await api.request<HostCard[]>('hosts', {})).data).toHaveLength(12);
-    expect((await api.request<PrivateTask[]>('private_tasks_get')).data?.find(task => task.id === 'task-demo-001')?.has_results).toBe(false);
+    expect((await api.request<PrivateTask[]>('private_tasks_get')).data?.find(task => task.id === 'scan_001')?.has_results).toBe(false);
     await api.request('private_task_remove', { id: task.id }); expect((await api.request<PrivateTask[]>('private_tasks_get')).data?.some(item => item.id === task.id)).toBe(false);
   });
 
   it('updates and removes a planning record without deleting a separate historical task', async () => {
-    const api = createDemoApi(); await api.request('private_task_update', { id: 'plan-demo-001', schedule: '0 30 4 * * *' });
+    const api = createDemoApi(); await api.request('private_task_update', { id: 'schedule_001', schedule: '0 30 4 * * *' });
     expect((await api.request<PlanningTask[]>('private_planning_tasks_get')).data?.[0].schedule).toBe('0 30 4 * * *');
-    await api.request('private_planning_task_remove', { id: 'plan-demo-001' });
+    await api.request('private_planning_task_remove', { id: 'schedule_001' });
     expect((await api.request<PlanningTask[]>('private_planning_tasks_get')).data).toEqual([]);
     expect((await api.request<PrivateTask[]>('private_tasks_get')).data).toHaveLength(3);
   });
@@ -195,8 +195,8 @@ describe('in-memory demo implements meaningful client behavior', () => {
     const after = await api.http<Profile>('/whoami'); expect(after.balance).toBe(before.balance); expect(after.subscription).toEqual(before.subscription);
     await api.request('delete_payment', { payment_id: invoice.data?.payment_id });
     expect((await api.request<BillingData>('user_billing', {})).data?.payments?.some(payment => payment.payment_id === invoice.data?.payment_id)).toBe(false);
-    await expect(api.request('init_checkout', { subscription: 'Plus', cadence: 'monthly' })).rejects.toThrow('not connected');
-    await expect(api.request('billing_manage')).rejects.toThrow('not connected');
+    await expect(api.request('init_checkout', { subscription: 'Plus', cadence: 'monthly' })).rejects.toThrow('Payment service unavailable');
+    await expect(api.request('billing_manage')).rejects.toThrow('Payment service unavailable');
   });
 
   it('preserves huge crypto unit strings in read-only fixtures without settling payments', async () => {
@@ -241,7 +241,7 @@ describe('in-memory demo implements meaningful client behavior', () => {
     const response = await api.raw('/download/bulk/stream', post({ download_mode: 'partial', max_documents: 3 }));
     expect(response.bodyUsed).toBe(false); expect(response.headers.get('content-type')).toBe('application/x-ndjson');
     const rows = (await response.text()).trim().split('\n').map(row => JSON.parse(row)); expect(rows).toHaveLength(3); expect(rows[0].ip).toBe('192.0.2.10');
-    const files = await api.raw('/download/buckets/stream', post({ download_mode: 'files', format: 'csv' })); expect(await files.text()).toContain('demo-empty.log');
+    const files = await api.raw('/download/buckets/stream', post({ download_mode: 'files', format: 'csv' })); expect(await files.text()).toContain('empty.log');
     await expect(api.raw('/download/bulk/stream', post({ download_mode: 'full', format: 'csv' }))).rejects.toThrow('csv is not supported');
     await expect(api.raw('/download/bulk/stream', { ...post({ download_mode: 'partial' }), headers: { Range: 'bytes=1048576-' } })).rejects.toMatchObject({ status: 501 });
   });

@@ -8,12 +8,12 @@ test('left filter drawers keep their actions reachable with dark theme and enlar
     for (const kind of ['search', 'files']) {
       await page.goto(kind === 'search' ? '/search?q=example&run=1' : '/files');
       await expect(page.locator('h1')).toBeVisible();
-      await page.getByRole('button', { name: kind === 'search' ? 'Add Filter' : 'Filters', exact: true }).click();
+      await page.getByRole('button', { name: 'Filters', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: kind === 'search' ? 'Filters' : 'File filters', exact: true });
       await expect(dialog).toBeVisible();
       if (kind === 'search') {
-        await dialog.getByRole('button', { name: 'Add AND / OR / NOT group', exact: true }).click();
-        await dialog.getByRole('button', { name: 'Add group', exact: true }).last().click();
+        await dialog.getByRole('button', { name: 'Add group', exact: true }).click();
+        await dialog.locator('.search-condition-group').first().getByRole('button', { name: 'Add group', exact: true }).click();
       }
       const box = await dialog.boundingBox();
       expect(box!.x).toBe(0);
