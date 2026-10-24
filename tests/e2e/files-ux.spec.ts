@@ -33,6 +33,7 @@ async function controlledFiles(page: Page) {
 }
 
 test('completed file and bucket views survive tab changes while an in-flight request continues and export matches its source', async ({ page }) => {
+  await page.clock.install();
   await page.addInitScript(() => Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined }));
   const fixture = await controlledFiles(page);
   await page.goto('/files');
@@ -48,6 +49,16 @@ test('completed file and bucket views survive tab changes while an in-flight req
   fixture.releaseBuckets();
   await page.getByRole('tab', { name: 'Buckets', exact: true }).click();
   await expect(page.getByRole('heading', { name: '1 bucket record', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Files', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '1 file record', exact: true })).toBeVisible();
+  // Files is rendered from an inactive cache entry while Buckets owns the query
+  // observer. It must survive the former GC deadline and an unrelated rerender.
+  await page.clock.fastForward(61_000);
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('dialog', { name: 'File filters', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '1 file record', exact: true })).toBeVisible();
+  expect(fixture.requests.filter(frame => frame.type === 'buckets')).toHaveLength(1);
+  expect(fixture.requests.filter(frame => frame.type === 'bucket_analytics')).toHaveLength(1);
   for (const [tab, mode] of [['Buckets', 'hosts'], ['Files', 'files']] as const) {
     await page.getByRole('tab', { name: tab, exact: true }).click();
     await page.getByRole('button', { name: 'Download records', exact: true }).click();

@@ -56,7 +56,9 @@ export function FilesPage() {
   const results = useQuery<Result>({
     queryKey, enabled: !!job && job.principal === principal && permitted && !paused,
     retry: false, refetchOnMount: false, refetchOnWindowFocus: false, refetchOnReconnect: false,
-    staleTime: Infinity, gcTime: 60000,
+    // An inactive query can still supply the visible sibling tab. Keep it until
+    // the bounded snapshot pruning below or the account's cache reset removes it.
+    staleTime: Infinity, gcTime: Infinity,
     placeholderData: previous => previous?.principal === principal && previous.view === job?.view ? previous : undefined,
     queryFn: async ({ signal }) => {
       if (!job) throw new Error('Start a file search first.');
@@ -90,7 +92,8 @@ export function FilesPage() {
     return () => cancelAnimationFrame(frame);
   }, [advanced]);
   useEffect(() => {
-    // At most six completed result snapshots; no data survives a principal change.
+    // Keep at most five inactive snapshots plus the current query, including
+    // earlier visits to this page. AppProvider clears the cache on identity changes.
     const entries = queryClient.getQueryCache().findAll({ queryKey: ['bucket-results', principal], type: 'inactive' }).sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt);
     for (const entry of entries.slice(5)) queryClient.removeQueries({ queryKey: entry.queryKey, exact: true });
   }, [job?.sequence, results.dataUpdatedAt, principal, queryClient]);
