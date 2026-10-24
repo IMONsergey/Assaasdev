@@ -8,8 +8,11 @@ async function start(page:Page,id:string) {
   await page.getByRole('dialog').getByRole('button',{name:'Start scenario',exact:true}).click();
   await expect(guideOf(page)).toBeVisible();
 }
-async function expand(guide:Locator) {
-  if(await guide.getByRole('button',{name:'Expand scenario guide'}).isVisible()) await guide.getByRole('button',{name:'Expand scenario guide'}).click();
+async function expectExpanded(guide:Locator) {
+  // These callers have just advanced a step. The guide clears its temporary
+  // mobile editing state on the next layout frame, so wait for that transition.
+  await expect(guide.getByRole('button',{name:'Minimize scenario guide',exact:true})).toHaveAttribute('aria-expanded','true');
+  await expect(guide.locator('.scenario-guide-body')).toBeVisible();
 }
 async function searchApi(page:Page) {
   const requests:Array<{type:string;data:Record<string,unknown>}>=[];
@@ -58,7 +61,7 @@ for(const width of [1440,390]) test(`history guide restores a draft and waits fo
   await page.locator('.search-query-bar').getByRole('button',{name:'Run search',exact:true}).click();
   await expect(guide).toContainText('Step 4 of 4');
   expect(requests.filter(item=>item.type==='hosts')).toHaveLength(2);
-  await expand(guide); await guide.getByRole('button',{name:'Finish walkthrough'}).click();
+  await expectExpanded(guide); await guide.getByRole('button',{name:'Finish walkthrough'}).click();
   await expect(guide).toContainText('3 actions observed');
 });
 
@@ -67,7 +70,7 @@ test('clear-history guide requires confirmation, observes Undo and never starts 
   const requests=await searchApi(page);
   await start(page,'manage-search-history'); const guide=guideOf(page);
   await run(page); await expect(guide).toContainText('Step 2 of 4');
-  await expand(guide); await guide.getByRole('button',{name:'Review clearing history',exact:true}).click();
+  await expectExpanded(guide); await guide.getByRole('button',{name:'Review clearing history',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'Clear search history?',exact:true});
   await expect(guide).toContainText('Step 3 of 4'); await noModalOverlap(page,dialog);
   await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
@@ -105,7 +108,7 @@ for(const width of [390,320]) test(`avatar guide observes a local photo save and
   await page.locator('[data-onboarding="avatar-save"]').click();
   await expect(guide).toContainText('Step 4 of 4');
   await expect(page.locator('.profile-avatar-button img')).toHaveAttribute('src',/^data:image\//);
-  await expand(guide); await guide.getByRole('button',{name:'Finish walkthrough'}).click();
+  await expectExpanded(guide); await guide.getByRole('button',{name:'Finish walkthrough'}).click();
   await expect(guide).toContainText('3 actions observed');
   await guide.getByRole('button',{name:'Close scenario guide'}).click();
   expect(await page.locator('dialog:has(>.scenario-tour-layer[data-docked="true"])').count()).toBe(0);

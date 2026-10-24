@@ -75,8 +75,11 @@ test('mobile settings and avatar controls stay reachable with dark theme and lar
   const picker = page.getByRole('dialog', { name: 'Choose your avatar', exact: true });
   await expect(picker.getByRole('button', { name: 'Use avatar', exact: true })).toBeInViewport();
   expect((await picker.getByRole('button', { name: 'Use avatar', exact: true }).boundingBox())!.height).toBeLessThanOrEqual(48);
-  await picker.getByRole('radio', { name: 'Avatar 20: Joy', exact: true }).check();
-  await expect(picker.getByRole('radio', { name: 'Avatar 20: Joy', exact: true })).toBeInViewport();
+  const lastAvatar = picker.getByRole('radio', { name: 'Avatar 20: Joy', exact: true });
+  // The initial preset is random: check() skips scrolling when Joy is already selected.
+  await lastAvatar.click();
+  await expect(lastAvatar).toBeChecked();
+  await expect(lastAvatar).toBeInViewport();
   await page.screenshot({ path: testInfo.outputPath('avatar-picker-320-dark-large.png') });
   await picker.getByRole('button', { name: 'Use avatar', exact: true }).click();
   await expect(page.locator('.profile-avatar-button img')).toHaveAttribute('src', /avatar-20\.svg$/);

@@ -80,9 +80,9 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`a copied
     await expect(page.locator('.app-shell:not([inert])')).toBeVisible();
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     await expect(match).toBeFocused();
+    await expect(match).toBeInViewport();
   }
   await expectStableFieldFocus();
-  await expect(match).toBeInViewport();
   await page.getByRole('button', { name: 'Copy link to this section', exact: true }).click();
   const copied = await page.evaluate(() => (window as unknown as { __docLinks: string[] }).__docLinks[0]);
   expect(new URL(copied).pathname + new URL(copied).search + new URL(copied).hash).toBe(target);

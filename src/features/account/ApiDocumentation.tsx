@@ -150,19 +150,22 @@ export function ApiDocumentation() {
     copyOperation.current++;
     setCopied(false); setCopyError('');
     const changed = previousTopic.current !== topic.id;
-    previousTopic.current = topic.id;
     const wasInitial = initial.current;
     const scroll = navigated.current || (changed && navigation !== 'POP') || (wasInitial && Boolean(selection.field));
-    initial.current = false; navigated.current = false;
     const restore = !wasInitial && navigation === 'POP' && document.activeElement === document.body;
-    if (!scroll && !restore) return;
+    const completeNavigation = () => { previousTopic.current = topic.id; initial.current = false; navigated.current = false; };
+    if (!scroll && !restore) { completeNavigation(); return; }
     const focus = () => {
       const target = article.current?.querySelector<HTMLElement>('[data-doc-match="true"]') ?? article.current;
-      for (let parent = target?.parentElement; parent && parent !== article.current; parent = parent.parentElement) {
+      if (!target) return;
+      for (let parent = target.parentElement; parent && parent !== article.current; parent = parent.parentElement) {
         if (parent instanceof HTMLDetailsElement) parent.open = true;
       }
-      target?.focus({ preventScroll: true });
-      if (scroll) target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      target.focus({ preventScroll: true });
+      if (scroll) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+      // Keep the pending intent until it runs. An effect replay or navigation
+      // can cancel the inert observer while the welcome screen is still open.
+      completeNavigation();
     };
     const shell = article.current?.closest('.app-shell');
     if (!shell?.hasAttribute('inert')) { focus(); return; }
