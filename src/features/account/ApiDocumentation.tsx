@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useNavigationType } from 'react-router';
 import { CodeCanvas } from '../../components/CodeCanvas';
 import { Badge, Button, Icon, Tabs, TabPanel } from '../../components/ui';
 import {
   API_BASE_URL, API_DOCS_SOURCE, API_ENDPOINTS, API_ERRORS, API_PLANS, DOC_TOPICS,
   RESTRICTED_FIELDS, RESTRICTED_VALUES, buildApiExample, docHref, filterGroups,
-  filterShape, rangeShape, resolveDocTopic, searchDocTopics,
-  type ApiEndpoint, type DocField, type ExampleLanguage, type SchemaGroup,
+  filterShape, rangeShape, resolveDocTopic, resolveDocSelection, searchDocSelection, searchDocTopics,
+  type ApiEndpoint, type DocField, type DocSelection, type ExampleLanguage, type SchemaGroup,
 } from './api-docs-model';
 import './api-docs.css';
 
@@ -16,16 +16,16 @@ function DocLink({ id, children }: { id: string; children: ReactNode }) {
   return <Link to={docHref(id)} state={{ preserveTabFocus: true }}>{children}</Link>;
 }
 
-function FieldTable({ fields, caption }: { fields: DocField[]; caption: string }) {
+function FieldTable({ fields, caption, selectedField }: { fields: DocField[]; caption: string; selectedField?: string }) {
   return <div className="api-docs-fields" role="region" aria-label={caption}>
     <table><caption className="sr-only">{caption}</caption><thead><tr><th scope="col">Field</th><th scope="col">Description</th></tr></thead><tbody>
-      {fields.map(item => <tr key={item.name}><th scope="row"><code>{item.name}</code><span className="api-docs-field-meta">{item.type}{item.required && <strong>Required</strong>}</span></th><td><p>{item.description}</p>{item.defaultValue !== undefined && <span className="api-docs-field-default">Default: <code>{item.defaultValue}</code></span>}{item.access && <span className="api-docs-field-access">{item.access}</span>}</td></tr>)}
+      {fields.map(item => <tr key={item.name} tabIndex={selectedField === item.name ? -1 : undefined} data-doc-match={selectedField === item.name || undefined}><th scope="row"><code>{item.name}</code><span className="api-docs-field-meta">{item.type}{item.required && <strong>Required</strong>}</span></th><td><p>{item.description}</p>{item.defaultValue !== undefined && <span className="api-docs-field-default">Default: <code>{item.defaultValue}</code></span>}{item.access && <span className="api-docs-field-access">{item.access}</span>}</td></tr>)}
     </tbody></table>
   </div>;
 }
 
-function Schema({ groups }: { groups: SchemaGroup[] }) {
-  return <div className="api-docs-schema">{groups.map((group, index) => index === 0 ? <section key={group.title}><h3>{group.title}</h3>{group.note && <p className="api-docs-note">{group.note}</p>}<FieldTable fields={group.fields} caption={`${group.title} fields`} /></section> : <details className="api-docs-details" key={group.title} open={undefined}><summary><span>{group.title}<small>{group.fields.length} fields</small></span><Icon name="chevron-down" size={17} /></summary>{group.note && <p className="api-docs-note">{group.note}</p>}<FieldTable fields={group.fields} caption={`${group.title} fields`} /></details>)}</div>;
+function Schema({ groups, selection }: { groups: SchemaGroup[]; selection?: DocSelection }) {
+  return <div className="api-docs-schema">{groups.map((group, index) => index === 0 ? <section key={group.title}><h3>{group.title}</h3>{group.note && <p className="api-docs-note">{group.note}</p>}<FieldTable fields={group.fields} caption={`${group.title} fields`} selectedField={selection?.group === group.title ? selection.field : undefined} /></section> : <details className="api-docs-details" key={group.title} open={selection?.group === group.title || undefined}><summary><span>{group.title}<small>{group.fields.length} fields</small></span><Icon name="chevron-down" size={17} /></summary>{group.note && <p className="api-docs-note">{group.note}</p>}<FieldTable fields={group.fields} caption={`${group.title} fields`} selectedField={selection?.group === group.title ? selection.field : undefined} /></details>)}</div>;
 }
 
 function RequestExample({ endpoint, id = endpoint.id }: { endpoint: ApiEndpoint; id?: string }) {
@@ -41,22 +41,25 @@ function RequestExample({ endpoint, id = endpoint.id }: { endpoint: ApiEndpoint;
   </section>;
 }
 
-function EndpointArticle({ endpoint }: { endpoint: ApiEndpoint }) {
-  const [view, setView] = useState('request');
+function EndpointArticle({ endpoint, selection, onViewChange }: { endpoint: ApiEndpoint; selection: DocSelection; onViewChange: (view: DocSelection['view']) => void }) {
+  const view = selection.view;
   const prefix = `api-reference-${endpoint.id}`;
+  useLayoutEffect(() => {
+    if (document.activeElement?.id.startsWith(`${prefix}-tab-`)) document.getElementById(`${prefix}-tab-${view}`)?.focus({ preventScroll: true });
+  }, [prefix, view]);
   return <>
     <div className="api-docs-endpoint-path"><span className={`api-docs-method api-docs-method--${endpoint.method.toLowerCase()}`}>{endpoint.method}</span><code>/api/v1{endpoint.path}</code></div>
     <div className="api-docs-meta"><Badge>{endpoint.access}</Badge><span>{endpoint.cost} {endpoint.cost === 1 ? 'allowance unit' : 'allowance units'} per request</span><DocLink id="authentication">X-API-Key required</DocLink></div>
     {endpoint.notes && <ul className="api-docs-notes">{endpoint.notes.map(note => <li key={note}>{note}</li>)}</ul>}
-    <Tabs idPrefix={prefix} ariaLabel={`${endpoint.title} reference`} items={[{ id: 'request', label: 'Request' }, { id: 'response', label: 'Response' }]} value={view} onChange={setView} />
+    <Tabs idPrefix={prefix} ariaLabel={`${endpoint.title} reference`} items={[{ id: 'request', label: 'Request' }, { id: 'response', label: 'Response' }]} value={view} onChange={next => onViewChange(next as DocSelection['view'])} />
     <TabPanel idPrefix={prefix} value="request" hidden={view !== 'request'}>
       <RequestExample endpoint={endpoint} />
-      <section className="api-docs-section"><div className="api-docs-section-heading"><h3>{endpoint.method === 'GET' ? 'Path parameter' : 'Request body'}</h3>{endpoint.method === 'POST' && <span>JSON · fields are optional</span>}</div><FieldTable fields={endpoint.request} caption={`${endpoint.title} request parameters`} /></section>
+      <section className="api-docs-section"><div className="api-docs-section-heading"><h3>{endpoint.method === 'GET' ? 'Path parameter' : 'Request body'}</h3>{endpoint.method === 'POST' && <span>JSON · fields are optional</span>}</div><FieldTable fields={endpoint.request} caption={`${endpoint.title} request parameters`} selectedField={view === 'request' ? selection.field : undefined} /></section>
       {endpoint.group !== 'Buckets' && endpoint.method === 'POST' && <p className="api-docs-next-note"><Icon name="info" size={16} /><span>For condition groups, field names and ranges, see <DocLink id="filters">Filters & syntax</DocLink>.</span></p>}
     </TabPanel>
     <TabPanel idPrefix={prefix} value="response" hidden={view !== 'response'}>
       <section className="api-docs-section"><div className="api-docs-section-heading"><h3>200 OK</h3><span>Illustrative response · values are examples</span></div><CodeCanvas content={JSON.stringify(endpoint.exampleResponse, null, 2)} language="json" title="Response example" className="api-docs-code" /></section>
-      <Schema groups={endpoint.response} />
+      <Schema groups={endpoint.response} selection={view === 'response' ? selection : undefined} />
       <p className="api-docs-next-note"><Icon name="info" size={16} /><span>Non-success responses contain an <code>error</code> string. See <DocLink id="errors">Errors</DocLink> for status codes.</span></p>
     </TabPanel>
   </>;
@@ -87,14 +90,14 @@ function Authentication() {
 }
 
 const nestedExample = { simple_search_filters: [{ operator: 'OR', filters: [{ field: 'port', value: '80' }, { field: 'port', value: '443' }] }, { field: 'country_code', value: 'DE' }] };
-function Filters() {
+function Filters({ selection }: { selection: DocSelection }) {
   return <>
     <p>Host search and analytics share the same filter model. Bucket endpoints use their own <DocLink id="search-buckets">request fields</DocLink>.</p>
     <section className="api-docs-section"><h3>Combine conditions</h3><p>Use a nonempty <code>field</code> and <code>value</code> for each leaf. Use <code>operator</code> with nested <code>filters</code> to combine groups.</p><FieldTable fields={filterShape} caption="Search filter shape" /><CodeCanvas content={JSON.stringify(nestedExample, null, 2)} language="json" title="Ports 80 or 443, in Germany" /></section>
     <section className="api-docs-section"><h3>Value syntax</h3><div className="api-docs-table-wrap" tabIndex={0} role="region" aria-label="API value syntax"><table className="api-docs-table"><thead><tr><th>Syntax</th><th>Meaning</th><th>Example</th></tr></thead><tbody><tr><td>Plain text</td><td>Term or text match, depending on field type</td><td><code>nginx</code></td></tr><tr><td>Quoted text</td><td>Exact phrase in a text field</td><td><code>"Welcome to nginx"</code></td></tr><tr><td>Parentheses</td><td>All words must match in a text field</td><td><code>(apache httpd)</code></td></tr><tr><td>Wildcards</td><td><code>*</code> and <code>?</code> on keyword fields/subfields</td><td><code>CVE-2021-*</code></td></tr><tr><td>Comma-separated</td><td>Multiple values joined with OR</td><td><code>80,443</code></td></tr></tbody></table></div></section>
     <section className="api-docs-section"><h3>Inclusive ranges</h3><p>Use <code>range_filter</code> for numeric values and Unix timestamps in seconds. Plan restrictions also apply to fields inside ranges.</p><FieldTable fields={rangeShape} caption="Range filter shape" /></section>
     <section className="api-docs-section"><h3>HTTP headers</h3><p>Use <code>headers.k</code> for an exact header name, <code>headers.v</code> for a text value, or <code>headers.&#123;Name&#125;</code> for both together.</p><CodeCanvas content={JSON.stringify({ simple_search_filters: [{ field: 'headers.Server', value: 'nginx' }] }, null, 2)} language="json" title="Server header contains nginx" /></section>
-    <section className="api-docs-section"><h3>Available search fields</h3><p>Current names are <code>products</code>, <code>vendors</code>, <code>cve_id</code> and <code>headers</code>. Avoid legacy names such as <code>product_name</code>, <code>vendor_name</code> and <code>product_cve</code>.</p><Schema groups={filterGroups} /></section>
+    <section className="api-docs-section"><h3>Available search fields</h3><p>Current names are <code>products</code>, <code>vendors</code>, <code>cve_id</code> and <code>headers</code>. Avoid legacy names such as <code>product_name</code>, <code>vendor_name</code> and <code>product_cve</code>.</p><Schema groups={filterGroups} selection={selection} /></section>
   </>;
 }
 
@@ -125,39 +128,62 @@ function Errors() {
 export function ApiDocumentation() {
   const location = useLocation(), navigate = useNavigate(), navigation = useNavigationType();
   const [query, setQuery] = useState(''), [navigationOpen, setNavigationOpen] = useState(false), [copied, setCopied] = useState(false), [copyError, setCopyError] = useState('');
-  const article = useRef<HTMLElement>(null), navigated = useRef(false), searchInput = useRef<HTMLInputElement>(null);
+  const article = useRef<HTMLElement>(null), navigated = useRef(false), searchInput = useRef<HTMLInputElement>(null), initial = useRef(true), copyOperation = useRef(0);
   const topic = resolveDocTopic(location.hash);
+  const selection = useMemo(() => resolveDocSelection(topic, new URLSearchParams(location.search)), [topic, location.search]);
   const previousTopic = useRef(topic.id);
   const results = useMemo(() => searchDocTopics(query), [query]);
   const groups = useMemo(() => Array.from(new Set(results.map(item => item.group))), [results]);
   useEffect(() => {
+    copyOperation.current++;
     setCopied(false); setCopyError('');
     const changed = previousTopic.current !== topic.id;
     previousTopic.current = topic.id;
-    if (navigated.current || (changed && navigation !== 'POP')) { article.current?.focus({ preventScroll: true }); article.current?.scrollIntoView({ block: 'start', behavior: 'instant' }); navigated.current = false; }
-  }, [topic.id, location.key, navigation]);
+    const wasInitial = initial.current;
+    const scroll = navigated.current || (changed && navigation !== 'POP') || (wasInitial && Boolean(selection.field));
+    initial.current = false; navigated.current = false;
+    const restore = !wasInitial && navigation === 'POP' && document.activeElement === document.body;
+    if (!scroll && !restore) return;
+    const focus = () => {
+      const target = article.current?.querySelector<HTMLElement>('[data-doc-match="true"]') ?? article.current;
+      for (let parent = target?.parentElement; parent && parent !== article.current; parent = parent.parentElement) {
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+      }
+      target?.focus({ preventScroll: true });
+      if (scroll) target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    };
+    const shell = article.current?.closest('.app-shell');
+    if (!shell?.hasAttribute('inert')) { focus(); return; }
+    const observer = new MutationObserver(() => { if (!shell.hasAttribute('inert')) { observer.disconnect(); focus(); } });
+    observer.observe(shell, { attributes: true, attributeFilter: ['inert'] });
+    return () => observer.disconnect();
+  }, [topic.id, location.key, navigation, selection]);
+  useEffect(() => () => { copyOperation.current++; }, []);
   useEffect(() => { if (!copied) return; const timeout = window.setTimeout(() => setCopied(false), 1800); return () => window.clearTimeout(timeout); }, [copied]);
-  function chooseTopic(id: string) {
+  function chooseTopic(id: string, fromSearch = false) {
+    const destination = DOC_TOPICS.find(item => item.id === id)!;
+    const match = fromSearch ? searchDocSelection(destination, query) : undefined;
     setNavigationOpen(false); setQuery(''); navigated.current = true;
-    navigate(docHref(id), { state: { preserveTabFocus: true } });
+    navigate(docHref(id, match), { state: { preserveTabFocus: true } });
   }
   async function copyLink() {
-    setCopyError('');
-    try { await navigator.clipboard.writeText(new URL(docHref(topic.id), window.location.origin).href); setCopied(true); }
-    catch { setCopyError('Copy is unavailable. You can copy this page’s address from the browser.'); }
+    const token = ++copyOperation.current;
+    setCopied(false); setCopyError('');
+    try { await navigator.clipboard.writeText(new URL(docHref(topic.id, selection), window.location.origin).href); if (token === copyOperation.current) setCopied(true); }
+    catch { if (token === copyOperation.current) setCopyError('Copy is unavailable. You can copy this page’s address from the browser.'); }
   }
   return <div className="api-docs">
-    <div className="api-docs-toolbar"><div className="api-docs-search"><Icon name="search" size={18} /><input ref={searchInput} type="search" aria-label="Search API documentation" aria-controls="api-docs-navigation" placeholder="Search documentation, endpoints, fields…" value={query} maxLength={200} onChange={event => { setQuery(event.target.value); setNavigationOpen(true); }} onKeyDown={event => { if (event.key === 'Escape') { setQuery(''); setNavigationOpen(false); } if (event.key === 'Enter' && results.length) { event.preventDefault(); chooseTopic(results[0].id); } }} />{query && <button type="button" aria-label="Clear documentation search" onClick={() => { setQuery(''); searchInput.current?.focus(); }}><Icon name="close" size={16} /></button>}</div><a className="button button--secondary" href={API_DOCS_SOURCE} target="_blank" rel="noreferrer">Official reference<Icon name="external" size={16} /></a></div>
+    <div className="api-docs-toolbar"><div className="api-docs-search"><Icon name="search" size={18} /><input ref={searchInput} type="search" aria-label="Search API documentation" aria-controls="api-docs-navigation" placeholder="Search documentation, endpoints, fields…" value={query} maxLength={200} onChange={event => { setQuery(event.target.value); setNavigationOpen(true); }} onKeyDown={event => { if (event.key === 'Escape') { setQuery(''); setNavigationOpen(false); } if (event.key === 'Enter' && results.length) { event.preventDefault(); chooseTopic(results[0].id, true); } }} />{query && <button type="button" aria-label="Clear documentation search" onClick={() => { setQuery(''); searchInput.current?.focus(); }}><Icon name="close" size={16} /></button>}</div><a className="button button--secondary" href={API_DOCS_SOURCE} target="_blank" rel="noreferrer">Official reference<Icon name="external" size={16} /></a></div>
     <div className="api-docs-layout">
       <aside className={`api-docs-sidebar${navigationOpen ? ' is-open' : ''}`}><button className="api-docs-mobile-toggle" type="button" aria-expanded={navigationOpen} aria-controls="api-docs-navigation" onClick={() => setNavigationOpen(!navigationOpen)}><Icon name="list" size={18} /><span>{query ? `${results.length} results` : topic.title}</span><Icon name="chevron-down" size={17} /></button><nav id="api-docs-navigation" aria-label="API documentation">
         {query && <p className="api-docs-search-status" role="status">{results.length ? `${results.length} matching ${results.length === 1 ? 'section' : 'sections'}` : 'No matching sections. Try a field name, status code or endpoint.'}</p>}
-        {groups.map(group => <div className="api-docs-nav-group" key={group}><p>{group}</p>{results.filter(item => item.group === group).map(item => <Link key={item.id} to={docHref(item.id)} state={{ preserveTabFocus: true }} aria-current={topic.id === item.id ? 'page' : undefined} onClick={event => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); chooseTopic(item.id); }}>{item.endpoint ? <span className={`api-docs-nav-method api-docs-nav-method--${item.endpoint.method.toLowerCase()}`}>{item.endpoint.method}</span> : <Icon name={item.id === 'getting-started' ? 'arrow' : item.id === 'authentication' ? 'key' : item.id === 'errors' ? 'alert' : item.id === 'filters' ? 'list' : 'chart'} size={15} />}<span>{item.title}</span></Link>)}</div>)}
+        {groups.map(group => <div className="api-docs-nav-group" key={group}><p>{group}</p>{results.filter(item => item.group === group).map(item => <Link key={item.id} to={docHref(item.id, query ? searchDocSelection(item, query) : undefined)} state={{ preserveTabFocus: true }} aria-current={topic.id === item.id ? 'page' : undefined} onClick={event => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); chooseTopic(item.id, Boolean(query.trim())); }}>{item.endpoint ? <span className={`api-docs-nav-method api-docs-nav-method--${item.endpoint.method.toLowerCase()}`}>{item.endpoint.method}</span> : <Icon name={item.id === 'getting-started' ? 'arrow' : item.id === 'authentication' ? 'key' : item.id === 'errors' ? 'alert' : item.id === 'filters' ? 'list' : 'chart'} size={15} />}<span>{item.title}</span></Link>)}</div>)}
         {!query && <p className="api-docs-source-note">API v1<br />Reference reviewed 24 Oct 2026</p>}
       </nav></aside>
       <article className="api-docs-article" id={topic.id} ref={article} tabIndex={-1} aria-labelledby="api-docs-title">
         <header className="api-docs-article-heading"><div><p className="api-docs-kicker">{topic.group}</p><h2 id="api-docs-title">{topic.title}</h2><p>{topic.summary}</p></div><Button variant="ghost" size="sm" className="api-docs-copy-link" onClick={() => void copyLink()} aria-label={copied ? 'Documentation link copied' : 'Copy link to this section'} title={copied ? 'Copied' : 'Copy section link'}><Icon name={copied ? 'check' : 'link'} size={18} /><span>{copied ? 'Copied' : 'Copy link'}</span></Button></header>
         {copyError && <p className="api-docs-copy-error" role="status">{copyError}</p>}
-        <div key={topic.id} className="api-docs-article-body">{topic.endpoint ? <EndpointArticle endpoint={topic.endpoint} /> : topic.id === 'authentication' ? <Authentication /> : topic.id === 'filters' ? <Filters /> : topic.id === 'limits' ? <Limits /> : topic.id === 'errors' ? <Errors /> : <GettingStarted />}</div>
+        <div key={topic.id} className="api-docs-article-body">{topic.endpoint ? <EndpointArticle endpoint={topic.endpoint} selection={selection} onViewChange={view => navigate(docHref(topic.id, { view }), { state: { preserveTabFocus: true } })} /> : topic.id === 'authentication' ? <Authentication /> : topic.id === 'filters' ? <Filters selection={selection} /> : topic.id === 'limits' ? <Limits /> : topic.id === 'errors' ? <Errors /> : <GettingStarted />}</div>
         <footer className="api-docs-footer">{DOC_TOPICS.findIndex(item => item.id === topic.id) > 0 && <button type="button" onClick={() => chooseTopic(DOC_TOPICS[DOC_TOPICS.findIndex(item => item.id === topic.id) - 1].id)}><Icon name="arrow-left" size={17} /><span>Previous<strong>{DOC_TOPICS[DOC_TOPICS.findIndex(item => item.id === topic.id) - 1].title}</strong></span></button>}{DOC_TOPICS.findIndex(item => item.id === topic.id) < DOC_TOPICS.length - 1 && <button type="button" className="api-docs-footer-next" onClick={() => chooseTopic(DOC_TOPICS[DOC_TOPICS.findIndex(item => item.id === topic.id) + 1].id)}><span>Next<strong>{DOC_TOPICS[DOC_TOPICS.findIndex(item => item.id === topic.id) + 1].title}</strong></span><Icon name="arrow" size={17} /></button>}</footer>
       </article>
     </div>

@@ -35,6 +35,13 @@
 .profile-account-reference code { font:500 .75rem/1.5 var(--font-mono); max-width:70%; text-align:right; overflow-wrap:anywhere; }
 .account-session h3 { min-width:0; overflow-wrap:anywhere; }
 @container settings (max-width:740px) { .profile-details-grid { grid-template-columns:1fr; }.profile-credit-grid { max-width:440px; }.profile-subscription-link { width:auto; justify-content:flex-start; gap:16px; }.profile-account-reference { justify-content:flex-start; }.profile-account-reference code { text-align:left; }.profile-plan-heading { margin-bottom:20px; } }
+@container settings (max-width:600px) {
+  .profile-identity { flex-wrap:wrap; gap:14px; }
+  .profile-identity .user-avatar { --avatar-size:60px!important; }
+  .profile-identity-copy { flex-basis:calc(100% - 80px); }
+  .profile-avatar-action { margin-left:74px; max-width:calc(100% - 74px); white-space:normal; }
+  .account-member-form { grid-template-columns:1fr; gap:10px; }
+}
 @media(max-width:900px) { .account-page .profile-details-grid { grid-template-columns:1fr; } }
 @media(max-width:600px) { .profile-identity { flex-wrap:wrap; gap:14px; padding-bottom:22px; }.profile-identity .user-avatar { --avatar-size:60px!important; }.profile-identity-copy { flex-basis:calc(100% - 80px); }.profile-avatar-action { margin-left:74px; min-height:40px; padding:8px 13px; }.profile-identity-copy h2 { font-size:1.25rem; }.profile-identity-copy p { font-size:.83rem; }.profile-details-grid { grid-template-columns:1fr; gap:24px; }.profile-account-summary { padding:20px; }.profile-credit-grid dt { font-size:.76rem; }.profile-credit-grid dd { font-size:1.06rem; }.profile-subscription-link { width:100%; justify-content:space-between; }.profile-details-card .form-actions .button { width:100%!important; }.profile-account-reference code { max-width:65%; }.profile-account-reference { justify-content:space-between; }.profile-account-reference code { text-align:right; } }
 @media(prefers-reduced-motion:reduce) { .profile-avatar-button>span:last-child { transition:none; }.profile-avatar-button:hover>span:last-child { transform:none; } }

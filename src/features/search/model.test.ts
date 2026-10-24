@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { activeFacetValues, analyticsCostLabel, analyticsRequest, decodeSearch, encodeSearch, FACET_NAMES, facetUnit, filterSummary, parseHostRows, searchAccessIssues, selectedType, validateSearchRequest, withType, withoutShareToken, toggleFacet } from './model';
+import { activeFacetValues, analyticsCostLabel, analyticsRequest, decodeSearch, encodeSearch, FACET_NAMES, facetUnit, filterSummary, parseHostRows, savedQueriesHref, searchAccessIssues, selectedType, validateSearchRequest, withType, withoutShareToken, toggleFacet } from './model';
 
 describe('search context', () => {
+  it('keeps the private analytics return path and preview intent when opening Saved queries', () => {
+    const request = { full_text_search: 'nginx', task_ids: ['owned-task'], page: 2, docs_per_page: 10, st: 'never-keep-this-token' };
+    const source = new URLSearchParams({ view: 'analytics', scanner_back: '/scanner?section=history', unrelated: 'ignored' });
+    const target = new URL(savedQueriesHref(request, 'private', `?${source}`, true), 'https://app.example.test');
+    expect(target.pathname).toBe('/search/saved');
+    expect(decodeSearch(target.searchParams).request).toEqual(withoutShareToken(request));
+    expect(target.searchParams.get('dataset')).toBe('private');
+    expect(target.searchParams.get('return_view')).toBe('analytics');
+    expect(target.searchParams.get('scanner_back')).toBe('/scanner?section=history');
+    expect(target.searchParams.get('draft')).toBe('1');
+    expect(target.toString()).not.toContain('never-keep-this-token');
+    expect(target.searchParams.has('unrelated')).toBe(false);
+    const publicTarget = new URL(savedQueriesHref({ full_text_search: 'nginx' }, 'public', '?scanner_back=//external.test&return_view=analytics&draft=1'), target.origin);
+    expect(publicTarget.searchParams.has('scanner_back')).toBe(false);
+    expect(publicTarget.searchParams.has('dataset')).toBe(false);
+    expect(publicTarget.searchParams.get('return_view')).toBe('analytics');
+    expect(publicTarget.searchParams.get('draft')).toBe('1');
+  });
   it('round-trips the complete search body and separately restores a share token', () => {
     const request = { page: 3, docs_per_page: 25, full_text_search: 'nginx', task_ids: ['task_1042'], range_filter: [{ field: 'uts', start: 0, end: 200 }], simple_search_filters: [{ operator: 'OR' as const, filters: [{ field: 'port', value: '80' }, { field: 'port', value: '443' }] }], robots_body: 'Disallow', st: 'token' };
     expect(decodeSearch(new URLSearchParams(encodeSearch(request))).request).toEqual(request);

@@ -7,9 +7,9 @@ import { errorMessage } from '../../lib/format';
 import { checkpoint, exportLimit, MEMORY_DOWNLOAD_LIMIT, transferExport, trimChunks, validateExport, type DownloadFile, type ExportFormat, type ExportMode, type SavePickerWindow, type WritableFile } from './export';
 
 type Job = { body: object; path: string; name: string; bytes: number; chunks: Uint8Array[]; file?: DownloadFile; resumable: boolean };
-export function ExportDialog({ open, onClose, query = {}, privateSearch = false, taskIds, shareToken, bucketFilter }: { open: boolean; onClose: () => void; query?: SearchRequest; privateSearch?: boolean; taskIds?: string[]; shareToken?: string; bucketFilter?: BucketFilter }) {
+export function ExportDialog({ open, onClose, query = {}, privateSearch = false, taskIds, shareToken, bucketFilter, bucketMode = 'files' }: { open: boolean; onClose: () => void; query?: SearchRequest; privateSearch?: boolean; taskIds?: string[]; shareToken?: string; bucketFilter?: BucketFilter; bucketMode?: 'files' | 'hosts' }) {
   const { api, user, session, metadata } = useApp();
-  const [format, setFormat] = useState<ExportFormat>('json'), [mode, setMode] = useState<ExportMode>(bucketFilter ? 'files' : 'partial');
+  const [format, setFormat] = useState<ExportFormat>('json'), [mode, setMode] = useState<ExportMode>(bucketFilter ? bucketMode : 'partial');
   const [count, setCount] = useState(10000), [status, setStatus] = useState<'idle' | 'preparing' | 'running' | 'complete' | 'interrupted'>('idle');
   const [bytes, setBytes] = useState(0), [error, setError] = useState(''), [disk, setDisk] = useState(false);
   const job = useRef<Job | null>(null), abort = useRef<AbortController | null>(null), busy = useRef(false);
@@ -17,7 +17,7 @@ export function ExportDialog({ open, onClose, query = {}, privateSearch = false,
   const allowed = session.status === 'authenticated' && (user?.subscription?.type === 'Business' || metadata?.full_access === true);
   const shared = !!(shareToken || query.st || query.share_token);
   useEffect(() => () => abort.current?.abort(), []);
-  useEffect(() => { if (open && !busy.current) { setMode(bucketFilter ? 'files' : 'partial'); setFormat('json'); setCount(10000); setStatus('idle'); setBytes(0); setError(''); job.current = null; } }, [open]);
+  useEffect(() => { if (open && !busy.current) { setMode(bucketFilter ? bucketMode : 'partial'); setFormat('json'); setCount(10000); setStatus('idle'); setBytes(0); setError(''); job.current = null; } }, [open]);
   async function run(resume = false) {
     if (busy.current) return;
     const validation = validateExport(format, mode, count);

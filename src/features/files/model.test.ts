@@ -1,7 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILE_DRAFT, draftFromFilter, fileParams, fileSize, filterChips, filterFromDraft, middleTruncate, nameParts, normalizeBucketFilter, observedFileUrl, readFileParams, utcInput, utcSeconds } from './model';
+import { checkedBucketResult, DEFAULT_FILE_DRAFT, draftFromFilter, fileParams, fileSignInHref, fileSize, filterChips, filterFromDraft, middleTruncate, nameParts, normalizeBucketFilter, observedFileUrl, readFileParams, utcInput, utcSeconds } from './model';
 
 describe('file search contract and view model', () => {
+  it('rejects unrenderable records before UI string/list operations and preserves valid source metadata', () => {
+    const response = { result_count: 1, result: [{ key: 'reports/one.csv', size_mb: 0, alphabets: ['latin'], alias_hosts: [], custom_metadata: { retained: true } }] };
+    expect(checkedBucketResult(response, 'files')).toBe(response);
+    expect(checkedBucketResult({ result_count: 0, result: [] }, 'files')).toEqual({ result_count: 0, result: [] });
+    for (const row of [null, [], { key: 42 }, { extension: {} }, { alphabets: 'latin' }, { alias_hosts: ['valid', {}] }, { size_mb: -1 }, { uts: Infinity }]) {
+      expect(() => checkedBucketResult({ result_count: 1, result: [row] }, 'files')).toThrow('invalid file or bucket metadata');
+    }
+    for (const row of [{ host: '', file_count: 1 }, { host: 'example.test', file_count: Infinity }, { host: 'example.test', file_count: -1 }, { host: 'example.test', file_count: 1.5 }, { host: 'example.test', container: {}, file_count: 1 }]) {
+      expect(() => checkedBucketResult({ result_count: 1, result: [row] }, 'hosts')).toThrow('invalid file or bucket metadata');
+    }
+    const bucket = { result_count: 1, result: [{ host: 'example.test', file_count: 0 }] };
+    expect(checkedBucketResult(bucket, 'hosts')).toBe(bucket);
+  });
+
+  it('carries prepared filters through sign-in as an explicit-search draft and falls back when edits are invalid', () => {
+    const fallback = filterFromDraft({ ...DEFAULT_FILE_DRAFT, keywords: 'saved context' });
+    const draft = { ...DEFAULT_FILE_DRAFT, keywords: 'reports', host: 'storage.example.test/public', minSize: '0', extensions: 'csv, json' };
+    const href = new URL(fileSignInHref(draft, 'hosts', fallback), 'https://app.example.test');
+    expect(href.pathname).toBe('/auth/login');
+    const returned = new URL(href.searchParams.get('returnTo')!, href.origin);
+    expect(returned.pathname).toBe('/files');
+    expect(readFileParams(returned.searchParams)).toMatchObject({ view: 'hosts', restored: true, filter: filterFromDraft(draft) });
+    expect(returned.searchParams.has('run')).toBe(false);
+    const invalid = new URL(fileSignInHref({ ...draft, minSize: '20', maxSize: '10' }, 'files', fallback), href.origin);
+    expect(readFileParams(new URL(invalid.searchParams.get('returnTo')!, href.origin).searchParams).filter).toEqual(fallback);
+  });
+
   it('round-trips every applied bucket parameter without dropping zero or exclusions', () => {
     const filter = filterFromDraft({ ...DEFAULT_FILE_DRAFT, host: 'storage.example.com/public', keywords: 'report, 2026', stopWords: 'tmp, backup', extensions: '.pdf, txt, pdf', excludeExtensions: true, products: 'azureblobstorage, custom_detector', alphabets: 'latin, custom_alphabet', minSize: '0', maxSize: '10.5', discoveredFrom: '2026-10-01T00:00:00', discoveredTo: '2026-10-23T23:59:59', updatedFrom: '2026-10-02T12:30', updatedTo: '2026-10-23T20:00', sort: 'size_mb:asc', pageSize: '50' });
     expect(filter).toMatchObject({ min_size_mb: 0, max_size_mb: 10.5, exclude_extensions: true, extensions: ['pdf', 'txt'], docs_per_page: 50, sort_field: 'size_mb', sort_direction: 'asc', page: 1 });

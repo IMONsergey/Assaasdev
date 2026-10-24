@@ -195,3 +195,23 @@
 @media(max-width:360px) { .settings-signout { align-items:stretch; flex-direction:column; }.settings-signout .button { align-self:flex-start; }.settings-section-picker { margin-bottom:20px; } }
 
 @media(max-width:600px) { .settings-panel form.stack>.form-actions .button { width:100%; }.settings-panel .account-card-heading { gap:10px; } }
+
+/* The two sidebars can leave a phone-sized content column on a tablet. */
+@container settings (max-width:600px) {
+  .settings-row { align-items:flex-start; flex-direction:column; gap:14px; }
+  .settings-row:has(.settings-switch) { flex-direction:row; align-items:center; }
+  .settings-row:has(.settings-switch) .settings-row-copy { max-width:calc(100% - 60px); }
+  .settings-row-control:has(select),.settings-row-control select,.settings-row-control:has(>.form-select),.settings-row-control>.form-select { width:100%; min-width:0; }
+  .settings-connection-actions { justify-content:flex-start; }
+  .settings-footer { align-items:flex-start; flex-direction:column; gap:12px; }
+  .theme-options { grid-template-columns:repeat(auto-fit,minmax(min(100%,6rem),1fr)); gap:10px; }
+  .theme-option { padding:7px 7px 9px; gap:5px; }
+  .theme-option-heading { font-size:.86rem; }
+  .theme-preview { height:78px; }
+  .theme-preview-nav { padding:11px 4px; }
+  .theme-preview-body { padding:7px; }
+  .theme-radio { width:13px; height:13px; }
+  .theme-radio .icon { width:10px; height:10px; }
+  .settings-signout { align-items:stretch; flex-direction:column; gap:16px; }
+  .settings-signout .button { align-self:flex-start; }
+}

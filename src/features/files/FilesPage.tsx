@@ -8,17 +8,11 @@ import { CodeCanvas } from '../../components/CodeCanvas';
 import { asset } from '../../config';
 import { formatTimestamp } from '../../lib/format';
 import { ExportDialog } from './ExportDialog';
-import { DEFAULT_FILE_DRAFT, FILE_PAGE_CAPS, bucketIdentity, draftFromFilter, fileName, fileParams, fileSize, filterChips, filterFromDraft, middleTruncate, nameParts, normalizeBucketFilter, observedFileUrl, readFileParams, type FileDraft, type FilesView } from './model';
+import { DEFAULT_FILE_DRAFT, FILE_PAGE_CAPS, bucketIdentity, checkedBucketResult, draftFromFilter, fileName, fileParams, fileSignInHref, fileSize, filterChips, filterFromDraft, middleTruncate, nameParts, normalizeBucketFilter, observedFileUrl, readFileParams, type FileDraft, type FilesView } from './model';
 import './files.css';
 
 type Job = { filter: BucketFilter; view: FilesView; principal: string; sequence: number };
 type Result = Job & { metadata?: ResponseMetadata; response: BucketResults | BucketAnalytics };
-
-function checkedResult(value: unknown, view: FilesView): BucketResults | BucketAnalytics {
-  if (!value || typeof value !== 'object' || !('result' in value) || !Array.isArray(value.result) || !('result_count' in value) || typeof value.result_count !== 'number' || !Number.isSafeInteger(value.result_count) || value.result_count < 0) throw new ApiError('transport', 'The server returned an unexpected bucket result. Your filters have been kept.', { outcome: 'unknown' });
-  if (value.result.some(row => !row || typeof row !== 'object' || (view === 'hosts' && (typeof row.host !== 'string' || typeof row.file_count !== 'number' || row.file_count < 0)))) throw new ApiError('transport', 'Some returned bucket records are incomplete. Your filters have been kept.', { outcome: 'unknown' });
-  return value as BucketResults | BucketAnalytics;
-}
 
 function FileGlyph({ extension }: { extension?: string }) {
   return <span className="files-record-glyph" aria-hidden="true"><span className="files-file-icon" style={{ maskImage: `url(${asset('figma/files/imgIconFile.svg')})`, WebkitMaskImage: `url(${asset('figma/files/imgIconFile.svg')})` }} />{extension && <small>{extension.slice(0, 4).toUpperCase()}</small>}</span>;
@@ -67,7 +61,7 @@ export function FilesPage() {
     queryFn: async ({ signal }) => {
       if (!job) throw new Error('Start a file search first.');
       const response = await api.request<BucketResults | BucketAnalytics>(job.view === 'files' ? 'buckets' : 'bucket_analytics', job.filter, { signal, mutation: false });
-      return { ...job, response: checkedResult(response.data, job.view), metadata: response.metadata };
+      return { ...job, response: checkedBucketResult(response.data, job.view), metadata: response.metadata };
     },
   });
   useEffect(() => {
@@ -75,14 +69,16 @@ export function FilesPage() {
     setDraft(draftFromFilter(restored.filter)); setView(restored.view); setFormError('');
     setSelected(null); setExportOpen(false); setPaused(false); setAdvanced(false);
     // Back/forward restores a completed response without silently billing another search.
-    const canonical = fileParams(restored.filter, restored.view).toString();
-    const cached = queryClient.getQueryCache().findAll({ queryKey: ['bucket-results', principal, instanceId] })
+    setJob(completedSnapshot(restored.filter, restored.view) ?? null);
+  }, [serialized, restored, principal, instanceId, queryClient]);
+  function completedSnapshot(filter: BucketFilter, targetView: FilesView) {
+    const canonical = fileParams(filter, targetView).toString();
+    return queryClient.getQueryCache().findAll({ queryKey: ['bucket-results', principal, instanceId] })
       .filter(entry => entry.state.status === 'success')
       .map(entry => entry.state.data as Result | undefined)
       .sort((a, b) => (b?.sequence ?? 0) - (a?.sequence ?? 0))
-      .find(entry => entry && entry.view === restored.view && fileParams(entry.filter, entry.view).toString() === canonical);
-    setJob(cached ?? null);
-  }, [serialized, restored, principal, instanceId, queryClient]);
+      .find(entry => entry && entry.view === targetView && fileParams(entry.filter, entry.view).toString() === canonical);
+  }
   useEffect(() => { setJob(null); setPaused(false); setSelected(null); setExportOpen(false); }, [principal]);
   useEffect(() => {
     if (!advanced) return;
@@ -99,9 +95,12 @@ export function FilesPage() {
     for (const entry of entries.slice(5)) queryClient.removeQueries({ queryKey: entry.queryKey, exact: true });
   }, [job?.sequence, results.dataUpdatedAt, principal, queryClient]);
 
-  const shown = results.data?.principal === principal && results.data.view === view ? results.data : undefined;
+  // A tab can display its completed snapshot while the other tab keeps loading.
+  // Do not replace the active job: that would cancel a request already sent.
+  const shown = results.data?.principal === principal && results.data.view === view ? results.data : completedSnapshot(restored.filter, view);
   const response = shown?.response, loading = results.isFetching && job?.view === view;
-  const previousResults = !!shown && shown.sequence !== job?.sequence;
+  const previousResults = !!shown && job?.view === view && shown.sequence !== job?.sequence;
+  const pausedView = paused && job?.view === view;
   const activeFilter = shown?.filter ?? job?.filter;
   const appliedChips = activeFilter ? filterChips(activeFilter) : [];
   const changed = useMemo(() => {
@@ -133,7 +132,7 @@ export function FilesPage() {
     });
   }
   async function stop() { setPaused(true); await queryClient.cancelQueries({ queryKey, exact: true }); }
-  async function copy(value: string) { try { await navigator.clipboard.writeText(value); toast('Copied to clipboard.', 'success'); } catch { toast('Copy was blocked by the browser. Select the text and copy it manually.', 'error'); } }
+  async function copy(value: string) { try { await navigator.clipboard.writeText(value); toast('Copied to clipboard.', 'success'); return true; } catch { toast('Copy was blocked by the browser. Select the text and copy it manually.', 'error'); return false; } }
   function openFilters() { beforeFilters.current = { ...draft }; setAdvanced(true); setFormError(''); }
   function cancelFilters() { setDraft(beforeFilters.current); setFormError(''); setAdvanced(false); }
   function runCurrent() { try { run(filterFromDraft(draft)); } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Check your filters.'); } }
@@ -144,7 +143,7 @@ export function FilesPage() {
     <TabPanel idPrefix="files" value={view === 'files' ? 'hosts' : 'files'} hidden>{null}</TabPanel>
     <TabPanel idPrefix="files" value={view} className="files-workspace stack">
     {restored.error && <Alert tone="error" title="These file filters could not be restored" actions={<Button variant="secondary" onClick={() => { lastWritten.current = ''; setParams({}); }}>Start a new search</Button>}>{restored.error}</Alert>}
-    {!permitted && session.status !== 'loading' && <Alert tone="info" title={hasAccount ? 'File search is available on Plus and above' : 'Sign in to search files'} actions={<Link className="inline-link" to={hasAccount ? '/billing' : '/auth/login?returnTo=%2Ffiles'}>{hasAccount ? 'Compare plans' : 'Continue to sign in'} →</Link>}>Prepare your filters below. Files and bucket analytics use your account’s search access.</Alert>}
+    {!permitted && session.status !== 'loading' && <Alert tone="info" title={hasAccount ? 'File search is available on Plus and above' : 'Sign in to search files'} actions={<Link className="inline-link" to={hasAccount ? '/billing' : fileSignInHref(draft, view, restored.filter)}>{hasAccount ? 'Compare plans' : 'Continue to sign in'} →</Link>}>Prepare your filters below. Files and bucket analytics use your account’s search access.</Alert>}
 
     <form className="files-search-toolbar" onSubmit={event => { event.preventDefault(); runCurrent(); }}>
       <Field id="files-main-query" className="files-command-field" label={view === 'files' ? 'Filename or keywords' : 'Keywords in bucket files'} icon={<Icon name="search" size={18} />} placeholder={view === 'files' ? 'Search filenames or keywords' : 'Search matching files in buckets'} value={draft.keywords} onChange={event => edit('keywords', event.target.value)} autoComplete="off" />
@@ -153,7 +152,7 @@ export function FilesPage() {
       <div className="files-command-meta">{draft.host && <span className="files-query-summary"><Icon name="database" size={14} />{draft.host}</span>}<span className="files-request-cost">1 search credit per request</span></div>
     </form>
     {formError && !advanced && <Alert tone="error" title="Check your filters" actions={<Button variant="secondary" onClick={openFilters}>Edit filters</Button>}>{formError}</Alert>}
-    <Dialog open={advanced} onClose={cancelFilters} title="File filters" placement="left" scope="workspace" className="files-filter-drawer" footer={<><Button variant="secondary" onClick={cancelFilters}>Cancel</Button><Button type="submit" form="files-filter-form" loading={loading} disabled={!permitted}>Apply filters</Button></>}>
+    <Dialog open={advanced} onClose={cancelFilters} title="File filters" placement="left" scope="workspace" className="files-filter-drawer" footer={<><Button variant="secondary" onClick={cancelFilters}>Cancel</Button>{!hasAccount && session.status !== 'loading' ? <Link className="button" to={fileSignInHref(draft, view, restored.filter)} onClick={event => { try { filterFromDraft(draft); } catch (cause) { event.preventDefault(); setFormError(cause instanceof Error ? cause.message : 'Check the search filters.'); requestAnimationFrame(() => { filterError.current?.focus({ preventScroll: true }); filterError.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' }); }); } }}>Continue to sign in</Link> : <Button type="submit" form="files-filter-form" loading={loading} disabled={!permitted}>Apply filters</Button>}</>}>
       <form ref={filterForm} id="files-filter-form" className="files-filter-surface" onSubmit={submit} aria-label="File search filters">
         <section className="files-filter-group">
           <h3><Icon name="search" size={17} />Content</h3>
@@ -193,8 +192,8 @@ export function FilesPage() {
     {!job && restored.restored && <p className="files-draft-notice">Filters restored · Search to load results</p>}
     {loading && <div className="files-loading-bar"><Spinner label={shown ? 'Updating results…' : 'Looking for matching records…'} /><Button variant="secondary" size="sm" onClick={() => void stop()}>Stop waiting</Button></div>}
     {loading && !shown && <Skeleton rows={5} label="Loading search results" />}
-    {paused && job?.view === view && <Alert tone="warning" title="Search stopped">No new result is confirmed. Your filters are preserved; the server may have already processed this request. <Button variant="secondary" size="sm" onClick={() => job && run(job.filter, job.view)}>Run again</Button></Alert>}
-    {visibleError && <Alert tone={uncertain ? 'warning' : 'error'} title={uncertain ? 'The response was interrupted' : 'Search could not be completed'} actions={<Button variant="secondary" size="sm" onClick={() => job && run(job.filter, job.view)}>Run again</Button>}>{visibleError.message} Your filters have been kept.{uncertain && ' A search credit may already have been used. Starting again sends a new request.'}</Alert>}
+    {pausedView && <Alert tone="warning" title="Search stopped">No new result is confirmed. Your filters are preserved; the server may have already processed this request. <Button variant="secondary" size="sm" onClick={() => job && run(job.filter, job.view)}>Run again</Button></Alert>}
+    {visibleError && <Alert tone={uncertain ? 'warning' : 'error'} title={uncertain ? 'Search results could not be confirmed' : 'Search could not be completed'} actions={<Button variant="secondary" size="sm" onClick={() => job && run(job.filter, job.view)}>Run again</Button>}>{visibleError.message} Your filters have been kept.{uncertain && ' A search credit may already have been used. Starting again sends a new request.'}</Alert>}
 
     {shown && response && <section className="files-result-section" data-onboarding="file-results" data-ready={!loading && !previousResults && !changed ? 'true' : 'false'} aria-label={view === 'files' ? 'File results' : 'Bucket results'} aria-busy={loading || undefined}>
       <div className="files-result-heading"><div><h2>{response.result_count.toLocaleString()} {view === 'files' ? 'file' : 'bucket'} {response.result_count === 1 ? 'record' : 'records'}</h2><p>{response.result.length.toLocaleString()} loaded · Page {shown.filter.page ?? 1}{previousResults ? ' · Previous results' : ''}</p></div><Button data-onboarding="export-files" variant="secondary" size="sm" disabled={loading || !response.result.length || previousResults} onClick={() => setExportOpen(true)}>Download records<Icon name="download" size={20} /></Button></div>
@@ -204,13 +203,13 @@ export function FilesPage() {
 
     </section>}
 
-    {!shown && !loading && !visibleError && !paused && <section className="files-start-state" aria-labelledby="files-start-heading"><div className="files-start-heading"><span className="files-start-icon"><Icon name={view === 'files' ? 'file' : 'database'} size={23} /></span><div><h2 id="files-start-heading">{view === 'files' ? 'Search indexed files' : 'Search matching buckets'}</h2><p>{view === 'files' ? 'Find a file, inspect its metadata, then explore the storage it belongs to.' : 'Group matching files by bucket, then open a bucket to inspect its records.'}</p></div></div><div className="files-example-grid">{(view === 'files' ? fileExamples : bucketExamples).map(example => <Button key={example.title} variant="secondary" className="files-example" disabled={!permitted} onClick={() => run({ ...filterFromDraft(DEFAULT_FILE_DRAFT), ...example.filter }, view, true)}><span className="files-example-symbol"><Icon name={example.icon} size={20} /></span><span className="files-example-copy"><strong>{example.title}</strong><small>{example.description}</small></span><Icon name="arrow-up-right" size={16} /></Button>)}</div></section>}
+    {!shown && !loading && !visibleError && !pausedView && <section className="files-start-state" aria-labelledby="files-start-heading"><div className="files-start-heading"><span className="files-start-icon"><Icon name={view === 'files' ? 'file' : 'database'} size={23} /></span><div><h2 id="files-start-heading">{view === 'files' ? 'Search indexed files' : 'Search matching buckets'}</h2><p>{view === 'files' ? 'Find a file, inspect its metadata, then explore the storage it belongs to.' : 'Group matching files by bucket, then open a bucket to inspect its records.'}</p></div></div><div className="files-example-grid">{(view === 'files' ? fileExamples : bucketExamples).map(example => <Button key={example.title} variant="secondary" className="files-example" disabled={!permitted} onClick={() => run({ ...filterFromDraft(DEFAULT_FILE_DRAFT), ...example.filter }, view, true)}><span className="files-example-symbol"><Icon name={example.icon} size={20} /></span><span className="files-example-copy"><strong>{example.title}</strong><small>{example.description}</small></span><Icon name="arrow-up-right" size={16} /></Button>)}</div></section>}
 
 
     <Dialog open={!!selected} onClose={() => setSelected(null)} title={selected ? middleTruncate(fileName(selected)) : 'File details'} size="lg" className="files-detail-dialog" footer={<Button variant="secondary" onClick={() => setSelected(null)}>Close</Button>}>
       {selected && <div className="stack"><div className="files-detail-title"><FileGlyph extension={selected.extension} /><Badge>{selected.extension?.toUpperCase() || 'File'}</Badge><span>{fileSize(selected.size_mb)}</span></div><dl className="files-detail-facts"><div><dt>Bucket</dt><dd>{selected.host ?? 'Not observed'}</dd></div>{selected.container !== undefined && <div><dt>Container</dt><dd>{selected.container || 'Empty value'}</dd></div>}<div><dt>Object key</dt><dd className="mono files-object-key" tabIndex={selected.key && selected.key.length > 160 ? 0 : undefined}>{selected.key ?? 'Not observed'}</dd></div><div><dt>Protocol</dt><dd>{selected.protocol ?? 'Not observed'}</dd></div><div><dt>Discovered</dt><dd>{formatTimestamp(selected.cts)}</dd></div><div><dt>Last updated</dt><dd>{formatTimestamp(selected.uts)}</dd></div><div><dt>Alphabets</dt><dd>{selected.alphabets?.join(', ') || 'Not observed'}</dd></div>{selected.alias_hosts && <div><dt>Alias hosts</dt><dd>{selected.alias_hosts.length ? selected.alias_hosts.join(', ') : 'None returned'}</dd></div>}</dl><div className="cluster files-detail-actions">{selected.key && <Button variant="secondary" onClick={() => void copy(selected.key!)}><Icon name="copy" size={17} />Copy object key</Button>}<Button variant="secondary" onClick={() => void copy(JSON.stringify(selected, null, 2))}><Icon name="copy" size={20} />Copy metadata</Button>{observedFileUrl(selected) && <a className="button button--secondary" href={observedFileUrl(selected)!} target="_blank" rel="noopener noreferrer">Open observed URL<Icon name="external" size={20} /></a>}</div><details className="files-source-record"><summary><Icon name="code" size={16} /><span>Source metadata</span><Icon name="chevron-down" size={16} /></summary><CodeCanvas content={JSON.stringify(selected, null, 2)} language="json" title="File metadata" onCopy={copy} /></details><p className="muted files-record-note">Indexed metadata · Current file availability may differ.</p></div>}
     </Dialog>
-    <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} bucketFilter={shown?.filter ?? job?.filter ?? {}} />
+    <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} bucketFilter={shown?.filter ?? job?.filter ?? {}} bucketMode={view} />
     </TabPanel>
   </div>;
 }

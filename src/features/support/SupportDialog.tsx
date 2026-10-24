@@ -10,7 +10,7 @@ export function SupportDialog({ open, onClose, initialTopic, initialMessage }: {
   const { user, toast } = useApp();
   const [view,setView] = useState<'help'|'form'|'review'>('help');
   const [draft,setDraft] = useState<SupportDraft>({name:'',email:'',topic:supportTopics[0],message:''});
-  const [error,setError] = useState('');
+  const [errors,setErrors] = useState<{ name?: string; message?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
@@ -20,27 +20,29 @@ export function SupportDialog({ open, onClose, initialTopic, initialMessage }: {
     wasOpen.current = open;
     if (!justOpened || (!initialTopic && !initialMessage)) return;
     setDraft({ name: user?.user_name ?? '', email: user?.email ?? '', topic: initialTopic ?? supportTopics[0], message: initialMessage ?? '' });
-    setView('form'); setError('');
+    setView('form'); setErrors({});
   }, [open, initialTopic, initialMessage, user]);
   useLayoutEffect(() => {
     if (!open) return;
     if (view === 'form') formRef.current?.querySelector<HTMLInputElement>('input')?.focus({preventScroll:true});
     else bodyRef.current?.closest<HTMLDialogElement>('dialog')?.focus({preventScroll:true});
   },[view,open]);
-  function close() { setView('help'); setError(''); if (initialTopic || initialMessage) setDraft({ name: '', email: '', topic: supportTopics[0], message: '' }); onClose(); }
+  function close() { setView('help'); setErrors({}); if (initialTopic || initialMessage) setDraft({ name: '', email: '', topic: supportTopics[0], message: '' }); onClose(); }
   function contact() {
     setDraft(current => ({...current,name:current.name || user?.user_name || '',email:current.email || user?.email || ''}));
-    setView('form'); setError('');
+    setView('form'); setErrors({});
   }
   function prepare(event: FormEvent) {
     event.preventDefault();
     if (!formRef.current?.reportValidity()) return;
-    if (!draft.name.trim() || draft.message.trim().length < 10) {
-      setError(!draft.name.trim() ? 'Enter your name.' : 'Write at least 10 characters about your request.');
-      formRef.current.querySelector<HTMLElement>(!draft.name.trim() ? '[name="support-name"]' : '[name="support-message"]')?.focus();
+    const name = !draft.name.trim() ? 'Enter your name.' : undefined;
+    const message = draft.message.trim().length < 10 ? 'Write at least 10 characters about your request.' : undefined;
+    if (name || message) {
+      setErrors({ name, message });
+      formRef.current.querySelector<HTMLElement>(name ? '[name="support-name"]' : '[name="support-message"]')?.focus();
       return;
     }
-    setError(''); setView('review');
+    setErrors({}); setView('review');
   }
   const footer = view === 'help' ? <Button key="contact" onClick={contact}><Icon name="mail" size={17} />Contact support</Button> : view === 'form' ? <><Button key="back" variant="secondary" onClick={() => setView('help')}><Icon name="chevron-left" size={16} />Back</Button><Button key="prepare" type="submit" form="support-request">Prepare email<Icon name="arrow" size={16} /></Button></> : <><Button key="edit" variant="secondary" onClick={() => setView('form')}>Edit message</Button><a key="open-email" className="button button--primary" href={prepared.mailto} onClick={() => toast('Your email app will open with the draft. Send it there when ready.','info')}>Open email app<Icon name="arrow-up-right" size={16} /></a></>;
   return <Dialog open={open} onClose={close} title={view === 'help' ? 'Help & support' : view === 'form' ? 'Contact support' : 'Review your message'} size="md" footer={footer} className={`support-dialog${view === 'help' ? ' support-dialog--help' : ''}`}>
@@ -57,14 +59,14 @@ export function SupportDialog({ open, onClose, initialTopic, initialMessage }: {
       <div className="support-contact-line"><Icon name="mail" size={15} /><a href={`mailto:${supportEmail}`}>{supportEmail}<Icon name="arrow-up-right" size={14} /></a></div>
     </div> : view === 'form' ? <form id="support-request" ref={formRef} onSubmit={prepare} className="support-request-form">
       <p className="support-intro">Describe your question. You can review the message before opening your email app.</p>
-      <div className="support-form-row"><Field label="Name" name="support-name" autoComplete="name" required maxLength={100} value={draft.name} onChange={event => {setDraft({...draft,name:event.target.value});setError('');}} /><Field label="Reply email" name="support-email" type="email" autoComplete="email" required maxLength={200} value={draft.email} onChange={event => setDraft({...draft,email:event.target.value})} /></div>
+      <div className="support-form-row"><Field label="Name" name="support-name" autoComplete="name" required maxLength={100} value={draft.name} error={errors.name} onChange={event => {setDraft({...draft,name:event.target.value});setErrors(current => ({...current,name:undefined}));}} /><Field label="Reply email" name="support-email" type="email" autoComplete="email" required maxLength={200} value={draft.email} onChange={event => setDraft({...draft,email:event.target.value})} /></div>
       <SelectField label="Topic" value={draft.topic} onChange={event => setDraft({...draft,topic:event.target.value})}>{supportTopics.map(topic => <option key={topic}>{topic}</option>)}</SelectField>
-      <TextArea label="Message" name="support-message" placeholder="What were you trying to do? What happened?" required minLength={10} maxLength={4000} rows={6} value={draft.message} error={error || undefined} onChange={event => {setDraft({...draft,message:event.target.value});setError('');}} hint="Keep passwords, API keys and private third-party data out of the message." />
+      <TextArea label="Message" name="support-message" placeholder="What were you trying to do? What happened?" required minLength={10} maxLength={4000} rows={6} value={draft.message} error={errors.message} onChange={event => {setDraft({...draft,message:event.target.value});setErrors(current => ({...current,message:undefined}));}} hint="Keep passwords, API keys and private third-party data out of the message." />
       <div className="support-form-meta"><span>{draft.message.length.toLocaleString()} / 4,000</span><a href="https://apcosys.net/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy<Icon name="arrow-up-right" size={14} /></a></div>
     </form> : <div className="support-review">
       <div className="support-review-recipient"><span className="support-resource-icon"><Icon name="mail" size={22} /></span><div><span>To the APCOSYS team</span><strong>{supportEmail}</strong></div></div>
       <dl className="support-review-fields"><div><dt>Subject</dt><dd>{prepared.subject}</dd></div><div><dt>From</dt><dd>{draft.name.trim()} · {draft.email.trim()}</dd></div></dl>
-      <div className="support-message-preview">{draft.message.trim()}</div>
+      <div className="support-message-preview" role="region" aria-label="Message preview" tabIndex={0}>{draft.message.trim()}</div>
       <div className="support-copy-row"><p>The message is ready for your email app. Review and send it there.</p><Button variant="secondary" size="sm" onClick={() => void copyText(`To: ${supportEmail}\nSubject: ${prepared.subject}\n\n${prepared.body}`,toast)}><Icon name="copy" size={16} />Copy message</Button></div>
     </div>}
     </div>
